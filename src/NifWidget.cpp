@@ -137,12 +137,23 @@ void NifWidget::paintGL()
       QOpenGLContext::currentContext());
   f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  for (auto& shape : m_GLShapes) {
-    if (const auto program = m_ShaderManager->getProgram(shape.shaderType);
-        program && program->isLinked() && program->bind()) {
-      auto binder = QOpenGLVertexArrayObject::Binder(shape.vertexArray);
+  std::vector<OpenGLShape*> opaqueShapes;
+  std::vector<OpenGLShape*> transparentShapes;
 
-      auto& modelMatrix    = shape.modelMatrix;
+  for (auto& shape : m_GLShapes) {
+    if (shape.alpha < 1.0f || shape.alphaBlendEnable) {
+      transparentShapes.push_back(&shape);
+    } else {
+      opaqueShapes.push_back(&shape);
+    }
+  }
+
+  for (const auto* shape : opaqueShapes) {
+    if (const auto program = m_ShaderManager->getProgram(shape->shaderType);
+        program && program->isLinked() && program->bind()) {
+      auto binder = QOpenGLVertexArrayObject::Binder(shape->vertexArray);
+
+      auto& modelMatrix    = shape->modelMatrix;
       auto modelViewMatrix = m_ViewMatrix * modelMatrix;
       auto mvpMatrix       = m_ProjectionMatrix * modelViewMatrix;
 
@@ -154,17 +165,53 @@ void NifWidget::paintGL()
       program->setUniformValue("mvpMatrix", mvpMatrix);
       program->setUniformValue("lightDirection", QVector3D(0, 0, 1));
 
-      shape.setupShaders(program);
+      shape->setupShaders(program);
 
-      if (shape.indexBuffer && shape.indexBuffer->isCreated()) {
-        shape.indexBuffer->bind();
-        f->glDrawElements(GL_TRIANGLES, shape.elements, GL_UNSIGNED_SHORT, nullptr);
-        shape.indexBuffer->release();
+      if (shape->indexBuffer && shape->indexBuffer->isCreated()) {
+        shape->indexBuffer->bind();
+        f->glDrawElements(GL_TRIANGLES, shape->elements, GL_UNSIGNED_SHORT, nullptr);
+        shape->indexBuffer->release();
       }
 
       program->release();
     }
   }
+
+  f->glEnable(GL_BLEND);
+  f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  f->glDepthMask(GL_FALSE);
+
+  for (const auto* shape : transparentShapes) {
+    if (const auto program = m_ShaderManager->getProgram(shape->shaderType);
+        program && program->isLinked() && program->bind()) {
+      auto binder = QOpenGLVertexArrayObject::Binder(shape->vertexArray);
+
+      auto& modelMatrix    = shape->modelMatrix;
+      auto modelViewMatrix = m_ViewMatrix * modelMatrix;
+      auto mvpMatrix       = m_ProjectionMatrix * modelViewMatrix;
+
+      program->setUniformValue("worldMatrix", modelMatrix);
+      program->setUniformValue("viewMatrix", m_ViewMatrix);
+      program->setUniformValue("modelViewMatrix", modelViewMatrix);
+      program->setUniformValue("modelViewMatrixInverse", modelViewMatrix.inverted());
+      program->setUniformValue("normalMatrix", modelViewMatrix.normalMatrix());
+      program->setUniformValue("mvpMatrix", mvpMatrix);
+      program->setUniformValue("lightDirection", QVector3D(0, 0, 1));
+
+      shape->setupShaders(program);
+
+      if (shape->indexBuffer && shape->indexBuffer->isCreated()) {
+        shape->indexBuffer->bind();
+        f->glDrawElements(GL_TRIANGLES, shape->elements, GL_UNSIGNED_SHORT, nullptr);
+        shape->indexBuffer->release();
+      }
+
+      program->release();
+    }
+  }
+
+  f->glDepthMask(GL_TRUE);
+  f->glDisable(GL_BLEND);
 }
 
 void NifWidget::resizeGL(const int w, const int h)

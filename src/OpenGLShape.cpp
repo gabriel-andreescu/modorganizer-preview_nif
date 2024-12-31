@@ -328,6 +328,7 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
 
   if (zBufferTest) {
     f->glEnable(GL_DEPTH_TEST);
+    f->glDepthFunc(GL_LEQUAL);
   } else {
     f->glDisable(GL_DEPTH_TEST);
   }
