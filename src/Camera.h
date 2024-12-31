@@ -3,35 +3,36 @@
 #include <QObject>
 #include <QVector3D>
 
-class Camera : public QObject
+class Camera final : public QObject
 {
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    QVector3D lookAt() { return m_LookAt; }
-    float pitch() { return m_Pitch; }
-    float yaw() { return m_Yaw; }
-    float distance() { return m_Distance; }
+  explicit Camera(QObject* parent = nullptr) : QObject(parent) {}
+  [[nodiscard]] QVector3D lookAt() const { return m_LookAt; }
+  [[nodiscard]] float pitch() const { return m_Pitch; }
+  [[nodiscard]] float yaw() const { return m_Yaw; }
+  [[nodiscard]] float distance() const { return m_Distance; }
 
-    void setDistance(float distance);
-    void setLookAt(QVector3D lookAt);
+  void setDistance(float distance);
+  void setLookAt(QVector3D lookAt);
 
-    void pan(QVector3D delta);
-    void rotate(float yaw, float pitch);
-    void zoomDistance(float distance);
-    void zoomFactor(float factor);
+  void pan(QVector3D delta);
+  void rotate(float yaw, float pitch);
+  void zoomDistance(float distance);
+  void zoomFactor(float factor);
 
 private:
-    inline static constexpr float MinDistance = 1.0f;
-    inline static constexpr float MaxDistance = 5000.0f;
+  static constexpr float MinDistance = 1.0f;
+  static constexpr float MaxDistance = 10000.0f;
 
-    static float repeat(float value, float min, float max);
+  static float repeat(float value, float min, float max);
 
-    QVector3D m_LookAt;
-    float m_Pitch = 0.0f;
-    float m_Yaw = 0.0f;
-    float m_Distance = 100.0f;
+  QVector3D m_LookAt;
+  float m_Pitch    = 0.0f;
+  float m_Yaw      = 0.0f;
+  float m_Distance = 100.0f;
 
 signals:
-    void cameraMoved();
+  void cameraMoved();
 };

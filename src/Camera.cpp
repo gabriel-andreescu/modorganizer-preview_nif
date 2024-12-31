@@ -2,49 +2,49 @@
 
 #include <cmath>
 
-void Camera::setDistance(float distance)
+void Camera::setDistance(const float distance)
 {
-    m_Distance = qBound(MinDistance, distance, MaxDistance);
-    cameraMoved();
+  m_Distance = qBound(MinDistance, distance, MaxDistance);
+  cameraMoved();
 }
 
-void Camera::setLookAt(QVector3D lookAt)
+void Camera::setLookAt(const QVector3D lookAt)
 {
-    m_LookAt = lookAt;
-    cameraMoved();
+  m_LookAt = lookAt;
+  cameraMoved();
 }
 
-void Camera::pan(QVector3D distance)
+void Camera::pan(const QVector3D delta)
 {
-    m_LookAt += distance;
-    cameraMoved();
+  m_LookAt += delta;
+  cameraMoved();
 }
 
-void Camera::rotate(float yaw, float pitch)
+void Camera::rotate(const float yaw, const float pitch)
 {
-    m_Yaw = repeat(m_Yaw + yaw, 0.0f, 360.0f);
-    m_Pitch = repeat(m_Pitch + pitch, 0.0f, 360.0f);
+  m_Yaw   = repeat(m_Yaw + yaw, 0.0f, 360.0f);
+  m_Pitch = repeat(m_Pitch + pitch, 0.0f, 360.0f);
 
-    cameraMoved();
+  cameraMoved();
 }
 
-void Camera::zoomDistance(float distance)
+void Camera::zoomDistance(const float distance)
 {
-    m_Distance += distance;
-    m_Distance = qBound(MinDistance, m_Distance, MaxDistance);
+  m_Distance += distance;
+  m_Distance = qBound(MinDistance, m_Distance, MaxDistance);
 
-    cameraMoved();
+  cameraMoved();
 }
 
-void Camera::zoomFactor(float factor)
+void Camera::zoomFactor(const float factor)
 {
-    m_Distance *= factor;
-    m_Distance = qBound(MinDistance, m_Distance, MaxDistance);
+  m_Distance *= factor;
+  m_Distance = qBound(MinDistance, m_Distance, MaxDistance);
 
-    cameraMoved();
+  cameraMoved();
 }
 
-float Camera::repeat(float value, float min, float max)
+float Camera::repeat(const float value, const float min, const float max)
 {
-    return fmod(fmod(value, max - min) + (max - min), max - min) + min;
+  return fmod(fmod(value, max - min) + (max - min), max - min) + min;
 }
