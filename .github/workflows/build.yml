@@ -4,7 +4,7 @@ on:
   push:
     branches: main
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [ opened, synchronize, reopened ]
 
 jobs:
   build:
@@ -13,8 +13,8 @@ jobs:
       - name: Build NIF Preview Plugin
         uses: ModOrganizer2/build-with-mob-action@master
         with:
-          mo2-third-parties: fmt libbsarch
-          mo2-dependencies: cmake_common uibase
+          mo2-third-parties: libbsarch
+          mo2-dependencies: DirectXTex cmake_common uibase
       - name: Upload Build
         uses: actions/upload-artifact@v3
         with:
