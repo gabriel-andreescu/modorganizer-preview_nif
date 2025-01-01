@@ -2,9 +2,10 @@
   "version": 3,
   "configurePresets": [
     {
-      "name": "windows-2022",
+      "name": "Release",
       "generator": "Visual Studio 17 2022",
-      "binaryDir": "${sourceDir}/vsbuild",
+      "binaryDir": "${sourceDir}/cmake-build-default",
+      "installDir": "${sourceDir}/../../../install",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "STRING",
@@ -22,9 +23,9 @@
           "type": "PATH",
           "value": "${sourceDir}/../../boost_1_83_0/lib64-msvc-14.3/lib"
         },
-        "FMT_ROOT": {
+        "DIRECTXTEX_ROOT": {
           "type": "PATH",
-          "value": "${sourceDir}/../../fmt-8.1.1"
+          "value": "${sourceDir}/../../DirectXTex"
         },
         "SPDLOG_ROOT": {
           "type": "PATH",
@@ -40,7 +41,7 @@
         },
         "QT_ROOT": {
           "type": "PATH",
-          "value": "C:/Qt/6.5.3/msvc2019_64"
+          "value": "C:/Qt/6.7.1/msvc2019_64"
         },
         "ZLIB_ROOT": {
           "type": "PATH",
@@ -56,7 +57,7 @@
         },
         "LIBBSARCH_ROOT": {
           "type": "PATH",
-          "value": "${sourceDir}/../../libbsarch-0.0.9-release-x64"
+          "value": "${sourceDir}/../../libbsarch-0.0.12-release-x64"
         },
         "BOOST_DI_ROOT": {
           "type": "PATH",
@@ -65,6 +66,18 @@
         "GTEST_ROOT": {
           "type": "PATH",
           "value": "${sourceDir}/../../googletest"
+        }
+      }
+    },
+    {
+      "name": "RelWithDebInfo",
+      "displayName": "RelWithDebInfo",
+      "inherits": "Release",
+      "binaryDir": "${sourceDir}/cmake-build-relwithdebinfo",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "RelWithDebInfo"
         }
       }
     }
