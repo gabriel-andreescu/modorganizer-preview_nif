@@ -14,37 +14,47 @@ attribute vec3 bitangent;
 attribute vec2 texCoord;
 attribute vec4 color;
 
-varying vec2 TexCoord;
-varying vec3 LightDir;
-varying vec3 ViewDir;
+varying vec2  vTexCoord;
+varying vec3  vLightDir;
+varying vec3  vViewDir;
 
-varying vec3 N;
-varying vec3 t;
-varying vec3 b;
-varying vec3 v;
+varying vec3  vNormal;
+varying vec3  vTangent;
+varying vec3  vBitangent;
+varying vec3  vPosViewSpace;
 
-varying vec4 A;
-varying vec4 C;
-varying vec4 D;
+varying vec4  vAmbientColor;
+varying vec4  vVertexColor;
+varying vec4  vDiffuseColor;
 
-void main( void )
+void main(void)
 {
     gl_Position = mvpMatrix * vec4(position, 1.0);
-    TexCoord = texCoord;
 
-    N = normalize(normalMatrix * normal);
-    t = normalize(normalMatrix * tangent);
-    b = normalize(normalMatrix * bitangent);
-    v = vec3(modelViewMatrix * vec4(position, 1.0));
+    vTexCoord = texCoord;
 
-    mat3 tbnMatrix = mat3(b.x, t.x, N.x,
-                          b.y, t.y, N.y,
-                          b.z, t.z, N.z);
+    vec3 N = normalize(normalMatrix * normal);
+    vec3 T = normalize(normalMatrix * tangent);
+    vec3 B = normalize(normalMatrix * bitangent);
 
-    ViewDir = tbnMatrix * -v;
-    LightDir = tbnMatrix * lightDirection;
+    vec3 viewPos = (modelViewMatrix * vec4(position, 1.0)).xyz;
+    vPosViewSpace = viewPos;
 
-    A = ambientColor;
-    C = color;
-    D = diffuseColor;
+    mat3 tbnMatrix = mat3(
+    B.x, T.x, N.x,
+    B.y, T.y, N.y,
+    B.z, T.z, N.z
+    );
+
+    vViewDir = tbnMatrix * (-viewPos);
+
+    vLightDir = tbnMatrix * lightDirection;
+
+    vAmbientColor = ambientColor;
+    vDiffuseColor = diffuseColor;
+    vVertexColor  = color;
+
+    vNormal    = N;
+    vTangent   = T;
+    vBitangent = B;
 }

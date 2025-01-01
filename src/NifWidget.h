@@ -37,6 +37,7 @@ protected:
 
   void initializeGL() override;
   void paintGL() override;
+  void drawShapeList(const std::vector<OpenGLShape*>& shapes) const;
   void resizeGL(int w, int h) override;
 
 private:

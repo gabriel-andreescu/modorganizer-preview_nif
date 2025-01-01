@@ -9,29 +9,29 @@ uniform sampler2D BacklightMap;
 uniform sampler2D EnvironmentMap;
 uniform samplerCube CubeMap;
 
-uniform vec3 specColor;
+uniform vec3  specColor;
 uniform float specStrength;
 uniform float specGlossiness;
 
-uniform bool hasGlowMap;
-uniform vec3 glowColor;
+uniform bool  hasGlowMap;
+uniform vec3  glowColor;
 uniform float glowMult;
 
 uniform float alpha;
 
-uniform vec3 tintColor;
+uniform vec3  tintColor;
+uniform bool  hasTintColor;
 
-uniform bool hasHeightMap;
-uniform vec2 uvScale;
-uniform vec2 uvOffset;
+uniform bool  hasHeightMap;
+uniform vec2  uvScale;
+uniform vec2  uvOffset;
 
-uniform bool hasEmit;
-uniform bool hasSoftlight;
-uniform bool hasBacklight;
-uniform bool hasRimlight;
-uniform bool hasTintColor;
-uniform bool hasCubeMap;
-uniform bool hasEnvMask;
+uniform bool  hasEmit;
+uniform bool  hasSoftlight;
+uniform bool  hasBacklight;
+uniform bool  hasRimlight;
+uniform bool  hasCubeMap;
+uniform bool  hasEnvMask;
 
 uniform float softlight;
 uniform float rimPower;
@@ -41,17 +41,18 @@ uniform float envReflection;
 uniform mat4 modelViewMatrixInverse;
 uniform mat4 worldMatrix;
 
-varying vec2 TexCoord;
-varying vec3 LightDir;
-varying vec3 ViewDir;
+varying vec2  vTexCoord;
+varying vec3  vLightDir;
+varying vec3  vViewDir;
 
-varying vec4 A;
-varying vec4 C;
-varying vec4 D;
+varying vec3  vNormal;
+varying vec3  vTangent;
+varying vec3  vBitangent;
+varying vec3  vPosViewSpace;
 
-varying vec3 N;
-varying vec3 t;
-varying vec3 b;
+varying vec4  vAmbientColor;
+varying vec4  vVertexColor;
+varying vec4  vDiffuseColor;
 
 vec3 tonemap(vec3 x)
 {
@@ -62,119 +63,123 @@ vec3 tonemap(vec3 x)
     float _E = 0.02;
     float _F = 0.30;
 
-    return ((x*(_A*x+_C*_B)+_D*_E)/(x*(_A*x+_B)+_D*_F))-_E/_F;
+    return ((x * (_A*x + _C*_B) + _D*_E) /
+    (x * (_A*x + _B)       + _D*_F))
+    - (_E / _F);
 }
 
-vec3 toGrayscale(vec3 color)
+void main(void)
 {
-    return vec3(dot(vec3(0.3, 0.59, 0.11), color));
-}
+    vec2 offset = vTexCoord * uvScale + uvOffset;
+    vec3 E = normalize(vViewDir);
 
-void main( void )
-{
-    vec2 offset = TexCoord * uvScale + uvOffset;
-
-    vec3 E = normalize(ViewDir);
-
-    if ( hasHeightMap ) {
-        float height = texture2D( HeightMap, offset ).r;
-        offset += E.xy * (height * 0.08 - 0.04);
+    if (hasHeightMap)
+    {
+        float heightSample = texture2D(HeightMap, offset).r;
+        offset += E.xy * (heightSample * 0.08 - 0.04);
     }
 
-    vec4 baseMap = texture2D( BaseMap, offset );
-    vec4 normalMap = texture2D( NormalMap, offset );
-    vec4 glowMap = texture2D( GlowMap, offset );
+    vec4 baseMap   = texture2D(BaseMap, offset);
+    vec4 normalMap = texture2D(NormalMap, offset);
+    vec4 glowTex   = texture2D(GlowMap, offset);
 
-    vec3 normal = normalize(normalMap.rgb * 2.0 - 1.0);
+    vec3 normalTS = normalize(normalMap.rgb * 2.0 - 1.0);
 
-    vec3 L = normalize(LightDir);
-    vec3 R = reflect(-L, normal);
-    vec3 H = normalize( L + E );
+    vec3 L = normalize(vLightDir);
+    vec3 H = normalize(L + E);
 
-    float NdotL = max( dot(normal, L), 0.0 );
-    float NdotH = max( dot(normal, H), 0.0 );
-    float EdotN = max( dot(normal, E), 0.0 );
-    float NdotNegL = max( dot(normal, -L), 0.0 );
+    float NdotL    = max(dot(normalTS, L), 0.0);
+    float NdotH    = max(dot(normalTS, H), 0.0);
+    float EdotN    = max(dot(normalTS, E), 0.0);
+    float NdotNegL = max(dot(normalTS, -L), 0.0);
 
-    vec3 reflected = reflect( -E, normal );
-    vec3 reflectedVS = b * reflected.x + t * reflected.y + N * reflected.z;
-    vec3 reflectedWS = vec3( worldMatrix * (modelViewMatrixInverse * vec4( reflectedVS, 0.0 )) );
+    vec3 reflectedTS = reflect(-E, normalTS);
 
+    vec3 reflectedVS = (vBitangent * reflectedTS.x)
+    + (vTangent   * reflectedTS.y)
+    + (vNormal    * reflectedTS.z);
 
-    vec4 color;
-    vec3 albedo = baseMap.rgb * C.rgb;
-    vec3 diffuse = A.rgb + (D.rgb * NdotL);
+    vec3 reflectedWS = vec3(worldMatrix *
+    (modelViewMatrixInverse * vec4(reflectedVS, 0.0)));
 
+    vec3 albedo  = baseMap.rgb * vVertexColor.rgb;
+    vec3 diffuse = vAmbientColor.rgb + (vDiffuseColor.rgb * NdotL);
 
-    // Environment
-    if ( hasCubeMap ) {
-        vec4 cube = textureCube( CubeMap, reflectedWS );
-        cube.rgb *= envReflection;
+    if (hasCubeMap)
+    {
+        vec4 cubeSample = textureCube(CubeMap, reflectedWS);
+        cubeSample.rgb *= envReflection;
 
-        if ( hasEnvMask ) {
-            vec4 env = texture2D( EnvironmentMap, offset );
-            cube.rgb *= env.r;
-        } else {
-            cube.rgb *= normalMap.a;
+        if (hasEnvMask)
+        {
+            vec4 envMask = texture2D(EnvironmentMap, offset);
+            cubeSample.rgb *= envMask.r;
+        }
+        else
+        {
+            cubeSample.rgb *= normalMap.a;
         }
 
-
-        albedo += cube.rgb;
+        albedo += cubeSample.rgb;
     }
 
-    // Emissive & Glow
     vec3 emissive = vec3(0.0);
-    if ( hasEmit ) {
+
+    if (hasEmit)
+    {
         emissive += glowColor * glowMult;
 
-        if ( hasGlowMap ) {
-            emissive *= glowMap.rgb;
+        if (hasGlowMap)
+        {
+            emissive *= glowTex.rgb;
         }
     }
 
-    // Specular
-    vec3 spec = clamp( specColor * specStrength * normalMap.a * pow(NdotH, specGlossiness), 0.0, 1.0 );
-    spec *= D.rgb;
+    float specFactor = pow(NdotH, specGlossiness);
+    vec3 spec = clamp(specColor * specStrength * normalMap.a * specFactor, 0.0, 1.0);
+    spec *= vDiffuseColor.rgb;
 
-    vec3 backlight = vec3(0.0);
-    if ( hasBacklight ) {
-        backlight = texture2D( BacklightMap, offset ).rgb;
-        backlight *= NdotNegL;
-
-        emissive += backlight * D.rgb;
+    if (hasBacklight)
+    {
+        vec3 backTex = texture2D(BacklightMap, offset).rgb;
+        backTex *= NdotNegL;
+        emissive += backTex * vDiffuseColor.rgb;
     }
 
     vec4 mask = vec4(0.0);
-    if ( hasRimlight || hasSoftlight ) {
-        mask = texture2D( LightMask, offset );
+    if (hasRimlight || hasSoftlight)
+    {
+        mask = texture2D(LightMask, offset);
     }
 
-    vec3 rim = vec3(0.0);
-    if ( hasRimlight ) {
-        rim = mask.rgb * pow(vec3((1.0 - EdotN)), vec3(rimPower));
-        rim *= smoothstep( -0.2, 1.0, dot(-L, E) );
-
-        emissive += rim * D.rgb;
+    if (hasRimlight)
+    {
+        vec3 rim = mask.rgb * pow((1.0 - EdotN), rimPower);
+        rim *= smoothstep(-0.2, 1.0, dot(-L, E));
+        emissive += rim * vDiffuseColor.rgb;
     }
 
-    vec3 soft = vec3(0.0);
-    if ( hasSoftlight ) {
-        float wrap = (dot(normal, L) + softlight) / (1.0 + softlight);
+    if (hasSoftlight)
+    {
+        float wrap = (dot(normalTS, L) + softlight) / (1.0 + softlight);
+        vec3 soft = max(wrap, 0.0) * mask.rgb * smoothstep(1.0, 0.0, NdotL);
+        soft *= sqrt(clamp(softlight, 0.0, 1.0));
 
-        soft = max( wrap, 0.0 ) * mask.rgb * smoothstep( 1.0, 0.0, NdotL );
-        soft *= sqrt( clamp( softlight, 0.0, 1.0 ) );
-
-        emissive += soft * D.rgb;
+        emissive += soft * vDiffuseColor.rgb;
     }
 
-    if ( hasTintColor ) {
+    if (hasTintColor)
+    {
         albedo *= tintColor;
     }
 
-    color.rgb = albedo * (diffuse + emissive) + spec;
-    color.rgb = tonemap( color.rgb ) / tonemap( vec3(1.0) );
-    color.a = C.a * baseMap.a;
+    vec3 finalColor = albedo * (diffuse + emissive) + spec;
 
-    gl_FragColor = color;
-    gl_FragColor.a *= alpha;
+    float finalAlpha = vVertexColor.a * baseMap.a * alpha;
+
+    finalColor = tonemap(finalColor) / tonemap(vec3(1.0));
+
+    vec4 outColor = vec4(finalColor, finalAlpha);
+
+    gl_FragColor = outColor;
 }

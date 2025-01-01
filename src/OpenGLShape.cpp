@@ -19,9 +19,14 @@ static QOpenGLBuffer* makeVertexBuffer(const std::vector<T>* data, const GLuint 
           QOpenGLContext::currentContext());
 
       f->glEnableVertexAttribArray(attrib);
-
-      f->glVertexAttribPointer(attrib, sizeof(T) / sizeof(float), GL_FLOAT, GL_FALSE,
-                               sizeof(T), nullptr);
+      f->glVertexAttribPointer(
+          attrib,
+          sizeof(T) / sizeof(float),
+          GL_FLOAT,
+          GL_FALSE,
+          sizeof(T),
+          nullptr
+          );
 
       buffer->release();
     }
@@ -33,7 +38,9 @@ static QOpenGLBuffer* makeVertexBuffer(const std::vector<T>* data, const GLuint 
 void validateShapeGeometry(nifly::NiShape* shape)
 {
   if (const auto geomData = shape->GetGeomData()) {
-    if (!shape->HasUVs()) { shape->SetUVs(true); }
+    if (!shape->HasUVs()) {
+      shape->SetUVs(true);
+    }
     if (!shape->HasNormals()) {
       shape->SetNormals(true);
       geomData->RecalcNormals();
@@ -42,7 +49,9 @@ void validateShapeGeometry(nifly::NiShape* shape)
       shape->SetTangents(true);
       geomData->CalcTangentSpace();
     }
-    if (!shape->HasVertexColors()) { shape->SetVertexColors(true); }
+    if (!shape->HasVertexColors()) {
+      shape->SetVertexColors(true);
+    }
   }
 }
 
@@ -111,7 +120,6 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
 
   indexBuffer = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
   if (indexBuffer->create() && indexBuffer->bind()) {
-
     if (std::vector<nifly::Triangle> tris; niShape->GetTriangles(tris)) {
       indexBuffer->allocate(tris.data(), tris.size() * sizeof(nifly::Triangle));
     }
@@ -179,7 +187,6 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
     envReflection  = shader->GetEnvironmentMapScale();
 
     if (const auto alphaProperty = nifFile->GetAlphaProperty(niShape)) {
-
       NiAlphaPropertyFlags flags = alphaProperty->flags;
 
       alphaBlendEnable = flags.isAlphaBlendEnabled();
@@ -212,10 +219,11 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
       }
     }
 
-    if (const auto effectShader =
-        dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
+    if (const auto effectShader = dynamic_cast<nifly::BSEffectShaderProperty*>(
+      shader)) {
       hasWeaponBlood = effectShader->shaderFlags2 & SLSF2::WeaponBlood;
     }
+
   } else {
     textures[BaseMap]   = textureManager->getWhiteTexture();
     textures[NormalMap] = textureManager->getFlatNormalTexture();
@@ -311,6 +319,27 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
 
+  if (alphaTestEnable) {
+    f->glEnable(GL_ALPHA_TEST);
+    f->glAlphaFunc(alphaTestMode, alphaThreshold);
+
+    f->glDisable(GL_BLEND);
+  } else if (alphaBlendEnable) {
+    f->glDisable(GL_ALPHA_TEST);
+    f->glEnable(GL_BLEND);
+    f->glBlendFunc(srcBlendMode, dstBlendMode);
+  } else {
+    f->glDisable(GL_ALPHA_TEST);
+    f->glDisable(GL_BLEND);
+  }
+
+  if (doubleSided) {
+    f->glDisable(GL_CULL_FACE);
+  } else {
+    f->glEnable(GL_CULL_FACE);
+    f->glCullFace(GL_BACK);
+  }
+
   for (std::size_t i = 0; i < ATTRIB_COUNT; i++) {
     if (vertexBuffers[i]) {
       f->glEnableVertexAttribArray(i);
@@ -326,27 +355,6 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
     f->glDepthFunc(GL_LEQUAL);
   } else {
     f->glDisable(GL_DEPTH_TEST);
-  }
-
-  if (doubleSided) {
-    f->glDisable(GL_CULL_FACE);
-  } else {
-    f->glEnable(GL_CULL_FACE);
-    f->glCullFace(GL_BACK);
-  }
-
-  if (alphaBlendEnable) {
-    f->glEnable(GL_BLEND);
-    f->glBlendFunc(srcBlendMode, dstBlendMode);
-  } else {
-    f->glDisable(GL_BLEND);
-  }
-
-  if (alphaTestEnable) {
-    f->glEnable(GL_ALPHA_TEST);
-    f->glAlphaFunc(alphaTestMode, alphaThreshold);
-  } else {
-    f->glDisable(GL_ALPHA_TEST);
   }
 }
 
@@ -369,7 +377,9 @@ QMatrix4x4 OpenGLShape::convertTransform(const nifly::MatTransform& transform)
 {
   auto mat = transform.ToMatrix();
   return QMatrix4x4{
-      mat[0], mat[1], mat[2], mat[3], mat[4], mat[5], mat[6], mat[7],
-      mat[8], mat[9], mat[10], mat[11], mat[12], mat[13], mat[14], mat[15],
+      mat[0], mat[1], mat[2], mat[3],
+      mat[4], mat[5], mat[6], mat[7],
+      mat[8], mat[9], mat[10], mat[11],
+      mat[12], mat[13], mat[14], mat[15],
   };
 }
