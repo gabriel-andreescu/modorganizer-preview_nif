@@ -4,7 +4,7 @@
 <context>
     <name>NifWidget</name>
     <message>
-        <location filename="NifWidget.cpp" line="87"/>
+        <location filename="NifWidget.cpp" line="88"/>
         <source>OpenGL debug message: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -25,7 +25,7 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="TextureManager.cpp" line="119"/>
+        <location filename="TextureManager.cpp" line="121"/>
         <source>Failed to interface with managed game plugin</source>
         <translation type="unfinished"></translation>
     </message>

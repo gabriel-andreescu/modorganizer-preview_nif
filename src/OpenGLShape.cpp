@@ -30,6 +30,22 @@ static QOpenGLBuffer* makeVertexBuffer(const std::vector<T>* data, const GLuint 
   return buffer;
 }
 
+void validateShapeGeometry(nifly::NiShape* shape)
+{
+  if (const auto geomData = shape->GetGeomData()) {
+    if (!shape->HasUVs()) { shape->SetUVs(true); }
+    if (!shape->HasNormals()) {
+      shape->SetNormals(true);
+      geomData->RecalcNormals();
+    }
+    if (!shape->HasTangents() || geomData->tangents.empty()) {
+      shape->SetTangents(true);
+      geomData->CalcTangentSpace();
+    }
+    if (!shape->HasVertexColors()) { shape->SetVertexColors(true); }
+  }
+}
+
 OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
                          TextureManager* textureManager)
 {
@@ -67,28 +83,7 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
   f->glVertexAttrib2f(AttribTexCoord, 0.0f, 0.0f);
   f->glVertexAttrib4f(AttribColor, 1.0f, 1.0f, 1.0f, 1.0f);
 
-  // AMD GPU fails to render without vertex data
-  if (!niShape->HasNormals()) {
-    niShape->SetNormals(true);
-    if (const auto geomData = niShape->GetGeomData()) {
-      geomData->RecalcNormals();
-    }
-  }
-
-  if (!niShape->HasTangents()) {
-    niShape->SetTangents(true);
-    if (const auto geomData = niShape->GetGeomData()) {
-      geomData->CalcTangentSpace();
-    }
-  }
-
-  if (!niShape->HasUVs()) {
-    niShape->SetUVs(true);
-  }
-
-  if (!niShape->HasVertexColors()) {
-    niShape->SetVertexColors(true);
-  }
+  validateShapeGeometry(niShape);
 
   if (const auto verts = nifFile->GetVertsForShape(niShape)) {
     vertexBuffers[AttribPosition] = makeVertexBuffer(verts, AttribPosition);
@@ -218,7 +213,7 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
     }
 
     if (const auto effectShader =
-            dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
+        dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
       hasWeaponBlood = effectShader->shaderFlags2 & SLSF2::WeaponBlood;
     }
   } else {
@@ -374,7 +369,7 @@ QMatrix4x4 OpenGLShape::convertTransform(const nifly::MatTransform& transform)
 {
   auto mat = transform.ToMatrix();
   return QMatrix4x4{
-      mat[0], mat[1], mat[2],  mat[3],  mat[4],  mat[5],  mat[6],  mat[7],
+      mat[0], mat[1], mat[2], mat[3], mat[4], mat[5], mat[6], mat[7],
       mat[8], mat[9], mat[10], mat[11], mat[12], mat[13], mat[14], mat[15],
   };
 }
