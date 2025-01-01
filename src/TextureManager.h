@@ -27,6 +27,10 @@ public:
 
 private:
   [[nodiscard]] QOpenGLTexture* loadTexture(const QString& texturePath) const;
+  QOpenGLTexture* tryLoadTextureFromMods(const QString& texturePath) const;
+  QOpenGLTexture* tryLoadTextureFromGame(const QString& texturePath) const;
+  static QOpenGLTexture* loadTextureFromBSA(const QString& bsaPath,
+                                            const QString& texturePath);
   static QOpenGLTexture* makeTexture(const gli::texture& texture);
   static QOpenGLTexture* makeSolidColor(QVector4D color);
 
