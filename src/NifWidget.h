@@ -52,6 +52,7 @@ private:
   std::unique_ptr<ShaderManager> m_ShaderManager;
 
   QOpenGLDebugLogger* m_Logger = nullptr;
+  QOpenGLContext* m_Context    = nullptr;
 
   std::vector<OpenGLShape> m_GLShapes;
 
@@ -63,4 +64,6 @@ private:
   float m_ViewportWidth{};
   float m_ViewportHeight{};
   QPointF m_MousePos;
+
+  static void messageLogged(const QOpenGLDebugMessage& message);
 };

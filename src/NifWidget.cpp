@@ -11,17 +11,20 @@ using OpenGLFunctions = QOpenGLFunctions_2_1;
 NifWidget::NifWidget(std::shared_ptr<nifly::NifFile> nifFile,
                      MOBase::IOrganizer* organizer, const bool debugContext,
                      QWidget* parent, const Qt::WindowFlags f)
-    : QOpenGLWidget(parent, f), m_NifFile{std::move(nifFile)}, m_MOInfo{organizer},
-      m_TextureManager{std::make_unique<TextureManager>(organizer)},
-      m_ShaderManager{std::make_unique<ShaderManager>(organizer)}
+  : QOpenGLWidget(parent, f), m_NifFile{std::move(nifFile)}, m_MOInfo{organizer},
+    m_TextureManager{std::make_unique<TextureManager>(organizer)},
+    m_ShaderManager{std::make_unique<ShaderManager>(organizer)}
 {
   QSurfaceFormat format;
+  format.setDepthBufferSize(24);
   format.setVersion(2, 1);
   format.setProfile(QSurfaceFormat::CoreProfile);
 
   if (debugContext) {
     format.setOption(QSurfaceFormat::DebugContext);
-    m_Logger = new QOpenGLDebugLogger(this);
+    m_Context = new QOpenGLContext();
+    m_Context->setFormat(format);
+    m_Context->create();
   }
 
   setFormat(format);
@@ -47,7 +50,8 @@ void NifWidget::mouseMoveEvent(QMouseEvent* event)
   case Qt::LeftButton: {
     m_Camera->rotate(static_cast<float>(delta.x() * 0.5f),
                      static_cast<float>(delta.y() * 0.5f));
-  } break;
+  }
+  break;
   case Qt::MiddleButton: {
     const float viewDX = m_Camera->distance() / m_ViewportWidth;
     const float viewDY = m_Camera->distance() / m_ViewportHeight;
@@ -60,14 +64,16 @@ void NifWidget::mouseMoveEvent(QMouseEvent* event)
                                    static_cast<float>(delta.y() * viewDY), 0.0f, 0.0f);
 
     m_Camera->pan(QVector3D(pan));
-  } break;
+  }
+  break;
 
   case Qt::RightButton: {
     if (event->modifiers() == Qt::ShiftModifier) {
       m_Camera->zoomDistance(static_cast<float>(delta.y() * 0.1f));
     }
-  } break;
-  default:;
+  }
+  break;
+  default: ;
   }
 }
 
@@ -77,16 +83,23 @@ void NifWidget::wheelEvent(QWheelEvent* event)
                        (static_cast<float>(event->angleDelta().y()) / 120.0f * 0.38f));
 }
 
+void NifWidget::messageLogged(const QOpenGLDebugMessage& message)
+{
+  const auto msg = tr("OpenGL debug message: %1").arg(message.message());
+  qDebug(qUtf8Printable(msg));
+}
+
 void NifWidget::initializeGL()
 {
-  if (m_Logger) {
-    m_Logger->initialize();
-    connect(m_Logger, &QOpenGLDebugLogger::messageLogged, this,
-            [](const QOpenGLDebugMessage& debugMessage) {
-              const auto msg =
-                  tr("OpenGL debug message: %1").arg(debugMessage.message());
-              qDebug(qUtf8Printable(msg));
-            });
+  if (m_Context) {
+    m_Logger = new QOpenGLDebugLogger(m_Context);
+    if (m_Logger->initialize()) {
+      m_Logger->enableMessages();
+      qDebug() << "GL_DEBUG Debug Logger" << m_Logger;
+      connect(m_Logger, &QOpenGLDebugLogger::messageLogged, this,
+              &NifWidget::messageLogged);
+      m_Logger->startLogging();
+    }
   }
 
   auto shapes = m_NifFile->GetShapes();
@@ -107,7 +120,7 @@ void NifWidget::initializeGL()
     for (const auto& shape : shapes) {
 
       if (auto bounds = GetBoundingSphere(m_NifFile.get(), shape);
-          bounds.radius > largestRadius) {
+        bounds.radius > largestRadius) {
         largestRadius = bounds.radius;
 
         m_Camera->setDistance(bounds.radius * 2.4f);
@@ -150,7 +163,7 @@ void NifWidget::paintGL()
 
   for (const auto* shape : opaqueShapes) {
     if (const auto program = m_ShaderManager->getProgram(shape->shaderType);
-        program && program->isLinked() && program->bind()) {
+      program && program->isLinked() && program->bind()) {
       auto binder = QOpenGLVertexArrayObject::Binder(shape->vertexArray);
 
       auto& modelMatrix    = shape->modelMatrix;
@@ -183,7 +196,7 @@ void NifWidget::paintGL()
 
   for (const auto* shape : transparentShapes) {
     if (const auto program = m_ShaderManager->getProgram(shape->shaderType);
-        program && program->isLinked() && program->bind()) {
+      program && program->isLinked() && program->bind()) {
       auto binder = QOpenGLVertexArrayObject::Binder(shape->vertexArray);
 
       auto& modelMatrix    = shape->modelMatrix;
@@ -217,7 +230,7 @@ void NifWidget::paintGL()
 void NifWidget::resizeGL(const int w, const int h)
 {
   QMatrix4x4 m;
-  m.perspective(40.0f, static_cast<float>(w) / static_cast<float>(h), 0.1f, 10000.0f);
+  m.perspective(40.0f, static_cast<float>(w) / static_cast<float>(h), 10.0f, 10000.0f);
 
   m_ProjectionMatrix = m;
   m_ViewportWidth    = static_cast<float>(w);
