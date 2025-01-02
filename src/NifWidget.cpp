@@ -154,44 +154,24 @@ void NifWidget::paintGL()
   std::vector<OpenGLShape*> transparentShapes;
 
   for (auto& shape : m_GLShapes) {
-    const bool isCutout  = (shape.alphaTestEnable && !shape.alphaBlendEnable);
-    const bool isBlended = shape.alphaBlendEnable && !isCutout;
-
-    if (isCutout) {
-      opaqueShapes.push_back(&shape);
-    } else if (isBlended || shape.alpha < 1.0f) {
+    if (shape.alpha < 1.0f || shape.alphaBlendEnable) {
       transparentShapes.push_back(&shape);
     } else {
       opaqueShapes.push_back(&shape);
     }
   }
 
-  f->glDepthMask(GL_TRUE);
-  drawShapeList(opaqueShapes);
-
-  f->glDepthMask(GL_FALSE);
-  drawShapeList(transparentShapes);
-
-  f->glDepthMask(GL_TRUE);
-}
-
-void NifWidget::drawShapeList(const std::vector<OpenGLShape*>& shapes) const
-{
-  const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
-      QOpenGLContext::currentContext());
-
-  for (const auto* shape : shapes) {
-    if (!shape)
-      continue;
-
-    if (QOpenGLShaderProgram* program = m_ShaderManager->getProgram(shape->shaderType);
+  for (const auto* shape : opaqueShapes) {
+    if (const auto program = m_ShaderManager->getProgram(shape->shaderType);
       program && program->isLinked() && program->bind()) {
       auto binder = QOpenGLVertexArrayObject::Binder(shape->vertexArray);
 
-      QMatrix4x4 modelViewMatrix = m_ViewMatrix * shape->modelMatrix;
-      QMatrix4x4 mvpMatrix       = m_ProjectionMatrix * modelViewMatrix;
+      auto& modelMatrix    = shape->modelMatrix;
+      auto modelViewMatrix = m_ViewMatrix * modelMatrix;
+      auto mvpMatrix       = m_ProjectionMatrix * modelViewMatrix;
 
-      program->setUniformValue("worldMatrix", shape->modelMatrix);
+      program->setUniformValue("worldMatrix", modelMatrix);
+      program->setUniformValue("viewMatrix", m_ViewMatrix);
       program->setUniformValue("modelViewMatrix", modelViewMatrix);
       program->setUniformValue("modelViewMatrixInverse", modelViewMatrix.inverted());
       program->setUniformValue("normalMatrix", modelViewMatrix.normalMatrix());
@@ -205,15 +185,52 @@ void NifWidget::drawShapeList(const std::vector<OpenGLShape*>& shapes) const
         f->glDrawElements(GL_TRIANGLES, shape->elements, GL_UNSIGNED_SHORT, nullptr);
         shape->indexBuffer->release();
       }
+
       program->release();
     }
   }
+
+  f->glEnable(GL_BLEND);
+  f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  f->glDepthMask(GL_FALSE);
+
+  for (const auto* shape : transparentShapes) {
+    if (const auto program = m_ShaderManager->getProgram(shape->shaderType);
+      program && program->isLinked() && program->bind()) {
+      auto binder = QOpenGLVertexArrayObject::Binder(shape->vertexArray);
+
+      auto& modelMatrix    = shape->modelMatrix;
+      auto modelViewMatrix = m_ViewMatrix * modelMatrix;
+      auto mvpMatrix       = m_ProjectionMatrix * modelViewMatrix;
+
+      program->setUniformValue("worldMatrix", modelMatrix);
+      program->setUniformValue("viewMatrix", m_ViewMatrix);
+      program->setUniformValue("modelViewMatrix", modelViewMatrix);
+      program->setUniformValue("modelViewMatrixInverse", modelViewMatrix.inverted());
+      program->setUniformValue("normalMatrix", modelViewMatrix.normalMatrix());
+      program->setUniformValue("mvpMatrix", mvpMatrix);
+      program->setUniformValue("lightDirection", QVector3D(0, 0, 1));
+
+      shape->setupShaders(program);
+
+      if (shape->indexBuffer && shape->indexBuffer->isCreated()) {
+        shape->indexBuffer->bind();
+        f->glDrawElements(GL_TRIANGLES, shape->elements, GL_UNSIGNED_SHORT, nullptr);
+        shape->indexBuffer->release();
+      }
+
+      program->release();
+    }
+  }
+
+  f->glDepthMask(GL_TRUE);
+  f->glDisable(GL_BLEND);
 }
 
 void NifWidget::resizeGL(const int w, const int h)
 {
   QMatrix4x4 m;
-  m.perspective(40.0f, static_cast<float>(w) / static_cast<float>(h), 10.0f, 11000.0f);
+  m.perspective(40.0f, static_cast<float>(w) / static_cast<float>(h), 10.0f, 10000.0f);
 
   m_ProjectionMatrix = m;
   m_ViewportWidth    = static_cast<float>(w);

@@ -1,19 +1,19 @@
 #include "ShaderManager.h"
+
 #include <QOpenGLContext>
 
-ShaderManager::ShaderManager(MOBase::IOrganizer* moInfo)
-  : m_MOInfo{moInfo}
-{
-}
+ShaderManager::ShaderManager(MOBase::IOrganizer* moInfo) : m_MOInfo{moInfo} {}
 
 QOpenGLShaderProgram* ShaderManager::getProgram(const ShaderType type)
 {
   if (type == None) {
     return nullptr;
   }
+
   if (m_Programs[type] == nullptr) {
     m_Programs[type] = loadProgram(type);
   }
+
   return m_Programs[type];
 }
 
@@ -55,17 +55,9 @@ QOpenGLShaderProgram* ShaderManager::loadProgram(const ShaderType type)
   const auto vertexShader   = QString("%1/shaders/%2").arg(dataPath, vert);
   const auto fragmentShader = QString("%1/shaders/%2").arg(dataPath, frag);
 
-  auto* program = new QOpenGLShaderProgram(QOpenGLContext::currentContext());
-  if (!program->addShaderFromSourceFile(QOpenGLShader::Vertex, vertexShader)) {
-    qDebug() << "Vertex shader compile error: " << program->log();
-    delete program;
-    return nullptr;
-  }
-  if (!program->addShaderFromSourceFile(QOpenGLShader::Fragment, fragmentShader)) {
-    qDebug() << "Fragment shader compile error: " << program->log();
-    delete program;
-    return nullptr;
-  }
+  const auto program = new QOpenGLShaderProgram(QOpenGLContext::currentContext());
+  program->addShaderFromSourceFile(QOpenGLShader::Vertex, vertexShader);
+  program->addShaderFromSourceFile(QOpenGLShader::Fragment, fragmentShader);
 
   program->bindAttributeLocation("position", AttribPosition);
   program->bindAttributeLocation("normal", AttribNormal);
@@ -74,10 +66,7 @@ QOpenGLShaderProgram* ShaderManager::loadProgram(const ShaderType type)
   program->bindAttributeLocation("texCoord", AttribTexCoord);
   program->bindAttributeLocation("color", AttribColor);
 
-  if (!program->link()) {
-    qDebug() << "Shader program link error: " << program->log();
-    delete program;
-    return nullptr;
-  }
+  program->link();
+
   return program;
 }
