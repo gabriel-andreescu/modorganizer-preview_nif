@@ -41,6 +41,7 @@ protected:
 
 private:
   void cleanup();
+  void setProjectionMatrix();
   void updateCamera();
 
   inline static QWeakPointer<Camera> SharedCamera;

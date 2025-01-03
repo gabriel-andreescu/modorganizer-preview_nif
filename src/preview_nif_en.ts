@@ -4,7 +4,7 @@
 <context>
     <name>NifWidget</name>
     <message>
-        <location filename="NifWidget.cpp" line="88"/>
+        <location filename="NifWidget.cpp" line="87"/>
         <source>OpenGL debug message: %1</source>
         <translation type="unfinished"></translation>
     </message>
