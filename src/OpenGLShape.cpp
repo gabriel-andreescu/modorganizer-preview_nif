@@ -106,6 +106,15 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
   }
 
   if (std::vector<nifly::Color4> colors; nifFile->GetColorsForShape(niShape, colors)) {
+    if (const auto bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
+      if (!(bslsp->shaderFlags1 & SLSF1::VertexAlpha) ||
+          bslsp->shaderFlags2 & SLSF2::TreeAnim) {
+        for (auto& color : colors) {
+          color.a = 1.0f;
+        }
+      }
+    }
+
     vertexBuffers[AttribColor] = makeVertexBuffer(&colors, AttribColor);
   }
 
@@ -276,6 +285,7 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   program->setUniformValue("diffuseColor", QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
 
   program->setUniformValue("alpha", alpha);
+  program->setUniformValue("alphaThreshold", alphaThreshold);
   program->setUniformValue("tintColor", tintColor);
   program->setUniformValue("uvScale", uvScale);
   program->setUniformValue("uvOffset", uvOffset);
@@ -336,6 +346,7 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   }
 
   if (alphaBlendEnable) {
+    f->glDisable(GL_POLYGON_OFFSET_FILL);
     f->glEnable(GL_BLEND);
     f->glBlendFunc(srcBlendMode, dstBlendMode);
   } else {
@@ -343,9 +354,6 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   }
 
   if (alphaTestEnable) {
-    f->glEnable(GL_ALPHA_TEST);
-    f->glAlphaFunc(alphaTestMode, alphaThreshold);
-  } else {
     f->glDisable(GL_ALPHA_TEST);
   }
 }

@@ -193,8 +193,6 @@ void NifWidget::paintGL()
   }
 
   f->glDisable(GL_POLYGON_OFFSET_FILL);
-  f->glEnable(GL_BLEND);
-  f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   f->glDepthMask(GL_FALSE);
 
   for (const auto* shape : transparentShapes) {
@@ -227,7 +225,6 @@ void NifWidget::paintGL()
   }
 
   f->glDepthMask(GL_TRUE);
-  f->glDisable(GL_BLEND);
 }
 
 void NifWidget::resizeGL(const int w, const int h)
