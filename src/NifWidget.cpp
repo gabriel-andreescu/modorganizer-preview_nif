@@ -153,12 +153,15 @@ void NifWidget::paintGL()
   std::vector<OpenGLShape*> transparentShapes;
 
   for (auto& shape : m_GLShapes) {
-    if (shape.alpha < 1.0f || shape.alphaBlendEnable) {
+    if (shape.alpha < 1.0f || shape.alphaBlendEnable || shape.alphaTestEnable) {
       transparentShapes.push_back(&shape);
     } else {
       opaqueShapes.push_back(&shape);
     }
   }
+
+  f->glEnable(GL_POLYGON_OFFSET_FILL);
+  f->glPolygonOffset(1.0f, 2.0f);
 
   for (const auto* shape : opaqueShapes) {
     if (const auto program = m_ShaderManager->getProgram(shape->shaderType);
@@ -189,6 +192,7 @@ void NifWidget::paintGL()
     }
   }
 
+  f->glDisable(GL_POLYGON_OFFSET_FILL);
   f->glEnable(GL_BLEND);
   f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   f->glDepthMask(GL_FALSE);
