@@ -16,7 +16,6 @@ NifWidget::NifWidget(std::shared_ptr<nifly::NifFile> nifFile,
     m_ShaderManager{std::make_unique<ShaderManager>(organizer)}
 {
   QSurfaceFormat format;
-  format.setDepthBufferSize(24);
   format.setVersion(2, 1);
   format.setProfile(QSurfaceFormat::CoreProfile);
 
@@ -229,12 +228,10 @@ void NifWidget::paintGL()
 
 void NifWidget::resizeGL(const int w, const int h)
 {
-  QMatrix4x4 m;
-  m.perspective(40.0f, static_cast<float>(w) / static_cast<float>(h), 10.0f, 10000.0f);
+  m_ViewportWidth  = static_cast<float>(w);
+  m_ViewportHeight = static_cast<float>(h);
 
-  m_ProjectionMatrix = m;
-  m_ViewportWidth    = static_cast<float>(w);
-  m_ViewportHeight   = static_cast<float>(h);
+  setProjectionMatrix();
 }
 
 void NifWidget::cleanup()
@@ -249,6 +246,14 @@ void NifWidget::cleanup()
   m_TextureManager->cleanup();
 }
 
+void NifWidget::setProjectionMatrix()
+{
+  QMatrix4x4 m;
+  m.perspective(40.0f, m_ViewportWidth / m_ViewportHeight,
+                m_Camera->nearPlane(), m_Camera->farPlane());
+  m_ProjectionMatrix = m;
+}
+
 void NifWidget::updateCamera()
 {
   QMatrix4x4 m;
@@ -260,4 +265,6 @@ void NifWidget::updateCamera()
       -1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1,
   };
   m_ViewMatrix = m;
+
+  setProjectionMatrix();
 }

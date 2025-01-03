@@ -4,7 +4,9 @@
 
 void Camera::setDistance(const float distance)
 {
-  m_Distance = qBound(MinDistance, distance, MaxDistance);
+  m_Distance  = std::max(10.0f, distance);
+  m_NearPlane = qBound(10.0f, distance - 100.0f, 250.0f);
+  m_FarPlane  = std::max(10000.0f, distance * 2.0f);
   cameraMoved();
 }
 
@@ -30,16 +32,14 @@ void Camera::rotate(const float yaw, const float pitch)
 
 void Camera::zoomDistance(const float distance)
 {
-  m_Distance += distance;
-  m_Distance = qBound(MinDistance, m_Distance, MaxDistance);
+  setDistance(m_Distance + distance);
 
   cameraMoved();
 }
 
 void Camera::zoomFactor(const float factor)
 {
-  m_Distance *= factor;
-  m_Distance = qBound(MinDistance, m_Distance, MaxDistance);
+  setDistance(m_Distance * factor);
 
   cameraMoved();
 }
