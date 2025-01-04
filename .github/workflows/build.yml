@@ -15,14 +15,13 @@ jobs:
         with:
           mo2-third-parties: libbsarch
           mo2-dependencies: DirectXTex cmake_common uibase
+      - name: Set version env
+        run: |
+          sed -n 's/.*return\s*{\([0-9]\+\),\s*\([0-9]\+\),\s*\([0-9]\+\),\s*[0-9]\+,.*/version=\1.\2.\3/p' ./build/modorganizer_super/${{ github.event.repository.name }}/src/PreviewNif.cpp >> $GITHUB_ENV
       - name: Upload Build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: preview_nif
+          name: preview_nif_${{ env.name }}
           path: |
             ./build/modorganizer_super/${{ github.event.repository.name }}/vsbuild/src/RelWithDebInfo/preview_nif.dll
-      - uses: actions/upload-artifact@v3
-        with:
-          name: preview_nif
-          path: |
             ./build/modorganizer_super/${{ github.event.repository.name }}/**/data/shaders/*
