@@ -46,7 +46,7 @@ jobs:
         run: |
           mkdir -p upload
           cp ./build/modorganizer_super/${{ github.event.repository.name }}/vsbuild/src/RelWithDebInfo/preview_nif.dll ./upload/preview_nif.dll
-          cp -r ./build/modorganizer_super/${{ github.event.repository.name }}/**/data ./upload/data
+          cp -r ./build/modorganizer_super/${{ github.event.repository.name }}/data ./upload/data
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
