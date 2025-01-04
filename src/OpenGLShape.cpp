@@ -53,23 +53,27 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
       QOpenGLContext::currentContext());
 
   const auto shader = nifFile->GetShader(niShape);
-  if (const auto& version = nifFile->GetHeader().GetVersion(); version.IsFO4()) {
-    if (shader && shader->HasType<nifly::BSEffectShaderProperty>()) {
-      shaderType = ShaderManager::FO4EffectShader;
-    } else {
-      shaderType = ShaderManager::FO4Default;
-    }
-  } else {
-    if (shader && shader->HasType<nifly::BSEffectShaderProperty>()) {
+
+  if (const auto& version = nifFile->GetHeader().GetVersion();
+    shader && version.IsFO4()) {
+    shaderType = shader->HasType<nifly::BSEffectShaderProperty>()
+                   ? ShaderManager::FO4EffectShader
+                   : ShaderManager::FO4Default;
+  } else if (shader) {
+    if (shader->HasType<nifly::BSEffectShaderProperty>()) {
       shaderType = ShaderManager::SKEffectShader;
+    } else if (shader->IsModelSpace()) {
+      shaderType = ShaderManager::SKMSN;
+    } else if (shader->GetShaderType() == nifly::BSLSP_MULTILAYERPARALLAX) {
+      shaderType = ShaderManager::SKMultilayer;
+    } else if (
+      const auto bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)
+    ) {
+      shaderType = (bslsp->shaderFlags2 & SLSF2::PBR)
+                     ? ShaderManager::SKPBR
+                     : ShaderManager::SKDefault;
     } else {
-      if (shader && shader->IsModelSpace()) {
-        shaderType = ShaderManager::SKMSN;
-      } else if (shader && shader->GetShaderType() == nifly::BSLSP_MULTILAYERPARALLAX) {
-        shaderType = ShaderManager::SKMultilayer;
-      } else {
-        shaderType = ShaderManager::SKDefault;
-      }
+      shaderType = ShaderManager::SKDefault;
     }
   }
 
@@ -122,10 +126,17 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
   if (indexBuffer->create() && indexBuffer->bind()) {
 
     if (std::vector<nifly::Triangle> tris; niShape->GetTriangles(tris)) {
-      indexBuffer->allocate(tris.data(), tris.size() * sizeof(nifly::Triangle));
+      indexBuffer->allocate(tris.data(),
+                            static_cast<int>(tris.size() * sizeof(nifly::Triangle)));
     }
 
-    elements = niShape->GetNumTriangles() * 3;
+    const uint32_t iElements = niShape->GetNumTriangles() * 3;
+    elements                 = static_cast<GLsizei>(
+      std::min(
+          iElements,
+          static_cast<uint32_t>(std::numeric_limits<GLsizei>::max())
+          )
+    );
     indexBuffer->release();
   }
 
@@ -189,7 +200,7 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
 
     if (const auto alphaProperty = nifFile->GetAlphaProperty(niShape)) {
 
-      NiAlphaPropertyFlags flags = alphaProperty->flags;
+      const NiAlphaPropertyFlags flags = alphaProperty->flags;
 
       alphaBlendEnable = flags.isAlphaBlendEnabled();
       srcBlendMode     = flags.sourceBlendingFactor();
