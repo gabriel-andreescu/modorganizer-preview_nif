@@ -17,7 +17,7 @@ jobs:
           mo2-dependencies: DirectXTex cmake_common uibase
       - name: Set version env
         run: |
-          sed -n "s/.*return\s*{\([0-9]\+\),\s*\([0-9]\+\),\s*\([0-9]\+\),\s*[0-9]\+,.*/version=\1.\2.\3/p" ./build/modorganizer_super/${{ github.event.repository.name }}/src/PreviewNif.cpp >> $GITHUB_ENV
+          sed -n 's/.*return[[:space:]]*{\([0-9]\+\),[[:space:]]*\([0-9]\+\),[[:space:]]*\([0-9]\+\),[[:space:]]*[0-9]\+,.*/version=\1.\2.\3/p' ./build/modorganizer_super/${{ github.event.repository.name }}/src/PreviewNif.cpp >> $GITHUB_ENV
       - name: Upload Build
         uses: actions/upload-artifact@v4
         with:
