@@ -15,14 +15,37 @@ jobs:
         with:
           mo2-third-parties: libbsarch
           mo2-dependencies: DirectXTex cmake_common uibase
+
+      - name: Extract version and set as environment variable
+        id: get_version
+        shell: pwsh
+        run: |
+          $filePath = "./build/modorganizer_super/${{ github.event.repository.name }}/src/PreviewNif.cpp"
+          
+          if (-Not (Test-Path -Path $filePath)) {
+              Write-Error "File not found: $filePath"
+              exit 1
+          }
+          
+          $versionMatch = Select-String -Path $filePath -Pattern 'return\s*{\s*(\d+),\s*(\d+),\s*(\d+),'
+          
+          if ($versionMatch) {
+              $major = $versionMatch.Matches[0].Groups[1].Value
+              $minor = $versionMatch.Matches[0].Groups[2].Value
+              $subminor = $versionMatch.Matches[0].Groups[3].Value
+
+              $version = "$major.$minor.$subminor"
+
+              Write-Output "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          } else {
+              Write-Error "Version information not found."
+              exit 1
+          }
+
       - name: Upload Build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: preview_nif
+          name: preview_nif_${{ env.VERSION }}
           path: |
             ./build/modorganizer_super/${{ github.event.repository.name }}/vsbuild/src/RelWithDebInfo/preview_nif.dll
-      - uses: actions/upload-artifact@v3
-        with:
-          name: preview_nif
-          path: |
             ./build/modorganizer_super/${{ github.event.repository.name }}/**/data/shaders/*

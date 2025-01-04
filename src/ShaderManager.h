@@ -5,12 +5,12 @@
 
 enum VertexAttrib
 {
-  AttribPosition  = 0,
-  AttribNormal    = 1,
-  AttribTangent   = 2,
+  AttribPosition = 0,
+  AttribNormal = 1,
+  AttribTangent = 2,
   AttribBitangent = 3,
-  AttribTexCoord  = 4,
-  AttribColor     = 5,
+  AttribTexCoord = 4,
+  AttribColor = 5,
 
   ATTRIB_COUNT,
 };
@@ -25,6 +25,7 @@ public:
     SKMSN,
     SKMultilayer,
     SKEffectShader,
+    SKPBR,
     FO4Default,
     FO4EffectShader,
 

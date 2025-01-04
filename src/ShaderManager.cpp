@@ -2,7 +2,9 @@
 
 #include <QOpenGLContext>
 
-ShaderManager::ShaderManager(MOBase::IOrganizer* moInfo) : m_MOInfo{moInfo} {}
+ShaderManager::ShaderManager(MOBase::IOrganizer* moInfo) : m_MOInfo{moInfo}
+{
+}
 
 QOpenGLShaderProgram* ShaderManager::getProgram(const ShaderType type)
 {
@@ -38,6 +40,10 @@ QOpenGLShaderProgram* ShaderManager::loadProgram(const ShaderType type)
   case SKEffectShader:
     vert = "sk_effectshader.vert";
     frag = "sk_effectshader.frag";
+    break;
+  case SKPBR:
+    vert = "default.vert";
+    frag = "sk_pbr.frag";
     break;
   case FO4Default:
     vert = "default.vert";
