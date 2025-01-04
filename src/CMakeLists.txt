@@ -7,3 +7,6 @@ mo2_configure_plugin(
         PRIVATE_DEPENDS Qt::OpenGLWidgets libbsarch uibase
 )
 mo2_install_target(preview_nif)
+
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../data"
+        DESTINATION bin/plugins)
