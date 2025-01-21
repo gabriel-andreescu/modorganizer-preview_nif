@@ -165,7 +165,7 @@ void main(void)
         albedo *= tintColor;
     }
 
-    color.rgb = albedo * (diffuse + emissive) + spec;
+    color.rgb = albedo * (diffuse + emissive);
     color.rgb = tonemap(color.rgb) / tonemap(vec3(1.0));
     color.a = C.a * baseMap.a;
 

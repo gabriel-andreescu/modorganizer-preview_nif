@@ -75,6 +75,8 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
     } else {
       shaderType = ShaderManager::SKDefault;
     }
+  } else {
+    shaderType = ShaderManager::None;
   }
 
   vertexArray = new QOpenGLVertexArrayObject();

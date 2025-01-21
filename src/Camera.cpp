@@ -5,7 +5,7 @@
 void Camera::setDistance(const float distance)
 {
   m_Distance  = std::max(10.0f, distance);
-  m_NearPlane = qBound(10.0f, distance - 100.0f, 250.0f);
+  m_NearPlane = qBound(10.0f, distance - 5000.0f, 250.0f);
   m_FarPlane  = std::max(10000.0f, distance * 2.0f);
   cameraMoved();
 }

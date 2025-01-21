@@ -43,9 +43,13 @@ jobs:
           }
 
       - name: Upload Build
+        run: |
+          mkdir -p upload
+          cp ./build/modorganizer_super/${{ github.event.repository.name }}/vsbuild/src/RelWithDebInfo/preview_nif.dll ./upload/preview_nif.dll
+          cp -r ./build/modorganizer_super/${{ github.event.repository.name }}/data ./upload/data
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: preview_nif_${{ env.VERSION }}
-          path: |
-            ./build/modorganizer_super/${{ github.event.repository.name }}/vsbuild/src/RelWithDebInfo/preview_nif.dll
-            ./build/modorganizer_super/${{ github.event.repository.name }}/**/data/shaders/*
+          name: preview_nif-${{ env.VERSION }}
+          path: ./upload
