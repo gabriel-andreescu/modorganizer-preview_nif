@@ -7,6 +7,22 @@
   "NexusUrl": "https://www.nexusmods.com/skyrimspecialedition/mods/137741",
   "Versions": [
     {
+      "Version": "0.4.3.0b",
+      "Released": "2025-01-21",
+      "MinSupport": "2.5.2",
+      "MaxSupport": "2.5.2",
+      "MinWorking": "2.5.2",
+      "MaxWorking": "",
+      "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.4.3/preview_nif_0.4.3.zip",
+      "PluginPath": [
+        "preview_nif.dll",
+        "data"
+      ],
+      "LocalePath": [],
+      "DataPath": [],
+      "ReleaseNotes": []
+    },
+    {
       "Version": "0.4.0.0b",
       "Released": "2025-01-04",
       "MinSupport": "2.5.2",
