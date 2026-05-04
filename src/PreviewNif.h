@@ -2,7 +2,7 @@
 
 #include <NifFile.hpp>
 #include <QLabel>
-#include <ipluginpreview.h>
+#include <uibase/ipluginpreview.h>
 
 class PreviewNif final : public MOBase::IPluginPreview
 {

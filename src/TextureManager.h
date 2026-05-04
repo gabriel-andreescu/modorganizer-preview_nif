@@ -2,7 +2,7 @@
 
 #include <QOpenGLTexture>
 #include <gli/gli.hpp>
-#include <imoinfo.h>
+#include <uibase/imoinfo.h>
 #include <map>
 
 class TextureManager

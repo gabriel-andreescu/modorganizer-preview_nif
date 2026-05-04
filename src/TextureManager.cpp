@@ -1,10 +1,10 @@
 #include "TextureManager.h"
 #include "PreviewNif.h"
 
-#include <dataarchives.h>
-#include <igamefeatures.h>
-#include <iplugingame.h>
-#include <ifiletree.h>
+#include <uibase/game_features/dataarchives.h>
+#include <uibase/game_features/igamefeatures.h>
+#include <uibase/ifiletree.h>
+#include <uibase/iplugingame.h>
 
 #include <gli/gli.hpp>
 #include <libbsarch.h>
