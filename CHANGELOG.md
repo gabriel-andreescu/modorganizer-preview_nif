@@ -14,6 +14,8 @@
 
 - Fixes preview crashes and loading failures for valid luminance DDS parallax
   height maps, which now load for parallax height-map preview.
+- Fixes previews for alpha-blended and effect-shader meshes whose transparent
+  areas could incorrectly hide other geometry.
 
 ## 0.4.4 - 2026-05-09
 

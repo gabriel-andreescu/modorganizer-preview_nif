@@ -729,10 +729,12 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
       alphaThreshold = static_cast<float>(alphaProperty->threshold) / 255.0f;
     }
 
-    if (const auto bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
-      zBufferTest  = bslsp->shaderFlags1 & SLSF1::ZBufferTest;
-      zBufferWrite = bslsp->shaderFlags2 & SLSF2::ZBufferWrite;
+    if (const auto bsShader = dynamic_cast<nifly::BSShaderProperty*>(shader)) {
+      zBufferTest  = bsShader->shaderFlags1 & SLSF1::ZBufferTest;
+      zBufferWrite = bsShader->shaderFlags2 & SLSF2::ZBufferWrite;
+    }
 
+    if (const auto bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
       const auto bslspType = bslsp->GetShaderType();
       if (bslspType == nifly::BSLSP_SKINTINT || bslspType == nifly::BSLSP_FACE) {
         tintColor    = convertVector3(bslsp->skinTintColor);
@@ -820,6 +822,8 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
 
   program->setUniformValue("alpha", alpha);
   program->setUniformValue("alphaThreshold", alphaThreshold);
+  program->setUniformValue(
+      "alphaTestMode", static_cast<GLint>(alphaTestEnable ? alphaTestMode : GL_ALWAYS));
   program->setUniformValue("tintColor", tintColor);
   program->setUniformValue("uvScale", uvScale);
   program->setUniformValue("uvOffset", uvOffset);
@@ -879,10 +883,14 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
     f->glCullFace(GL_BACK);
   }
 
-  if (alphaBlendEnable) {
+  if (usesBlendedPass()) {
     f->glDisable(GL_POLYGON_OFFSET_FILL);
     f->glEnable(GL_BLEND);
-    f->glBlendFunc(srcBlendMode, dstBlendMode);
+    if (alphaBlendEnable) {
+      f->glBlendFunc(srcBlendMode, dstBlendMode);
+    } else {
+      f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
   } else {
     f->glDisable(GL_BLEND);
   }
@@ -890,6 +898,16 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   if (alphaTestEnable) {
     f->glDisable(GL_ALPHA_TEST);
   }
+}
+
+bool OpenGLShape::usesAlphaPass() const
+{
+  return usesBlendedPass() || alphaTestEnable;
+}
+
+bool OpenGLShape::usesBlendedPass() const
+{
+  return alphaBlendEnable || alpha < 1.0f;
 }
 
 QVector2D OpenGLShape::convertVector2(nifly::Vector2 vector)

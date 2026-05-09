@@ -195,11 +195,8 @@ void NifWidget::paintGL()
   if (!f) {
     return;
   }
+  f->glDepthMask(GL_TRUE);
   f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  const auto isTransparent = [](const OpenGLShape& shape) {
-    return shape.alpha < 1.0f || shape.alphaBlendEnable || shape.alphaTestEnable;
-  };
 
   const auto drawShape = [&](const OpenGLShape& shape) {
     if (const auto program = m_ShaderManager->getProgram(shape.shaderType);
@@ -233,17 +230,16 @@ void NifWidget::paintGL()
   f->glEnable(GL_POLYGON_OFFSET_FILL);
   f->glPolygonOffset(1.0f, 2.0f);
 
-  for (auto& shape : m_GLShapes) {
-    if (!isTransparent(shape)) {
+  for (const auto& shape : m_GLShapes) {
+    if (!shape.usesAlphaPass()) {
       drawShape(shape);
     }
   }
 
   f->glDisable(GL_POLYGON_OFFSET_FILL);
-  f->glDepthMask(GL_FALSE);
 
-  for (auto& shape : m_GLShapes) {
-    if (isTransparent(shape)) {
+  for (const auto& shape : m_GLShapes) {
+    if (shape.usesAlphaPass()) {
       drawShape(shape);
     }
   }

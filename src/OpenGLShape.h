@@ -19,6 +19,8 @@ public:
 
   void destroy();
   void setupShaders(QOpenGLShaderProgram* program) const;
+  [[nodiscard]] bool usesAlphaPass() const;
+  [[nodiscard]] bool usesBlendedPass() const;
 
   static QVector2D convertVector2(nifly::Vector2 vector);
   static QVector3D convertVector3(nifly::Vector3 vector);

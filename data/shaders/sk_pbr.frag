@@ -19,6 +19,7 @@ uniform float glowMult;
 
 uniform float alpha;
 uniform float alphaThreshold;
+uniform int alphaTestMode;
 
 uniform vec3 tintColor;
 
@@ -69,6 +70,33 @@ vec3 tonemap(vec3 x)
 vec3 toGrayscale(vec3 color)
 {
     return vec3(dot(vec3(0.3, 0.59, 0.11), color));
+}
+
+bool passesAlphaTest(float value)
+{
+    if (alphaTestMode == 512) {
+        return false;
+    }
+    if (alphaTestMode == 513) {
+        return value < alphaThreshold;
+    }
+    if (alphaTestMode == 514) {
+        return value == alphaThreshold;
+    }
+    if (alphaTestMode == 515) {
+        return value <= alphaThreshold;
+    }
+    if (alphaTestMode == 516) {
+        return value > alphaThreshold;
+    }
+    if (alphaTestMode == 517) {
+        return value != alphaThreshold;
+    }
+    if (alphaTestMode == 518) {
+        return value >= alphaThreshold;
+    }
+
+    return true;
 }
 
 void main(void)
@@ -169,7 +197,7 @@ void main(void)
     color.rgb = tonemap(color.rgb) / tonemap(vec3(1.0));
     color.a = C.a * baseMap.a;
 
-    if (color.a < alphaThreshold) {
+    if (!passesAlphaTest(color.a)) {
         discard;
     }
 
