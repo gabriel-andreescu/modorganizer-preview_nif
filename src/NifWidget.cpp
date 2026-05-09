@@ -19,9 +19,11 @@ QSharedPointer<Camera> makeCamera()
 
 NifWidget::NifWidget(std::shared_ptr<nifly::NifFile> nifFile,
                      MOBase::IOrganizer* organizer, QSharedPointer<Camera> camera,
-                     const bool debugContext, QWidget* parent, const Qt::WindowFlags f)
+                     TextureSourceProvider textureSource, const bool debugContext,
+                     QWidget* parent, const Qt::WindowFlags f)
     : QOpenGLWidget(parent, f), m_NifFile{std::move(nifFile)}, m_MOInfo{organizer},
-      m_TextureManager{std::make_unique<TextureManager>(organizer)},
+      m_TextureManager{
+          std::make_unique<TextureManager>(organizer, std::move(textureSource))},
       m_ShaderManager{std::make_unique<ShaderManager>(organizer)}
 {
   setCamera(std::move(camera));

@@ -4,6 +4,7 @@
 #include "OpenGLShape.h"
 #include "ShaderManager.h"
 #include "TextureManager.h"
+#include "TextureSource.h"
 
 #include <QOpenGLDebugLogger>
 #include <QOpenGLShaderProgram>
@@ -21,7 +22,8 @@ class NifWidget final : public QOpenGLWidget
 
 public:
   NifWidget(std::shared_ptr<nifly::NifFile> nifFile, MOBase::IOrganizer* organizer,
-            QSharedPointer<Camera> camera = {}, bool debugContext = false,
+            QSharedPointer<Camera> camera       = {},
+            TextureSourceProvider textureSource = {}, bool debugContext = false,
             QWidget* parent = nullptr, Qt::WindowFlags f = {0});
 
   ~NifWidget() override;

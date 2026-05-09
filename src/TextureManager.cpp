@@ -31,6 +31,7 @@
 #include <limits>
 #include <memory>
 #include <ranges>
+#include <utility>
 
 namespace
 {
@@ -60,6 +61,12 @@ const MOBase::IProfile* currentProfile(MOBase::IOrganizer* organizer)
 bool sameMask(const glm::u32vec4& left, const glm::u32vec4& right)
 {
   return glm::all(glm::equal(left, right));
+}
+
+bool isArchiveName(const QString& name)
+{
+  return name.endsWith(".bsa", Qt::CaseInsensitive) ||
+         name.endsWith(".ba2", Qt::CaseInsensitive);
 }
 
 bool checkedAdd(const std::size_t left, const std::size_t right, std::size_t& result)
@@ -571,7 +578,10 @@ void PreviewTexture::bind(const int textureUnit) const
   }
 }
 
-TextureManager::TextureManager(MOBase::IOrganizer* organizer) : m_MOInfo{organizer} {}
+TextureManager::TextureManager(MOBase::IOrganizer* organizer,
+                               TextureSourceProvider textureSource)
+    : m_MOInfo{organizer}, m_TextureSource{std::move(textureSource)}
+{}
 
 void TextureManager::cleanup()
 {
@@ -660,6 +670,15 @@ PreviewTexture* TextureManager::getFlatNormalTexture()
 
 PreviewTexture* TextureManager::loadTexture(const QString& texturePath) const
 {
+  if (const auto texture = tryLoadTextureFromSource(texturePath)) {
+    return texture;
+  }
+
+  return loadTextureAuto(texturePath);
+}
+
+PreviewTexture* TextureManager::loadTextureAuto(const QString& texturePath) const
+{
   if (texturePath.isEmpty()) {
     return nullptr;
   }
@@ -706,6 +725,66 @@ PreviewTexture* TextureManager::loadTexture(const QString& texturePath) const
   return nullptr;
 }
 
+PreviewTexture*
+TextureManager::tryLoadTextureFromSource(const QString& texturePath) const
+{
+  if (m_TextureSource.kind == TextureSourceProviderKind::Auto ||
+      !textureProviderCoversPath(m_TextureSource, texturePath)) {
+    return nullptr;
+  }
+
+  switch (m_TextureSource.kind) {
+  case TextureSourceProviderKind::Mod:
+  case TextureSourceProviderKind::GameData: {
+    if (!m_TextureSource.sourcePath.isEmpty()) {
+      const auto realPath =
+          QDir(m_TextureSource.sourcePath)
+              .absoluteFilePath(QDir::cleanPath(normalizeTextureDataPath(texturePath)));
+      if (QFileInfo::exists(realPath) && QFileInfo(realPath).isFile()) {
+        if (const auto texture = loadLooseTexture(realPath)) {
+          return texture;
+        }
+      }
+    }
+
+    return tryLoadTextureFromArchives(m_TextureSource.archivePaths, texturePath);
+  }
+  case TextureSourceProviderKind::Auto:
+    return nullptr;
+  }
+
+  return nullptr;
+}
+
+PreviewTexture* TextureManager::loadLooseTexture(const QString& path) const
+{
+  try {
+    auto texture = loadDdsFileIfValid(path);
+    if (texture.empty()) {
+      qWarning("Failed to decode loose DDS '%s': invalid or unsupported DDS",
+               qUtf8Printable(path));
+      return nullptr;
+    }
+    return makeTexture(texture);
+  } catch (const std::exception& e) {
+    qWarning("Failed to decode loose DDS '%s': %s", qUtf8Printable(path), e.what());
+    return nullptr;
+  }
+}
+
+PreviewTexture*
+TextureManager::tryLoadTextureFromArchives(const QStringList& archivePaths,
+                                           const QString& texturePath) const
+{
+  for (const auto& archivePath : archivePaths) {
+    if (const auto texture = loadTextureFromBSA(archivePath, texturePath)) {
+      return texture;
+    }
+  }
+
+  return nullptr;
+}
+
 PreviewTexture* TextureManager::tryLoadTextureFromMods(const QString& texturePath) const
 {
   if (!m_MOInfo) {
@@ -725,7 +804,7 @@ PreviewTexture* TextureManager::tryLoadTextureFromMods(const QString& texturePat
         if (!fileInfo) {
           continue;
         }
-        if (!fileInfo->name().endsWith(".bsa", Qt::CaseInsensitive)) {
+        if (!isArchiveName(fileInfo->name())) {
           continue;
         }
 

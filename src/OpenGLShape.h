@@ -2,6 +2,7 @@
 
 #include "ShaderManager.h"
 #include "TextureManager.h"
+#include "TextureSlots.h"
 
 #include <Geometry.hpp>
 #include <NifFile.hpp>
@@ -9,22 +10,6 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
-
-enum TextureSlot
-{
-  BaseMap         = 0,
-  NormalMap       = 1,
-  GlowMap         = 2,
-  LightMask       = 2,
-  HeightMap       = 3,
-  DetailMask      = 3,
-  EnvironmentMap  = 4,
-  EnvironmentMask = 5,
-  TintMask        = 6,
-  InnerMap        = 6,
-  BacklightMap    = 7,
-  SpecularMap     = 7,
-};
 
 struct OpenGLShape
 {
@@ -49,7 +34,7 @@ public:
   QOpenGLBuffer* indexBuffer = nullptr;
   GLsizei elements           = 0;
 
-  std::array<PreviewTexture*, 13> textures{nullptr};
+  std::array<PreviewTexture*, TextureSlotCount> textures{nullptr};
 
   QMatrix4x4 modelMatrix;
   nifly::BoundingSphere bounds;

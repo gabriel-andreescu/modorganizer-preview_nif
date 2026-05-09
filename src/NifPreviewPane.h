@@ -2,9 +2,12 @@
 
 #include "Camera.h"
 #include "NifPreviewSource.h"
+#include "TextureSource.h"
 
 #include <QSharedPointer>
 #include <QWidget>
+
+#include <memory>
 
 class QComboBox;
 class QLabel;
@@ -41,24 +44,39 @@ protected:
 private:
   void selectProvider(int index);
   void selectRelativeProvider(int offset);
+  void selectTextureSource(int index);
+  void selectRelativeTextureSource(int offset);
   void updateControls();
   void updateSourceComboWidth();
+  void setTextureSources(TextureSourceSet sourceSet);
+  void updateTextureControls();
+  void updateTextureSourceComboWidth();
   void loadCurrentProvider();
+  void reloadCurrentNifWidget();
   void setViewWidget(QWidget* widget);
+  [[nodiscard]] TextureSourceProvider currentTextureSourceProvider() const;
 
   MOBase::IOrganizer* m_Organizer = nullptr;
   QVector<NifPreviewProvider> m_Providers;
   int m_CurrentProviderIndex = 0;
   bool m_UpdatingControls    = false;
+  TextureSourceSet m_TextureSourceSet;
+  int m_CurrentTextureSourceIndex = 0;
+  bool m_UpdatingTextureControls  = false;
 
   QSharedPointer<Camera> m_Camera;
   QMetaObject::Connection m_CameraConnection;
-  QLabel* m_TitleLabel      = nullptr;
-  QToolButton* m_PrevButton = nullptr;
-  QComboBox* m_SourceCombo  = nullptr;
-  QToolButton* m_NextButton = nullptr;
-  QLabel* m_StatsLabel      = nullptr;
-  QVBoxLayout* m_ViewLayout = nullptr;
-  QWidget* m_ViewWidget     = nullptr;
-  NifWidget* m_NifWidget    = nullptr;
+  QLabel* m_TitleLabel             = nullptr;
+  QToolButton* m_PrevButton        = nullptr;
+  QComboBox* m_SourceCombo         = nullptr;
+  QToolButton* m_NextButton        = nullptr;
+  QLabel* m_TextureLabel           = nullptr;
+  QToolButton* m_PrevTextureButton = nullptr;
+  QComboBox* m_TextureSourceCombo  = nullptr;
+  QToolButton* m_NextTextureButton = nullptr;
+  QLabel* m_StatsLabel             = nullptr;
+  QVBoxLayout* m_ViewLayout        = nullptr;
+  QWidget* m_ViewWidget            = nullptr;
+  NifWidget* m_NifWidget           = nullptr;
+  std::shared_ptr<nifly::NifFile> m_CurrentNifFile;
 };

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "TextureSource.h"
+
 #include <QOpenGLTexture>
 #include <gli/gli.hpp>
 #include <map>
@@ -27,7 +29,8 @@ private:
 class TextureManager
 {
 public:
-  explicit TextureManager(MOBase::IOrganizer* organizer);
+  explicit TextureManager(MOBase::IOrganizer* organizer,
+                          TextureSourceProvider textureSource = {});
   ~TextureManager()                                = default;
   TextureManager(const TextureManager&)            = delete;
   TextureManager(TextureManager&&)                 = delete;
@@ -46,6 +49,11 @@ public:
 
 private:
   [[nodiscard]] PreviewTexture* loadTexture(const QString& texturePath) const;
+  PreviewTexture* loadTextureAuto(const QString& texturePath) const;
+  PreviewTexture* tryLoadTextureFromSource(const QString& texturePath) const;
+  PreviewTexture* loadLooseTexture(const QString& path) const;
+  PreviewTexture* tryLoadTextureFromArchives(const QStringList& archivePaths,
+                                             const QString& texturePath) const;
   PreviewTexture* tryLoadTextureFromMods(const QString& texturePath) const;
   PreviewTexture* tryLoadTextureFromGame(const QString& texturePath) const;
   static PreviewTexture* loadTextureFromBSA(const QString& bsaPath,
@@ -56,6 +64,7 @@ private:
   QString resolvePath(const MOBase::IPluginGame* game, const QString& path) const;
 
   MOBase::IOrganizer* m_MOInfo;
+  TextureSourceProvider m_TextureSource;
   PreviewTexture* m_ErrorTexture      = nullptr;
   PreviewTexture* m_BlackTexture      = nullptr;
   PreviewTexture* m_WhiteTexture      = nullptr;
