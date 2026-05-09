@@ -47,10 +47,12 @@ public:
 
   float paletteScale;
 
-  bool hasGlowMap   = false;
-  bool hasHeightMap = false;
-  QColor glowColor  = QColorConstants::White;
-  float glowMult    = 1.0f;
+  bool hasGlowMap       = false;
+  bool hasHeightMap     = false;
+  bool hasSourceTexture = false;
+  bool hasGreyscaleMap  = false;
+  QColor glowColor      = QColorConstants::White;
+  float glowMult        = 1.0f;
 
   float alpha = 1.0f;
   QVector3D tintColor{1.0f, 1.0f, 1.0f};
@@ -64,6 +66,9 @@ public:
   bool hasRimlight    = false;
   bool hasTintColor   = false;
   bool hasWeaponBlood = false;
+  bool greyscaleAlpha = false;
+  bool greyscaleColor = false;
+  bool useFalloff     = false;
 
   bool doubleSided     = false;
   float softlight      = 0.3f;
@@ -71,6 +76,8 @@ public:
   float rimPower       = 2.0f;
   float subsurfaceRolloff{};
   float envReflection = 1.0f;
+  QVector4D falloffParams{1.0f, 1.0f, 0.0f, 0.0f};
+  float falloffDepth = 0.0f;
 
   QVector2D innerScale;
   float innerThickness;

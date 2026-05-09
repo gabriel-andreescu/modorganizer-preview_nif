@@ -41,7 +41,10 @@ vec4 colorLookup( float x, float y ) {
 
 void main( void )
 {
-    vec4 baseMap = texture2D( BaseMap, TexCoord.st * uvScale + uvOffset );
+    vec4 baseMap = vec4( 1.0 );
+    if ( hasSourceTexture ) {
+        baseMap = texture2D( BaseMap, TexCoord.st * uvScale + uvOffset );
+    }
 
     vec4 color;
 
@@ -81,7 +84,7 @@ void main( void )
     color.rgb *= C.rgb * glowColor.rgb;
     color.a *= C.a * falloff * alphaMult;
 
-    if ( greyscaleColor ) {
+    if ( hasGreyscaleMap && greyscaleColor ) {
         // Only Red emissive channel is used
         float emRGB = glowColor.r;
 
@@ -90,7 +93,7 @@ void main( void )
         color.rgb = luG.rgb;
     }
 
-    if ( greyscaleAlpha ) {
+    if ( hasGreyscaleMap && greyscaleAlpha ) {
         vec4 luA = colorLookup( baseMap.a, C.a * falloff * alphaMult );
 
         color.a = luA.a;

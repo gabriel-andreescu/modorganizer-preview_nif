@@ -111,13 +111,13 @@ void main( void )
     color.rgb = baseMap.rgb * C.rgb * baseColor.rgb;
     color.a = alphaMult * C.a * baseMap.a;
 
-    if ( greyscaleColor ) {
+    if ( hasGreyscaleMap && greyscaleColor ) {
         vec4 luG = colorLookup( texture2D( BaseMap, offset ).g, baseColor.r * C.r * falloff );
 
         color.rgb = luG.rgb;
     }
 
-    if ( greyscaleAlpha ) {
+    if ( hasGreyscaleMap && greyscaleAlpha ) {
         vec4 luA = colorLookup( texture2D( BaseMap, offset ).a, color.a );
 
         color.a = luA.a;

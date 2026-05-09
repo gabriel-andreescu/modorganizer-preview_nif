@@ -16,6 +16,9 @@
   height maps, which now load for parallax height-map preview.
 - Fixes previews for alpha-blended and effect-shader meshes whose transparent
   areas could incorrectly hide other geometry.
+- Fixes effect-shader previews that ignored direct source and greyscale
+  textures, causing embers, glow, fire, and similar effect surfaces to render
+  black.
 
 ## 0.4.4 - 2026-05-09
 

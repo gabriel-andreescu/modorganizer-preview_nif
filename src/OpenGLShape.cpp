@@ -18,6 +18,24 @@ namespace
 {
 constexpr float MinSkinWeight = 0.000001f;
 
+bool usesEffectShader(const ShaderManager::ShaderType shaderType)
+{
+  return shaderType == ShaderManager::SKEffectShader ||
+         shaderType == ShaderManager::FO4EffectShader;
+}
+
+QVector3D colorRgb(const QColor& color)
+{
+  return {static_cast<float>(color.redF()), static_cast<float>(color.greenF()),
+          static_cast<float>(color.blueF())};
+}
+
+QVector4D colorRgba(const QColor& color)
+{
+  return {static_cast<float>(color.redF()), static_cast<float>(color.greenF()),
+          static_cast<float>(color.blueF()), static_cast<float>(color.alphaF())};
+}
+
 struct BoneTransform
 {
   nifly::MatTransform transform;
@@ -472,6 +490,20 @@ bool tryBuildSkinnedGeometry(nifly::NifFile* nifFile, nifly::NiShape* shape,
   return true;
 }
 
+PreviewTexture* loadEffectTexture(TextureManager* textureManager,
+                                  const std::string& texturePath)
+{
+  if (texturePath.empty()) {
+    return textureManager->getWhiteTexture();
+  }
+
+  if (auto* texture = textureManager->getTexture(texturePath)) {
+    return texture;
+  }
+
+  return textureManager->getErrorTexture();
+}
+
 RenderGeometry prepareRenderGeometry(nifly::NifFile* nifFile, nifly::NiShape* shape)
 {
   RenderGeometry geometry;
@@ -645,7 +677,17 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
   }
 
   if (shader) {
-    if (shader->HasTextureSet()) {
+    if (const auto effectShader =
+            dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
+      const auto sourceTexture    = effectShader->sourceTexture.get();
+      const auto greyscaleTexture = effectShader->greyscaleTexture.get();
+
+      hasSourceTexture = !sourceTexture.empty();
+      hasGreyscaleMap  = !greyscaleTexture.empty();
+
+      textures[BaseMap]      = loadEffectTexture(textureManager, sourceTexture);
+      textures[GreyscaleMap] = loadEffectTexture(textureManager, greyscaleTexture);
+    } else if (shader->HasTextureSet()) {
       const auto textureSetRef = shader->TextureSetRef();
       const auto textureSet    = nifFile->GetHeader().GetBlock(textureSetRef);
 
@@ -760,6 +802,13 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
     if (const auto effectShader =
             dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
       hasWeaponBlood = effectShader->shaderFlags2 & SLSF2::WeaponBlood;
+      greyscaleAlpha = effectShader->shaderFlags1 & SLSF1::GreyscaleToPaletteAlpha;
+      greyscaleColor = effectShader->shaderFlags1 & SLSF1::GreyscaleToPaletteColor;
+      useFalloff     = effectShader->shaderFlags1 & SLSF1::UseFalloff;
+      falloffParams  = QVector4D(
+          effectShader->falloffStartAngle, effectShader->falloffStopAngle,
+          effectShader->falloffStartOpacity, effectShader->falloffStopOpacity);
+      falloffDepth = effectShader->softFalloffDepth;
     }
   } else {
     textures[BaseMap]   = textureManager->getWhiteTexture();
@@ -794,6 +843,7 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   program->setUniformValue("BaseMap", BaseMap + 1);
   program->setUniformValue("NormalMap", NormalMap + 1);
   program->setUniformValue("GlowMap", GlowMap + 1);
+  program->setUniformValue("GreyscaleMap", GreyscaleMap + 1);
   program->setUniformValue("LightMask", LightMask + 1);
   program->setUniformValue("hasGlowMap", hasGlowMap && textures[GlowMap] != nullptr);
   program->setUniformValue("HeightMap", HeightMap + 1);
@@ -833,6 +883,12 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   program->setUniformValue("fresnelPower", fresnelPower);
 
   program->setUniformValue("paletteScale", paletteScale);
+  if (usesEffectShader(shaderType)) {
+    program->setUniformValue("glowColor", colorRgba(glowColor));
+  } else {
+    program->setUniformValue("glowColor", colorRgb(glowColor));
+  }
+  program->setUniformValue("glowMult", glowMult);
 
   program->setUniformValue("hasEmit", hasEmit);
   program->setUniformValue("hasSoftlight", hasSoftlight);
@@ -840,6 +896,15 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   program->setUniformValue("hasRimlight", hasRimlight);
   program->setUniformValue("hasTintColor", hasTintColor);
   program->setUniformValue("hasWeaponBlood", hasWeaponBlood);
+  program->setUniformValue("hasSourceTexture",
+                           hasSourceTexture && textures[BaseMap] != nullptr);
+  program->setUniformValue("hasGreyscaleMap",
+                           hasGreyscaleMap && textures[GreyscaleMap] != nullptr);
+  program->setUniformValue("greyscaleAlpha", greyscaleAlpha);
+  program->setUniformValue("greyscaleColor", greyscaleColor);
+  program->setUniformValue("useFalloff", useFalloff);
+  program->setUniformValue("falloffParams", falloffParams);
+  program->setUniformValue("falloffDepth", falloffDepth);
 
   program->setUniformValue("softlight", softlight);
   program->setUniformValue("backlightPower", backlightPower);

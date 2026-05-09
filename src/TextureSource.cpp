@@ -234,6 +234,9 @@ QString textureSlotName(const nifly::NiShader* shader, const std::size_t slot)
   case TextureSlot::GlowMap:
     return shader && shader->HasGlowmap() ? QObject::tr("Glow") : QObject::tr("Light");
   case TextureSlot::HeightMap:
+    if (dynamic_cast<const nifly::BSEffectShaderProperty*>(shader)) {
+      return QObject::tr("Greyscale");
+    }
     if (const auto bslsp =
             dynamic_cast<const nifly::BSLightingShaderProperty*>(shader)) {
       const auto shaderType = bslsp->GetShaderType();
@@ -262,6 +265,21 @@ QString textureSlotName(const nifly::NiShader* shader, const std::size_t slot)
   }
 }
 
+void appendTextureReference(QVector<TextureReference>& references,
+                            QSet<QString>& seenPaths, const nifly::NiShader* shader,
+                            const int slot, const QString& texturePath)
+{
+  const auto path = normalizeTextureDataPath(texturePath);
+  const auto key  = textureDataPathKey(path);
+  if (path.isEmpty() || seenPaths.contains(key)) {
+    return;
+  }
+
+  seenPaths.insert(key);
+  references.push_back(
+      {slot, textureSlotName(shader, static_cast<std::size_t>(slot)), path, key});
+}
+
 QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile)
 {
   QVector<TextureReference> references;
@@ -276,7 +294,20 @@ QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile)
     }
 
     const auto shader = nifFile->GetShader(shape);
-    if (!shader || !shader->HasTextureSet()) {
+    if (!shader) {
+      continue;
+    }
+
+    if (const auto effectShader =
+            dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
+      appendTextureReference(references, seenPaths, shader, TextureSlot::BaseMap,
+                             QString::fromStdString(effectShader->sourceTexture.get()));
+      appendTextureReference(
+          references, seenPaths, shader, TextureSlot::GreyscaleMap,
+          QString::fromStdString(effectShader->greyscaleTexture.get()));
+    }
+
+    if (!shader->HasTextureSet()) {
       continue;
     }
 
@@ -288,16 +319,10 @@ QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile)
     const auto textureCount =
         std::min<std::size_t>(textureSet->textures.size(), TextureSlotCount);
     for (std::size_t i = 0; i < textureCount; i++) {
-      const auto path = normalizeTextureDataPath(QString::fromStdString(
-          textureSet->textures[static_cast<std::uint32_t>(i)].get()));
-      const auto key  = textureDataPathKey(path);
-      if (path.isEmpty() || seenPaths.contains(key)) {
-        continue;
-      }
-
-      seenPaths.insert(key);
-      references.push_back(
-          {static_cast<int>(i), textureSlotName(shader, i), path, key});
+      appendTextureReference(
+          references, seenPaths, shader, static_cast<int>(i),
+          QString::fromStdString(
+              textureSet->textures[static_cast<std::uint32_t>(i)].get()));
     }
   }
 

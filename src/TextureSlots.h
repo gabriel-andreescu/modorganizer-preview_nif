@@ -8,6 +8,7 @@ enum TextureSlot
   NormalMap       = 1,
   GlowMap         = 2,
   LightMask       = 2,
+  GreyscaleMap    = 3,
   HeightMap       = 3,
   DetailMask      = 3,
   EnvironmentMap  = 4,
