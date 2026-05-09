@@ -1,10 +1,12 @@
 #include "NifWidget.h"
 #include "NifExtensions.h"
 
+#include <QDebug>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions_2_1>
 #include <QOpenGLVersionFunctionsFactory>
 #include <QWheelEvent>
+#include <exception>
 #include <utility>
 using OpenGLFunctions = QOpenGLFunctions_2_1;
 
@@ -103,11 +105,20 @@ void NifWidget::initializeGL()
 
   auto shapes = m_NifFile->GetShapes();
   for (auto& shape : shapes) {
+    if (!shape) {
+      continue;
+    }
     if (shape->flags & TriShape::Hidden) {
       continue;
     }
 
-    m_GLShapes.emplace_back(m_NifFile.get(), shape, m_TextureManager.get());
+    try {
+      m_GLShapes.emplace_back(m_NifFile.get(), shape, m_TextureManager.get());
+    } catch (const std::exception& e) {
+      qWarning("Failed to prepare NIF shape for preview: %s", e.what());
+    } catch (...) {
+      qWarning("Failed to prepare NIF shape for preview: unknown exception");
+    }
   }
 
   m_Camera = SharedCamera;
@@ -117,6 +128,10 @@ void NifWidget::initializeGL()
 
     float largestRadius = 0.0f;
     for (const auto& shape : shapes) {
+
+      if (!shape) {
+        continue;
+      }
 
       if (auto bounds = GetBoundingSphere(m_NifFile.get(), shape);
         bounds.radius > largestRadius) {
@@ -137,6 +152,10 @@ void NifWidget::initializeGL()
 
   const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
+  if (!f) {
+    qWarning("NIF preview could not initialize OpenGL 2.1 functions");
+    return;
+  }
 
   f->glEnable(GL_DEPTH_TEST);
   f->glDepthFunc(GL_LEQUAL);
@@ -147,28 +166,21 @@ void NifWidget::paintGL()
 {
   const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
+  if (!f) {
+    return;
+  }
   f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  std::vector<OpenGLShape*> opaqueShapes;
-  std::vector<OpenGLShape*> transparentShapes;
+  const auto isTransparent = [](const OpenGLShape& shape) {
+    return shape.alpha < 1.0f || shape.alphaBlendEnable || shape.alphaTestEnable;
+  };
 
-  for (auto& shape : m_GLShapes) {
-    if (shape.alpha < 1.0f || shape.alphaBlendEnable || shape.alphaTestEnable) {
-      transparentShapes.push_back(&shape);
-    } else {
-      opaqueShapes.push_back(&shape);
-    }
-  }
-
-  f->glEnable(GL_POLYGON_OFFSET_FILL);
-  f->glPolygonOffset(1.0f, 2.0f);
-
-  for (const auto* shape : opaqueShapes) {
-    if (const auto program = m_ShaderManager->getProgram(shape->shaderType);
+  const auto drawShape = [&](OpenGLShape& shape) {
+    if (const auto program = m_ShaderManager->getProgram(shape.shaderType);
       program && program->isLinked() && program->bind()) {
-      auto binder = QOpenGLVertexArrayObject::Binder(shape->vertexArray);
+      auto binder = QOpenGLVertexArrayObject::Binder(shape.vertexArray);
 
-      auto& modelMatrix    = shape->modelMatrix;
+      auto& modelMatrix    = shape.modelMatrix;
       auto modelViewMatrix = m_ViewMatrix * modelMatrix;
       auto mvpMatrix       = m_ProjectionMatrix * modelViewMatrix;
 
@@ -180,47 +192,33 @@ void NifWidget::paintGL()
       program->setUniformValue("mvpMatrix", mvpMatrix);
       program->setUniformValue("lightDirection", QVector3D(0, 0, 1));
 
-      shape->setupShaders(program);
+      shape.setupShaders(program);
 
-      if (shape->indexBuffer && shape->indexBuffer->isCreated()) {
-        shape->indexBuffer->bind();
-        f->glDrawElements(GL_TRIANGLES, shape->elements, GL_UNSIGNED_SHORT, nullptr);
-        shape->indexBuffer->release();
+      if (shape.indexBuffer && shape.indexBuffer->isCreated()) {
+        shape.indexBuffer->bind();
+        f->glDrawElements(GL_TRIANGLES, shape.elements, GL_UNSIGNED_SHORT, nullptr);
+        shape.indexBuffer->release();
       }
 
       program->release();
+    }
+  };
+
+  f->glEnable(GL_POLYGON_OFFSET_FILL);
+  f->glPolygonOffset(1.0f, 2.0f);
+
+  for (auto& shape : m_GLShapes) {
+    if (!isTransparent(shape)) {
+      drawShape(shape);
     }
   }
 
   f->glDisable(GL_POLYGON_OFFSET_FILL);
   f->glDepthMask(GL_FALSE);
 
-  for (const auto* shape : transparentShapes) {
-    if (const auto program = m_ShaderManager->getProgram(shape->shaderType);
-      program && program->isLinked() && program->bind()) {
-      auto binder = QOpenGLVertexArrayObject::Binder(shape->vertexArray);
-
-      auto& modelMatrix    = shape->modelMatrix;
-      auto modelViewMatrix = m_ViewMatrix * modelMatrix;
-      auto mvpMatrix       = m_ProjectionMatrix * modelViewMatrix;
-
-      program->setUniformValue("worldMatrix", modelMatrix);
-      program->setUniformValue("viewMatrix", m_ViewMatrix);
-      program->setUniformValue("modelViewMatrix", modelViewMatrix);
-      program->setUniformValue("modelViewMatrixInverse", modelViewMatrix.inverted());
-      program->setUniformValue("normalMatrix", modelViewMatrix.normalMatrix());
-      program->setUniformValue("mvpMatrix", mvpMatrix);
-      program->setUniformValue("lightDirection", QVector3D(0, 0, 1));
-
-      shape->setupShaders(program);
-
-      if (shape->indexBuffer && shape->indexBuffer->isCreated()) {
-        shape->indexBuffer->bind();
-        f->glDrawElements(GL_TRIANGLES, shape->elements, GL_UNSIGNED_SHORT, nullptr);
-        shape->indexBuffer->release();
-      }
-
-      program->release();
+  for (auto& shape : m_GLShapes) {
+    if (isTransparent(shape)) {
+      drawShape(shape);
     }
   }
 
@@ -237,6 +235,10 @@ void NifWidget::resizeGL(const int w, const int h)
 
 void NifWidget::cleanup()
 {
+  if (!context()) {
+    return;
+  }
+
   makeCurrent();
 
   for (auto& shape : m_GLShapes) {
@@ -249,8 +251,11 @@ void NifWidget::cleanup()
 
 void NifWidget::setProjectionMatrix()
 {
+  const auto viewportWidth  = m_ViewportWidth > 0.0f ? m_ViewportWidth : 1.0f;
+  const auto viewportHeight = m_ViewportHeight > 0.0f ? m_ViewportHeight : 1.0f;
+
   QMatrix4x4 m;
-  m.perspective(40.0f, m_ViewportWidth / m_ViewportHeight,
+  m.perspective(40.0f, viewportWidth / viewportHeight,
                 m_Camera->nearPlane(), m_Camera->farPlane());
   m_ProjectionMatrix = m;
 }

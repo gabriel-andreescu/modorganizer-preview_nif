@@ -11,7 +11,7 @@
 #include <QSharedPointer>
 
 #include <NifFile.hpp>
-#include <imoinfo.h>
+#include <uibase/imoinfo.h>
 
 #include <memory>
 

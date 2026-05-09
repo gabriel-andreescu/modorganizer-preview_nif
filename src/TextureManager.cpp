@@ -1,21 +1,55 @@
 #include "TextureManager.h"
 #include "PreviewNif.h"
 
-#include <dataarchives.h>
-#include <igamefeatures.h>
-#include <iplugingame.h>
-#include <ifiletree.h>
+#include <uibase/game_features/dataarchives.h>
+#include <uibase/game_features/igamefeatures.h>
+#include <uibase/iplugingame.h>
+#include <uibase/ifiletree.h>
 
 #include <gli/gli.hpp>
+
+#if __has_include(<libbsarch/libbsarch.h>)
+#include <libbsarch/libbsarch.h>
+#else
 #include <libbsarch.h>
+#endif
 
 #include <QFileInfo>
+#include <QDebug>
+#include <QDir>
 #include <QOpenGLFunctions_2_1>
 #include <QOpenGLVersionFunctionsFactory>
 #include <QVector4D>
 
+#include <exception>
+#include <limits>
 #include <memory>
 #include <ranges>
+
+namespace
+{
+
+const MOBase::IProfile* profilePointer(const MOBase::IProfile* profile)
+{
+  return profile;
+}
+
+template <class Profile>
+const MOBase::IProfile* profilePointer(const std::shared_ptr<Profile>& profile)
+{
+  return profile.get();
+}
+
+const MOBase::IProfile* currentProfile(MOBase::IOrganizer* organizer)
+{
+  if (!organizer) {
+    return nullptr;
+  }
+
+  return profilePointer(organizer->profile());
+}
+
+}  // namespace
 
 struct BsaPtrDeleter
 {
@@ -86,7 +120,17 @@ QOpenGLTexture* TextureManager::getTexture(const QString& texturePath)
     return it->second;
   }
 
-  QOpenGLTexture* texture = loadTexture(texturePath);
+  QOpenGLTexture* texture = nullptr;
+  try {
+    texture = loadTexture(texturePath);
+  } catch (const std::exception& e) {
+    qWarning("Failed to load NIF texture '%s': %s", qUtf8Printable(texturePath),
+             e.what());
+  } catch (...) {
+    qWarning("Failed to load NIF texture '%s': unknown exception",
+             qUtf8Printable(texturePath));
+  }
+
   m_Textures[key]         = texture;
   return texture;
 }
@@ -129,6 +173,11 @@ QOpenGLTexture* TextureManager::loadTexture(const QString& texturePath) const
     return nullptr;
   }
 
+  if (!m_MOInfo) {
+    qCritical("Failed to interface with Mod Organizer");
+    return nullptr;
+  }
+
   const auto game = m_MOInfo->managedGame();
   if (!game) {
     qCritical("Failed to interface with managed game plugin");
@@ -141,7 +190,13 @@ QOpenGLTexture* TextureManager::loadTexture(const QString& texturePath) const
       isFile();
 
   if (fileExists) {
-    return makeTexture(gli::load(realPath.toStdString()));
+    try {
+      return makeTexture(gli::load(realPath.toStdString()));
+    } catch (const std::exception& e) {
+      qWarning("Failed to decode loose DDS '%s': %s", qUtf8Printable(realPath),
+               e.what());
+      return nullptr;
+    }
   }
 
   if (const auto texture = tryLoadTextureFromMods(texturePath)) {
@@ -157,6 +212,10 @@ QOpenGLTexture* TextureManager::loadTexture(const QString& texturePath) const
 
 QOpenGLTexture* TextureManager::tryLoadTextureFromMods(const QString& texturePath) const
 {
+  if (!m_MOInfo) {
+    return nullptr;
+  }
+
   const auto fileOrigins = m_MOInfo->getFileOrigins(texturePath);
   if (fileOrigins.empty()) {
     return nullptr;
@@ -190,13 +249,21 @@ QOpenGLTexture* TextureManager::tryLoadTextureFromMods(const QString& texturePat
 QOpenGLTexture* TextureManager::tryLoadTextureFromGame(
     const QString& texturePath) const
 {
+  if (!m_MOInfo) {
+    return nullptr;
+  }
+
   const auto features     = m_MOInfo->gameFeatures();
+  if (!features) {
+    return nullptr;
+  }
+
   const auto gameArchives = features->gameFeature<MOBase::DataArchives>();
   if (!gameArchives) {
     return nullptr;
   }
 
-  for (auto archives = gameArchives->archives(m_MOInfo->profile());
+  for (auto archives = gameArchives->archives(currentProfile(m_MOInfo));
        const auto& archive : std::ranges::reverse_view(archives)) {
     const auto bsaPath = resolvePath(m_MOInfo->managedGame(), archive);
     if (bsaPath.isEmpty()) {
@@ -213,6 +280,12 @@ QOpenGLTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath,
                                                    const QString& texturePath)
 {
   const UniqueBsaPtr bsaHandle(bsa_create());
+  if (!bsaHandle) {
+    qWarning("Failed to create BSA handle while loading '%s'",
+             qUtf8Printable(texturePath));
+    return nullptr;
+  }
+
   static_assert(sizeof(wchar_t) == 2, "Expected wchar_t to be 2 bytes");
 
   const auto bsaPathUtf16  = reinterpret_cast<const wchar_t*>(bsaPath.utf16());
@@ -221,22 +294,39 @@ QOpenGLTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath,
     return nullptr;
   }
 
-  const auto texturePathUtf16 = reinterpret_cast<const wchar_t*>(texturePath.utf16());
+  const auto archiveTexturePath = QDir::toNativeSeparators(texturePath);
+  const auto texturePathUtf16 =
+      reinterpret_cast<const wchar_t*>(archiveTexturePath.utf16());
   auto [rBuffer, msg]         = bsa_extract_file_data_by_filename(
       bsaHandle.get(), texturePathUtf16);
   if (msg.code == BSA_RESULT_EXCEPTION) {
     return nullptr;
   }
 
+  if (!rBuffer.data || rBuffer.size == 0) {
+    return nullptr;
+  }
+
   const UniqueBufferPtr buffer(&rBuffer, BsaBufferDeleter(bsaHandle.get()));
 
   const auto data = static_cast<char*>(buffer->data);
-  return makeTexture(gli::load(data, buffer->size));
+  try {
+    return makeTexture(gli::load(data, buffer->size));
+  } catch (const std::exception& e) {
+    qWarning("Failed to decode BSA DDS '%s' from '%s': %s",
+             qUtf8Printable(texturePath), qUtf8Printable(bsaPath), e.what());
+    return nullptr;
+  }
 }
 
 QOpenGLTexture* TextureManager::makeTexture(const gli::texture& texture)
 {
   if (texture.empty()) {
+    return nullptr;
+  }
+
+  if (texture.levels() == 0 || texture.layers() == 0 || texture.faces() == 0) {
+    qWarning("Skipping DDS texture with no image data");
     return nullptr;
   }
 
@@ -247,6 +337,21 @@ QOpenGLTexture* TextureManager::makeTexture(const gli::texture& texture)
 
   auto* f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
+  if (!f) {
+    qWarning("Skipping DDS texture: OpenGL 2.1 functions unavailable");
+    return nullptr;
+  }
+
+  const auto extent = texture.extent();
+  if (extent.x <= 0 || extent.y <= 0 || extent.z <= 0 ||
+      extent.x > std::numeric_limits<int>::max() ||
+      extent.y > std::numeric_limits<int>::max() ||
+      extent.z > std::numeric_limits<int>::max() ||
+      texture.levels() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+    qWarning("Skipping DDS texture with invalid extent or mip count");
+    return nullptr;
+  }
+
   auto* glTexture = new QOpenGLTexture(static_cast<QOpenGLTexture::Target>(target));
 
   glTexture->create();
@@ -262,7 +367,6 @@ QOpenGLTexture* TextureManager::makeTexture(const gli::texture& texture)
                             static_cast<QOpenGLTexture::SwizzleValue>(swizzles[3]));
   glTexture->setWrapMode(QOpenGLTexture::Repeat);
 
-  const auto extent = texture.extent();
   glTexture->setSize(extent.x, extent.y, extent.z);
   glTexture->setFormat(static_cast<QOpenGLTexture::TextureFormat>(internal));
   glTexture->allocateStorage(static_cast<QOpenGLTexture::PixelFormat>(external),
@@ -370,8 +474,16 @@ QOpenGLTexture* TextureManager::makeSolidColor(const QVector4D color)
 QString TextureManager::resolvePath(const MOBase::IPluginGame* game,
                                     const QString& path) const
 {
+  if (!m_MOInfo) {
+    return {};
+  }
+
   if (auto resolved = m_MOInfo->resolvePath(path); !resolved.isEmpty()) {
     return resolved;
+  }
+
+  if (!game) {
+    return {};
   }
 
   const auto dataPath =

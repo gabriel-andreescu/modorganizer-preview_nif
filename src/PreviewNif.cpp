@@ -4,7 +4,9 @@
 #include "NifWidget.h"
 #include "PreviewNif.h"
 
+#include <QDebug>
 #include <QGridLayout>
+#include <exception>
 #include <filesystem>
 #include <sstream>
 
@@ -31,7 +33,7 @@ QString PreviewNif::description() const
 
 MOBase::VersionInfo PreviewNif::version() const
 {
-  return {0, 4, 3, 0, MOBase::VersionInfo::RELEASE_BETA};
+  return {0, 4, 4, 0, MOBase::VersionInfo::RELEASE_BETA};
 }
 
 QList<MOBase::PluginSetting> PreviewNif::settings() const
@@ -65,15 +67,23 @@ QWidget* PreviewNif::genDataPreview(const QByteArray& fileData, const QString& f
   auto path = std::filesystem::path(fileName.toStdWString());
   std::shared_ptr<nifly::NifFile> nifFile;
 
-  if (fileData != nullptr && !fileData.isEmpty()) {
-    const auto fileStream =
-        std::make_shared<std::istringstream>(fileData.toStdString());
-    nifFile = std::make_shared<nifly::NifFile>(*fileStream);
-  } else {
-    nifFile = std::make_shared<nifly::NifFile>(path);
+  try {
+    if (fileData != nullptr && !fileData.isEmpty()) {
+      const auto fileStream =
+          std::make_shared<std::istringstream>(fileData.toStdString());
+      nifFile = std::make_shared<nifly::NifFile>(*fileStream);
+    } else {
+      nifFile = std::make_shared<nifly::NifFile>(path);
+    }
+  } catch (const std::exception& e) {
+    qWarning("Failed to load NIF '%s': %s", qUtf8Printable(fileName), e.what());
+    return nullptr;
+  } catch (...) {
+    qWarning("Failed to load NIF '%s': unknown exception", qUtf8Printable(fileName));
+    return nullptr;
   }
 
-  if (!nifFile->IsValid()) {
+  if (!nifFile || !nifFile->IsValid()) {
     qWarning(qUtf8Printable(tr("Failed to load file: %1").arg(fileName)));
     return nullptr;
   }
@@ -99,6 +109,9 @@ QLabel* PreviewNif::makeLabel(const nifly::NifFile* nifFile)
   unsigned int verts  = 0;
 
   for (const auto& shape : nifFile->GetShapes()) {
+    if (!shape) {
+      continue;
+    }
     shapes++;
     faces += shape->GetNumTriangles();
     verts += shape->GetNumVertices();

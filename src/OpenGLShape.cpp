@@ -1,22 +1,36 @@
 #include "OpenGLShape.h"
 #include "NifExtensions.h"
 
+#include <QDebug>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions_2_1>
 #include <QOpenGLVersionFunctionsFactory>
+
+#include <limits>
 
 template <typename T>
 static QOpenGLBuffer* makeVertexBuffer(const std::vector<T>* data, const GLuint attrib)
 {
   QOpenGLBuffer* buffer = nullptr;
 
-  if (data) {
+  if (data && !data->empty()) {
+    const auto byteSize = data->size() * sizeof(T);
+    if (byteSize > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+      qWarning("Skipping oversized vertex buffer for attribute %u", attrib);
+      return nullptr;
+    }
+
     buffer = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
     if (buffer->create() && buffer->bind()) {
-      buffer->allocate(data->data(), data->size() * sizeof(T));
+      buffer->allocate(data->data(), static_cast<int>(byteSize));
 
       const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
           QOpenGLContext::currentContext());
+      if (!f) {
+        qWarning("Skipping vertex attribute setup: OpenGL 2.1 functions unavailable");
+        buffer->release();
+        return buffer;
+      }
 
       f->glEnableVertexAttribArray(attrib);
 
@@ -51,6 +65,10 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
 {
   const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
+  if (!f) {
+    qWarning("Skipping NIF shape: OpenGL 2.1 functions unavailable");
+    return;
+  }
 
   const auto shader = nifFile->GetShader(niShape);
 
@@ -127,9 +145,14 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
   indexBuffer = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
   if (indexBuffer->create() && indexBuffer->bind()) {
 
-    if (std::vector<nifly::Triangle> tris; niShape->GetTriangles(tris)) {
-      indexBuffer->allocate(tris.data(),
-                            static_cast<int>(tris.size() * sizeof(nifly::Triangle)));
+    if (std::vector<nifly::Triangle> tris; niShape->GetTriangles(tris) &&
+      !tris.empty()) {
+      const auto byteSize = tris.size() * sizeof(nifly::Triangle);
+      if (byteSize <= static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        indexBuffer->allocate(tris.data(), static_cast<int>(byteSize));
+      } else {
+        qWarning("Skipping oversized index buffer");
+      }
     }
 
     const uint32_t iElements = niShape->GetNumTriangles() * 3;
@@ -147,7 +170,19 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
       const auto textureSetRef = shader->TextureSetRef();
       const auto textureSet    = nifFile->GetHeader().GetBlock(textureSetRef);
 
-      for (std::size_t i = 0; i < textureSet->textures.size(); i++) {
+      if (!textureSet) {
+        qWarning("Skipping missing shader texture set");
+      }
+
+      const auto nifTextureCount =
+          textureSet ? static_cast<std::size_t>(textureSet->textures.size()) : 0;
+      const auto textureCount = std::min(nifTextureCount, textures.size());
+      if (textureSet && nifTextureCount > textures.size()) {
+        qWarning("Skipping %zu unsupported texture slots",
+                 nifTextureCount - textures.size());
+      }
+
+      for (std::size_t i = 0; i < textureCount; i++) {
         if (auto texturePath = textureSet->textures[i].get(); !texturePath.empty()) {
           textures[i] = textureManager->getTexture(texturePath);
         }

@@ -1,5 +1,6 @@
 .idea/
 cmake-build-*/
+vsbuild/
 *.iws
 out/
 .idea_modules/
@@ -66,3 +67,5 @@ cmake_install.cmake
 install_manifest.txt
 CTestTestfile.cmake
 _deps
+dist/*
+!dist/.gitkeep

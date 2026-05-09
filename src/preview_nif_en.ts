@@ -4,7 +4,7 @@
 <context>
     <name>NifWidget</name>
     <message>
-        <location filename="NifWidget.cpp" line="87"/>
+        <location filename="NifWidget.cpp" line="89"/>
         <source>OpenGL debug message: %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -12,12 +12,12 @@
 <context>
     <name>PreviewNif</name>
     <message>
-        <location filename="PreviewNif.cpp" line="77"/>
+        <location filename="PreviewNif.cpp" line="87"/>
         <source>Failed to load file: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="PreviewNif.cpp" line="108"/>
+        <location filename="PreviewNif.cpp" line="121"/>
         <source>Verts: %1 | Faces: %2 | Shapes: %3</source>
         <translation type="unfinished"></translation>
     </message>

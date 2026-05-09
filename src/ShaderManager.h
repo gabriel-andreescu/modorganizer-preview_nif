@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QOpenGLShaderProgram>
-#include <imoinfo.h>
+#include <uibase/imoinfo.h>
 
 enum VertexAttrib
 {
