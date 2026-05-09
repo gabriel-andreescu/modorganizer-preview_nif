@@ -121,11 +121,8 @@ jobs:
 
       - name: Build release notes
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ github.ref_name }}"
-          $repo = "${{ github.repository }}"
           $changelog = Get-Content -LiteralPath "CHANGELOG.md" -Raw
           $escapedTag = [regex]::Escape($tag)
           $match = [regex]::Match(
@@ -139,16 +136,6 @@ jobs:
           }
 
           $notes = @("## Changelog", "", $match.Groups["body"].Value.Trim())
-          $generated = gh api "repos/$repo/releases/generate-notes" `
-            -f tag_name="$tag" | ConvertFrom-Json
-
-          if ($generated.body) {
-            $notes += ""
-            $notes += "## GitHub Generated Notes"
-            $notes += ""
-            $notes += $generated.body.Trim()
-          }
-
           Set-Content -LiteralPath "release-notes.md" `
             -Value ($notes -join "`n") `
             -Encoding utf8

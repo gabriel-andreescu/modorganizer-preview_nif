@@ -7,7 +7,7 @@
 - Adds MO2 2.5.3beta11 support while keeping a separate MO2 2.5.2 build.
 - Adds checked-in `uibase` ABI header snapshots and versioned CMake presets for both supported MO2 versions.
 - Adds package and GitHub Actions release targets that produce one ZIP per supported MO2 version.
-- Adds GitHub generated release notes configuration.
+- Adds release notes publishing from the tagged `CHANGELOG.md` section.
 
 ### Changed
 
