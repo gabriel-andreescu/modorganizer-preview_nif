@@ -748,6 +748,11 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
         outerRefraction = bslsp->parallaxRefractionScale;
         outerReflection = bslsp->parallaxEnvmapStrength;
       }
+
+      hasHeightMap = (bslspType == nifly::BSLSP_PARALLAX ||
+                      bslspType == nifly::BSLSP_PARALLAXOCC) &&
+                     (bslsp->shaderFlags1 & SLSF1::Parallax) &&
+                     textures[HeightMap] != nullptr;
     }
 
     if (const auto effectShader =
@@ -790,7 +795,7 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   program->setUniformValue("LightMask", LightMask + 1);
   program->setUniformValue("hasGlowMap", hasGlowMap && textures[GlowMap] != nullptr);
   program->setUniformValue("HeightMap", HeightMap + 1);
-  program->setUniformValue("hasHeightMap", textures[HeightMap] != nullptr);
+  program->setUniformValue("hasHeightMap", hasHeightMap);
   program->setUniformValue("DetailMask", DetailMask + 1);
   program->setUniformValue("hasDetailMask", textures[DetailMask] != nullptr);
   program->setUniformValue("CubeMap", EnvironmentMap + 1);

@@ -8,7 +8,6 @@
 
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
-#include <QOpenGLTexture>
 #include <QOpenGLVertexArrayObject>
 
 enum TextureSlot
@@ -50,7 +49,7 @@ public:
   QOpenGLBuffer* indexBuffer = nullptr;
   GLsizei elements           = 0;
 
-  std::array<QOpenGLTexture*, 13> textures{nullptr};
+  std::array<PreviewTexture*, 13> textures{nullptr};
 
   QMatrix4x4 modelMatrix;
   nifly::BoundingSphere bounds;
@@ -61,9 +60,10 @@ public:
 
   float paletteScale;
 
-  bool hasGlowMap  = false;
-  QColor glowColor = QColorConstants::White;
-  float glowMult   = 1.0f;
+  bool hasGlowMap   = false;
+  bool hasHeightMap = false;
+  QColor glowColor  = QColorConstants::White;
+  float glowMult    = 1.0f;
 
   float alpha = 1.0f;
   QVector3D tintColor{1.0f, 1.0f, 1.0f};

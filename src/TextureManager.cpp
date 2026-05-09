@@ -3,10 +3,11 @@
 
 #include <uibase/game_features/dataarchives.h>
 #include <uibase/game_features/igamefeatures.h>
-#include <uibase/iplugingame.h>
 #include <uibase/ifiletree.h>
+#include <uibase/iplugingame.h>
 
 #include <gli/gli.hpp>
+#include <gli/load_dds.hpp>
 
 #if __has_include(<libbsarch/libbsarch.h>)
 #include <libbsarch/libbsarch.h>
@@ -14,13 +15,18 @@
 #include <libbsarch.h>
 #endif
 
-#include <QFileInfo>
 #include <QDebug>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QOpenGLContext>
 #include <QOpenGLFunctions_2_1>
 #include <QOpenGLVersionFunctionsFactory>
 #include <QVector4D>
+#include <QtGui/qopenglext.h>
 
+#include <algorithm>
+#include <cstring>
 #include <exception>
 #include <limits>
 #include <memory>
@@ -28,6 +34,8 @@
 
 namespace
 {
+
+constexpr std::size_t maxGliTextureLevels = 16;
 
 const MOBase::IProfile* profilePointer(const MOBase::IProfile* profile)
 {
@@ -49,23 +57,459 @@ const MOBase::IProfile* currentProfile(MOBase::IOrganizer* organizer)
   return profilePointer(organizer->profile());
 }
 
+bool sameMask(const glm::u32vec4& left, const glm::u32vec4& right)
+{
+  return glm::all(glm::equal(left, right));
+}
+
+bool checkedAdd(const std::size_t left, const std::size_t right, std::size_t& result)
+{
+  if (left > std::numeric_limits<std::size_t>::max() - right) {
+    return false;
+  }
+
+  result = left + right;
+  return true;
+}
+
+bool checkedMul(const std::size_t left, const std::size_t right, std::size_t& result)
+{
+  if (left != 0 && right > std::numeric_limits<std::size_t>::max() / left) {
+    return false;
+  }
+
+  result = left * right;
+  return true;
+}
+
+std::size_t mipExtent(const std::size_t extent, const std::size_t level)
+{
+  return std::max<std::size_t>(extent >> level, 1);
+}
+
+bool ddsPayloadSize(const gli::format format, const std::size_t width,
+                    const std::size_t height, const std::size_t depth,
+                    const std::size_t faces, const std::size_t levels,
+                    std::size_t& payloadSize)
+{
+  const auto blockSize   = gli::block_size(format);
+  const auto blockExtent = gli::block_extent(format);
+
+  if (blockSize == 0 || blockExtent.x <= 0 || blockExtent.y <= 0 ||
+      blockExtent.z <= 0 || width == 0 || height == 0 || depth == 0 || faces == 0 ||
+      levels == 0 || levels > maxGliTextureLevels) {
+    return false;
+  }
+
+  payloadSize = 0;
+
+  for (std::size_t level = 0; level < levels; ++level) {
+    const auto levelWidth  = mipExtent(width, level);
+    const auto levelHeight = mipExtent(height, level);
+    const auto levelDepth  = mipExtent(depth, level);
+
+    const auto blocksX = (levelWidth + static_cast<std::size_t>(blockExtent.x) - 1) /
+                         static_cast<std::size_t>(blockExtent.x);
+    const auto blocksY = (levelHeight + static_cast<std::size_t>(blockExtent.y) - 1) /
+                         static_cast<std::size_t>(blockExtent.y);
+    const auto blocksZ = (levelDepth + static_cast<std::size_t>(blockExtent.z) - 1) /
+                         static_cast<std::size_t>(blockExtent.z);
+
+    std::size_t levelBlocks = 0;
+    if (!checkedMul(blocksX, blocksY, levelBlocks) ||
+        !checkedMul(levelBlocks, blocksZ, levelBlocks) ||
+        !checkedMul(levelBlocks, blockSize, levelBlocks) ||
+        !checkedAdd(payloadSize, levelBlocks, payloadSize)) {
+      return false;
+    }
+  }
+
+  return checkedMul(payloadSize, faces, payloadSize);
+}
+
+gli::format legacyDdsFormat(const gli::detail::dds_header& header)
+{
+  gli::dx dx;
+  gli::format format = gli::FORMAT_UNDEFINED;
+
+  if (!(header.Format.flags &
+        (gli::dx::DDPF_RGB | gli::dx::DDPF_ALPHAPIXELS | gli::dx::DDPF_ALPHA |
+         gli::dx::DDPF_YUV | gli::dx::DDPF_LUMINANCE)) ||
+      header.Format.bpp == 0 || header.Format.bpp >= 64) {
+    return format;
+  }
+
+  switch (header.Format.bpp) {
+  case 8:
+    if (sameMask(header.Format.Mask, dx.translate(gli::FORMAT_RG4_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_RG4_UNORM_PACK8;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_L8_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_L8_UNORM_PACK8;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_A8_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_A8_UNORM_PACK8;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_R8_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_R8_UNORM_PACK8;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_RG3B2_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_RG3B2_UNORM_PACK8;
+    }
+    break;
+  case 16:
+    if (sameMask(header.Format.Mask,
+                 dx.translate(gli::FORMAT_RGBA4_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_RGBA4_UNORM_PACK16;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_BGRA4_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_BGRA4_UNORM_PACK16;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_R5G6B5_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_R5G6B5_UNORM_PACK16;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_B5G6R5_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_B5G6R5_UNORM_PACK16;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_RGB5A1_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_RGB5A1_UNORM_PACK16;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_BGR5A1_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_BGR5A1_UNORM_PACK16;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_LA8_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_LA8_UNORM_PACK8;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_RG8_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_RG8_UNORM_PACK8;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_L16_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_L16_UNORM_PACK16;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_A16_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_A16_UNORM_PACK16;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_R16_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_R16_UNORM_PACK16;
+    }
+    break;
+  case 24:
+    if (sameMask(header.Format.Mask, dx.translate(gli::FORMAT_RGB8_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_RGB8_UNORM_PACK8;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_BGR8_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_BGR8_UNORM_PACK8;
+    }
+    break;
+  case 32:
+    if (sameMask(header.Format.Mask,
+                 dx.translate(gli::FORMAT_BGR8_UNORM_PACK32).Mask)) {
+      format = gli::FORMAT_BGR8_UNORM_PACK32;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_BGRA8_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_BGRA8_UNORM_PACK8;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_RGBA8_UNORM_PACK8).Mask)) {
+      format = gli::FORMAT_RGBA8_UNORM_PACK8;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_RGB10A2_UNORM_PACK32).Mask)) {
+      format = gli::FORMAT_RGB10A2_UNORM_PACK32;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_LA16_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_LA16_UNORM_PACK16;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_RG16_UNORM_PACK16).Mask)) {
+      format = gli::FORMAT_RG16_UNORM_PACK16;
+    } else if (sameMask(header.Format.Mask,
+                        dx.translate(gli::FORMAT_R32_SFLOAT_PACK32).Mask)) {
+      format = gli::FORMAT_R32_SFLOAT_PACK32;
+    }
+    break;
+  default:
+    break;
+  }
+
+  return format;
+}
+
+gli::texture loadDdsIfValid(const char* data, const std::size_t size)
+{
+  using namespace gli;
+  using namespace gli::detail;
+
+  if (!data || size < sizeof(FOURCC_DDS) + sizeof(dds_header) ||
+      std::strncmp(data, FOURCC_DDS, sizeof(FOURCC_DDS)) != 0) {
+    return {};
+  }
+
+  std::size_t offset = sizeof(FOURCC_DDS);
+
+  dds_header header{};
+  std::memcpy(&header, data + offset, sizeof(header));
+  offset += sizeof(dds_header);
+
+  if (header.Size != sizeof(dds_header) ||
+      header.Format.size != sizeof(dds_pixel_format) || header.Width == 0 ||
+      header.Height == 0) {
+    return {};
+  }
+
+  dds_header10 header10{};
+  const bool hasFourCc = (header.Format.flags & dx::DDPF_FOURCC) != 0;
+  if (hasFourCc && (header.Format.fourCC == dx::D3DFMT_DX10 ||
+                    header.Format.fourCC == dx::D3DFMT_GLI1)) {
+    if (size < offset + sizeof(dds_header10)) {
+      return {};
+    }
+    std::memcpy(&header10, data + offset, sizeof(header10));
+    offset += sizeof(dds_header10);
+  }
+
+  dx dxTranslator;
+  auto format = legacyDdsFormat(header);
+
+  if (hasFourCc && header.Format.fourCC != dx::D3DFMT_DX10 &&
+      header.Format.fourCC != dx::D3DFMT_GLI1 && format == FORMAT_UNDEFINED) {
+    format = dxTranslator.find(remap_four_cc(header.Format.fourCC));
+  } else if (hasFourCc && (header.Format.fourCC == dx::D3DFMT_DX10 ||
+                           header.Format.fourCC == dx::D3DFMT_GLI1)) {
+    format = dxTranslator.find(header.Format.fourCC, header10.Format);
+  }
+
+  if (format == FORMAT_UNDEFINED) {
+    return {};
+  }
+
+  const auto target = get_target(header, header10);
+  if (target != TARGET_2D && target != TARGET_CUBE) {
+    return {};
+  }
+
+  const std::size_t mipMapCount =
+      (header.Flags & DDSD_MIPMAPCOUNT) ? header.MipMapLevels : 1;
+  if (mipMapCount == 0) {
+    return {};
+  }
+
+  std::size_t faceCount = 1;
+  if (header.CubemapFlags & DDSCAPS2_CUBEMAP) {
+    faceCount = static_cast<std::size_t>(
+        glm::bitCount(header.CubemapFlags & DDSCAPS2_CUBEMAP_ALLFACES));
+  } else if (header10.MiscFlag & D3D10_RESOURCE_MISC_TEXTURECUBE) {
+    faceCount = 6;
+  }
+
+  if ((target == TARGET_2D && faceCount != 1) ||
+      (target == TARGET_CUBE && faceCount != 6)) {
+    return {};
+  }
+
+  const std::size_t layerCount = std::max<texture::size_type>(header10.ArraySize, 1);
+  if (layerCount != 1) {
+    return {};
+  }
+
+  const std::size_t depthCount =
+      (header.CubemapFlags & DDSCAPS2_VOLUME) ? header.Depth : 1;
+  if (depthCount == 0) {
+    return {};
+  }
+
+  const auto textureExtent =
+      texture::extent_type(header.Width, header.Height, depthCount);
+  if (mipMapCount >
+      std::min<std::size_t>(gli::levels(textureExtent), maxGliTextureLevels)) {
+    return {};
+  }
+
+  std::size_t payloadSize = 0;
+  if (!ddsPayloadSize(format, header.Width, header.Height, depthCount, faceCount,
+                      mipMapCount, payloadSize) ||
+      payloadSize > size - offset) {
+    return {};
+  }
+
+  texture texture(target, format, textureExtent, layerCount, faceCount, mipMapCount);
+
+  if (texture.empty() || texture.layers() != 1 || texture.size() > size - offset) {
+    return {};
+  }
+
+  std::memcpy(texture.data(), data + offset, texture.size());
+  return texture;
+}
+
+gli::texture loadDdsFileIfValid(const QString& path)
+{
+  QFile file(path);
+  if (!file.open(QIODevice::ReadOnly)) {
+    return {};
+  }
+
+  const auto data = file.readAll();
+  return loadDdsIfValid(data.constData(), static_cast<std::size_t>(data.size()));
+}
+
+bool hasUploadableExtents(const gli::texture& texture)
+{
+  if (texture.levels() == 0 || texture.layers() != 1 || texture.faces() == 0) {
+    return false;
+  }
+
+  if (texture.target() == gli::TARGET_2D && texture.faces() != 1) {
+    return false;
+  }
+  if (texture.target() == gli::TARGET_CUBE && texture.faces() != 6) {
+    return false;
+  }
+
+  for (std::size_t level = 0; level < texture.levels(); ++level) {
+    const auto extent = texture.extent(level);
+    if (extent.x <= 0 || extent.y <= 0 || extent.z <= 0 ||
+        extent.x > std::numeric_limits<GLsizei>::max() ||
+        extent.y > std::numeric_limits<GLsizei>::max() ||
+        texture.size(level) >
+            static_cast<std::size_t>(std::numeric_limits<GLsizei>::max())) {
+      return false;
+    }
+  }
+
+  return texture.levels() <=
+         static_cast<std::size_t>(std::numeric_limits<GLsizei>::max());
+}
+
+PFNGLTEXSTORAGE2DPROC resolveTexStorage2D(const QOpenGLContext* context)
+{
+  return context ? reinterpret_cast<PFNGLTEXSTORAGE2DPROC>(
+                       context->getProcAddress("glTexStorage2D"))
+                 : nullptr;
+}
+
+void clearGlErrors(QOpenGLFunctions_2_1* f)
+{
+  while (f->glGetError() != GL_NO_ERROR) {
+  }
+}
+
+GLenum textureFaceTarget(const gli::texture& texture, const GLenum target,
+                         const std::size_t face)
+{
+  return gli::is_target_cube(texture.target())
+             ? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face)
+             : target;
+}
+
+void setTextureParameters(QOpenGLFunctions_2_1* f, const GLenum target,
+                          const gli::gl::format& format, const std::size_t levels)
+{
+  f->glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
+  f->glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(levels - 1));
+  f->glTexParameteri(target, GL_TEXTURE_MIN_FILTER,
+                     levels > 1 ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+  f->glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  f->glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  f->glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  f->glTexParameteri(target, static_cast<GLenum>(QOpenGLTexture::SwizzleRed),
+                     format.Swizzles[0]);
+  f->glTexParameteri(target, static_cast<GLenum>(QOpenGLTexture::SwizzleGreen),
+                     format.Swizzles[1]);
+  f->glTexParameteri(target, static_cast<GLenum>(QOpenGLTexture::SwizzleBlue),
+                     format.Swizzles[2]);
+  f->glTexParameteri(target, static_cast<GLenum>(QOpenGLTexture::SwizzleAlpha),
+                     format.Swizzles[3]);
+}
+
+GLenum uploadTextureData(const gli::texture& texture, QOpenGLFunctions_2_1* f,
+                         PFNGLTEXSTORAGE2DPROC glTexStorage2D, const GLenum target,
+                         const gli::gl::format& format, const bool useStorage)
+{
+  if (useStorage) {
+    const auto extent = texture.extent();
+    glTexStorage2D(target, static_cast<GLsizei>(texture.levels()), format.Internal,
+                   extent.x, extent.y);
+  }
+
+  for (std::size_t face = 0; face < texture.faces(); ++face) {
+    for (std::size_t level = 0; level < texture.levels(); ++level) {
+      const auto extent       = texture.extent(level);
+      const auto targetFace   = textureFaceTarget(texture, target, face);
+      const auto* textureData = texture.data(0, face, level);
+      const auto textureSize  = static_cast<GLsizei>(texture.size(level));
+
+      if (gli::is_compressed(texture.format())) {
+        if (useStorage) {
+          f->glCompressedTexSubImage2D(targetFace, static_cast<GLint>(level), 0, 0,
+                                       extent.x, extent.y, format.Internal, textureSize,
+                                       textureData);
+        } else {
+          f->glCompressedTexImage2D(targetFace, static_cast<GLint>(level),
+                                    format.Internal, extent.x, extent.y, 0, textureSize,
+                                    textureData);
+        }
+      } else if (useStorage) {
+        f->glTexSubImage2D(targetFace, static_cast<GLint>(level), 0, 0, extent.x,
+                           extent.y, format.External, format.Type, textureData);
+      } else {
+        f->glTexImage2D(targetFace, static_cast<GLint>(level), format.Internal,
+                        extent.x, extent.y, 0, format.External, format.Type,
+                        textureData);
+      }
+    }
+  }
+
+  return f->glGetError();
+}
+
+GLuint makeRawTexture(const gli::texture& texture, QOpenGLFunctions_2_1* f,
+                      const GLenum target, const gli::gl::format& format,
+                      PFNGLTEXSTORAGE2DPROC glTexStorage2D)
+{
+  for (const bool useStorage : {true, false}) {
+    if (useStorage && !glTexStorage2D) {
+      continue;
+    }
+
+    GLuint textureId = 0;
+    f->glGenTextures(1, &textureId);
+    if (textureId == 0) {
+      continue;
+    }
+
+    f->glBindTexture(target, textureId);
+    setTextureParameters(f, target, format, texture.levels());
+    clearGlErrors(f);
+    f->glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    const auto error =
+        uploadTextureData(texture, f, glTexStorage2D, target, format, useStorage);
+
+    f->glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    f->glBindTexture(target, 0);
+
+    if (error == GL_NO_ERROR) {
+      return textureId;
+    }
+
+    qWarning("Failed to upload DDS texture with %s storage: OpenGL error 0x%x",
+             useStorage ? "immutable" : "mutable", error);
+    f->glDeleteTextures(1, &textureId);
+  }
+
+  return 0;
+}
+
 }  // namespace
 
 struct BsaPtrDeleter
 {
-  void operator()(void* ptr) const
-  {
-    bsa_free(ptr);
-  }
+  void operator()(void* ptr) const { bsa_free(ptr); }
 };
 
 using UniqueBsaPtr = std::unique_ptr<void, BsaPtrDeleter>;
 
 struct BsaBufferDeleter
 {
-  explicit BsaBufferDeleter(void* bsa) : m_bsa(bsa)
-  {
-  }
+  explicit BsaBufferDeleter(void* bsa) : m_bsa(bsa) {}
 
   void operator()(const bsa_result_buffer_t* buffer) const
   {
@@ -77,10 +521,57 @@ struct BsaBufferDeleter
 
 using UniqueBufferPtr = std::unique_ptr<bsa_result_buffer_t, BsaBufferDeleter>;
 
-TextureManager::TextureManager(MOBase::IOrganizer* organizer)
-  : m_MOInfo{organizer}
+PreviewTexture::PreviewTexture(QOpenGLTexture* texture) : m_QtTexture(texture) {}
+
+PreviewTexture::PreviewTexture(const GLuint textureId, const GLenum target)
+    : m_TextureId(textureId), m_Target(target)
+{}
+
+PreviewTexture::~PreviewTexture()
 {
+  delete m_QtTexture;
+  m_QtTexture = nullptr;
+
+  if (m_TextureId == 0) {
+    return;
+  }
+
+  auto* context = QOpenGLContext::currentContext();
+  if (!context) {
+    qWarning("Leaking raw DDS OpenGL texture %u: no current context", m_TextureId);
+    return;
+  }
+
+  if (auto* f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(context)) {
+    f->glDeleteTextures(1, &m_TextureId);
+  } else {
+    qWarning("Leaking raw DDS OpenGL texture %u: OpenGL 2.1 functions unavailable",
+             m_TextureId);
+    return;
+  }
+
+  m_TextureId = 0;
 }
+
+void PreviewTexture::bind(const int textureUnit) const
+{
+  if (m_QtTexture) {
+    m_QtTexture->bind(textureUnit);
+    return;
+  }
+
+  if (m_TextureId == 0) {
+    return;
+  }
+
+  if (auto* f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+          QOpenGLContext::currentContext())) {
+    f->glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(textureUnit));
+    f->glBindTexture(m_Target, m_TextureId);
+  }
+}
+
+TextureManager::TextureManager(MOBase::IOrganizer* organizer) : m_MOInfo{organizer} {}
 
 void TextureManager::cleanup()
 {
@@ -90,7 +581,7 @@ void TextureManager::cleanup()
     delete texture;
   }
 
-  auto cleanupTexture = [&](QOpenGLTexture*& texPtr) {
+  auto cleanupTexture = [&](PreviewTexture*& texPtr) {
     if (texPtr) {
       delete texPtr;
       texPtr = nullptr;
@@ -103,12 +594,12 @@ void TextureManager::cleanup()
   cleanupTexture(m_FlatNormalTexture);
 }
 
-QOpenGLTexture* TextureManager::getTexture(const std::string& texturePath)
+PreviewTexture* TextureManager::getTexture(const std::string& texturePath)
 {
   return getTexture(QString::fromStdString(texturePath));
 }
 
-QOpenGLTexture* TextureManager::getTexture(const QString& texturePath)
+PreviewTexture* TextureManager::getTexture(const QString& texturePath)
 {
   if (texturePath.isEmpty()) {
     return nullptr;
@@ -120,7 +611,7 @@ QOpenGLTexture* TextureManager::getTexture(const QString& texturePath)
     return it->second;
   }
 
-  QOpenGLTexture* texture = nullptr;
+  PreviewTexture* texture = nullptr;
   try {
     texture = loadTexture(texturePath);
   } catch (const std::exception& e) {
@@ -131,11 +622,11 @@ QOpenGLTexture* TextureManager::getTexture(const QString& texturePath)
              qUtf8Printable(texturePath));
   }
 
-  m_Textures[key]         = texture;
+  m_Textures[key] = texture;
   return texture;
 }
 
-QOpenGLTexture* TextureManager::getErrorTexture()
+PreviewTexture* TextureManager::getErrorTexture()
 {
   if (!m_ErrorTexture) {
     m_ErrorTexture = makeSolidColor({1.0f, 0.0f, 1.0f, 1.0f});
@@ -143,7 +634,7 @@ QOpenGLTexture* TextureManager::getErrorTexture()
   return m_ErrorTexture;
 }
 
-QOpenGLTexture* TextureManager::getBlackTexture()
+PreviewTexture* TextureManager::getBlackTexture()
 {
   if (!m_BlackTexture) {
     m_BlackTexture = makeSolidColor({0.0f, 0.0f, 0.0f, 1.0f});
@@ -151,7 +642,7 @@ QOpenGLTexture* TextureManager::getBlackTexture()
   return m_BlackTexture;
 }
 
-QOpenGLTexture* TextureManager::getWhiteTexture()
+PreviewTexture* TextureManager::getWhiteTexture()
 {
   if (!m_WhiteTexture) {
     m_WhiteTexture = makeSolidColor({1.0f, 1.0f, 1.0f, 1.0f});
@@ -159,7 +650,7 @@ QOpenGLTexture* TextureManager::getWhiteTexture()
   return m_WhiteTexture;
 }
 
-QOpenGLTexture* TextureManager::getFlatNormalTexture()
+PreviewTexture* TextureManager::getFlatNormalTexture()
 {
   if (!m_FlatNormalTexture) {
     m_FlatNormalTexture = makeSolidColor({0.5f, 0.5f, 1.0f, 1.0f});
@@ -167,7 +658,7 @@ QOpenGLTexture* TextureManager::getFlatNormalTexture()
   return m_FlatNormalTexture;
 }
 
-QOpenGLTexture* TextureManager::loadTexture(const QString& texturePath) const
+PreviewTexture* TextureManager::loadTexture(const QString& texturePath) const
 {
   if (texturePath.isEmpty()) {
     return nullptr;
@@ -185,13 +676,18 @@ QOpenGLTexture* TextureManager::loadTexture(const QString& texturePath) const
   }
 
   const auto realPath   = resolvePath(game, texturePath);
-  const bool fileExists =
-      !realPath.isEmpty() && QFileInfo::exists(realPath) && QFileInfo(realPath).
-      isFile();
+  const bool fileExists = !realPath.isEmpty() && QFileInfo::exists(realPath) &&
+                          QFileInfo(realPath).isFile();
 
   if (fileExists) {
     try {
-      return makeTexture(gli::load(realPath.toStdString()));
+      auto texture = loadDdsFileIfValid(realPath);
+      if (texture.empty()) {
+        qWarning("Failed to decode loose DDS '%s': invalid or unsupported DDS",
+                 qUtf8Printable(realPath));
+        return nullptr;
+      }
+      return makeTexture(texture);
     } catch (const std::exception& e) {
       qWarning("Failed to decode loose DDS '%s': %s", qUtf8Printable(realPath),
                e.what());
@@ -210,7 +706,7 @@ QOpenGLTexture* TextureManager::loadTexture(const QString& texturePath) const
   return nullptr;
 }
 
-QOpenGLTexture* TextureManager::tryLoadTextureFromMods(const QString& texturePath) const
+PreviewTexture* TextureManager::tryLoadTextureFromMods(const QString& texturePath) const
 {
   if (!m_MOInfo) {
     return nullptr;
@@ -246,14 +742,13 @@ QOpenGLTexture* TextureManager::tryLoadTextureFromMods(const QString& texturePat
   return nullptr;
 }
 
-QOpenGLTexture* TextureManager::tryLoadTextureFromGame(
-    const QString& texturePath) const
+PreviewTexture* TextureManager::tryLoadTextureFromGame(const QString& texturePath) const
 {
   if (!m_MOInfo) {
     return nullptr;
   }
 
-  const auto features     = m_MOInfo->gameFeatures();
+  const auto features = m_MOInfo->gameFeatures();
   if (!features) {
     return nullptr;
   }
@@ -276,7 +771,7 @@ QOpenGLTexture* TextureManager::tryLoadTextureFromGame(
   return nullptr;
 }
 
-QOpenGLTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath,
+PreviewTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath,
                                                    const QString& texturePath)
 {
   const UniqueBsaPtr bsaHandle(bsa_create());
@@ -297,8 +792,8 @@ QOpenGLTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath,
   const auto archiveTexturePath = QDir::toNativeSeparators(texturePath);
   const auto texturePathUtf16 =
       reinterpret_cast<const wchar_t*>(archiveTexturePath.utf16());
-  auto [rBuffer, msg]         = bsa_extract_file_data_by_filename(
-      bsaHandle.get(), texturePathUtf16);
+  auto [rBuffer, msg] =
+      bsa_extract_file_data_by_filename(bsaHandle.get(), texturePathUtf16);
   if (msg.code == BSA_RESULT_EXCEPTION) {
     return nullptr;
   }
@@ -309,153 +804,55 @@ QOpenGLTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath,
 
   const UniqueBufferPtr buffer(&rBuffer, BsaBufferDeleter(bsaHandle.get()));
 
-  const auto data = static_cast<char*>(buffer->data);
+  const auto data = static_cast<const char*>(buffer->data);
   try {
-    return makeTexture(gli::load(data, buffer->size));
+    auto texture = loadDdsIfValid(data, static_cast<std::size_t>(buffer->size));
+    if (texture.empty()) {
+      qWarning("Failed to decode BSA DDS '%s' from '%s': invalid or unsupported DDS",
+               qUtf8Printable(texturePath), qUtf8Printable(bsaPath));
+      return nullptr;
+    }
+    return makeTexture(texture);
   } catch (const std::exception& e) {
-    qWarning("Failed to decode BSA DDS '%s' from '%s': %s",
-             qUtf8Printable(texturePath), qUtf8Printable(bsaPath), e.what());
+    qWarning("Failed to decode BSA DDS '%s' from '%s': %s", qUtf8Printable(texturePath),
+             qUtf8Printable(bsaPath), e.what());
     return nullptr;
   }
 }
 
-QOpenGLTexture* TextureManager::makeTexture(const gli::texture& texture)
+PreviewTexture* TextureManager::makeTexture(const gli::texture& texture)
 {
   if (texture.empty()) {
     return nullptr;
   }
 
-  if (texture.levels() == 0 || texture.layers() == 0 || texture.faces() == 0) {
-    qWarning("Skipping DDS texture with no image data");
+  if (!hasUploadableExtents(texture)) {
+    qWarning("Skipping DDS texture with invalid or unsupported image layout");
     return nullptr;
   }
 
-  const gli::gl GL(gli::gl::PROFILE_GL32);
-  const auto [internal, external, type, swizzles] =
-      GL.translate(texture.format(), texture.swizzles());
-  GLenum target = GL.translate(texture.target());
-
-  auto* f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
-      QOpenGLContext::currentContext());
+  auto* context = QOpenGLContext::currentContext();
+  auto* f       = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(context);
   if (!f) {
     qWarning("Skipping DDS texture: OpenGL 2.1 functions unavailable");
     return nullptr;
   }
 
-  const auto extent = texture.extent();
-  if (extent.x <= 0 || extent.y <= 0 || extent.z <= 0 ||
-      extent.x > std::numeric_limits<int>::max() ||
-      extent.y > std::numeric_limits<int>::max() ||
-      extent.z > std::numeric_limits<int>::max() ||
-      texture.levels() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-    qWarning("Skipping DDS texture with invalid extent or mip count");
+  const gli::gl gl(gli::gl::PROFILE_GL33);
+  const auto format = gl.translate(texture.format(), texture.swizzles());
+  const auto target = static_cast<GLenum>(gl.translate(texture.target()));
+
+  const auto textureId =
+      makeRawTexture(texture, f, target, format, resolveTexStorage2D(context));
+  if (textureId == 0) {
+    qWarning("Skipping DDS texture after failed OpenGL upload");
     return nullptr;
   }
 
-  auto* glTexture = new QOpenGLTexture(static_cast<QOpenGLTexture::Target>(target));
-
-  glTexture->create();
-  glTexture->bind();
-  glTexture->setMipLevels(static_cast<int>(texture.levels()));
-  glTexture->setMipBaseLevel(0);
-  glTexture->setMipMaxLevel(static_cast<int>(texture.levels()) - 1);
-  glTexture->setMinMagFilters(QOpenGLTexture::LinearMipMapLinear,
-                              QOpenGLTexture::Linear);
-  glTexture->setSwizzleMask(static_cast<QOpenGLTexture::SwizzleValue>(swizzles[0]),
-                            static_cast<QOpenGLTexture::SwizzleValue>(swizzles[1]),
-                            static_cast<QOpenGLTexture::SwizzleValue>(swizzles[2]),
-                            static_cast<QOpenGLTexture::SwizzleValue>(swizzles[3]));
-  glTexture->setWrapMode(QOpenGLTexture::Repeat);
-
-  glTexture->setSize(extent.x, extent.y, extent.z);
-  glTexture->setFormat(static_cast<QOpenGLTexture::TextureFormat>(internal));
-  glTexture->allocateStorage(static_cast<QOpenGLTexture::PixelFormat>(external),
-                             static_cast<QOpenGLTexture::PixelType>(type));
-
-  for (std::size_t layer = 0; layer < texture.layers(); layer++) {
-    for (std::size_t face = 0; face < texture.faces(); face++) {
-      for (std::size_t level = 0; level < texture.levels(); level++) {
-        const auto levelExtent = texture.extent(level);
-
-        const GLenum targetFace = is_target_cube(texture.target())
-                                    ? (GL_TEXTURE_CUBE_MAP_POSITIVE_X + face)
-                                    : target;
-
-        const auto dataPtr = texture.data(layer, face, level);
-
-        if (is_compressed(texture.format())) {
-          switch (texture.target()) {
-          case gli::TARGET_1D:
-            f->glCompressedTexSubImage1D(
-                targetFace, static_cast<GLint>(level), 0,
-                levelExtent.x, internal, static_cast<GLsizei>(texture.size(level)),
-                dataPtr);
-            break;
-          case gli::TARGET_1D_ARRAY:
-          case gli::TARGET_2D:
-          case gli::TARGET_CUBE:
-            f->glCompressedTexSubImage2D(
-                targetFace, static_cast<GLint>(level), 0, 0, levelExtent.x,
-                (texture.target() == gli::TARGET_1D_ARRAY)
-                  ? static_cast<GLint>(layer)
-                  : levelExtent.y,
-                internal, static_cast<GLsizei>(texture.size(level)), dataPtr);
-            break;
-          case gli::TARGET_2D_ARRAY:
-          case gli::TARGET_3D:
-          case gli::TARGET_CUBE_ARRAY:
-            f->glCompressedTexSubImage3D(
-                targetFace, static_cast<GLint>(level), 0, 0, 0, levelExtent.x,
-                levelExtent.y,
-                (texture.target() == gli::TARGET_3D)
-                  ? levelExtent.z
-                  : static_cast<GLint>(layer),
-                internal, static_cast<GLsizei>(texture.size(level)), dataPtr);
-            break;
-          default:
-            break;
-          }
-        } else {
-          switch (texture.target()) {
-          case gli::TARGET_1D:
-            f->glTexSubImage1D(
-                targetFace, static_cast<GLint>(level), 0, levelExtent.x,
-                external, type, dataPtr);
-            break;
-          case gli::TARGET_1D_ARRAY:
-          case gli::TARGET_2D:
-          case gli::TARGET_CUBE:
-            f->glTexSubImage2D(
-                targetFace, static_cast<GLint>(level), 0, 0, levelExtent.x,
-                (texture.target() == gli::TARGET_1D_ARRAY)
-                  ? static_cast<GLint>(layer)
-                  : levelExtent.y,
-                external, type, dataPtr);
-            break;
-          case gli::TARGET_2D_ARRAY:
-          case gli::TARGET_3D:
-          case gli::TARGET_CUBE_ARRAY:
-            f->glTexSubImage3D(
-                targetFace, static_cast<GLint>(level), 0, 0, 0, levelExtent.x,
-                levelExtent.y,
-                (texture.target() == gli::TARGET_3D)
-                  ? levelExtent.z
-                  : static_cast<GLint>(layer),
-                external, type, dataPtr);
-            break;
-          default:
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  glTexture->release();
-  return glTexture;
+  return new PreviewTexture(textureId, target);
 }
 
-QOpenGLTexture* TextureManager::makeSolidColor(const QVector4D color)
+PreviewTexture* TextureManager::makeSolidColor(const QVector4D color)
 {
   auto* glTexture = new QOpenGLTexture(QOpenGLTexture::Target2D);
   glTexture->create();
@@ -468,7 +865,7 @@ QOpenGLTexture* TextureManager::makeSolidColor(const QVector4D color)
   glTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &color);
 
   glTexture->release();
-  return glTexture;
+  return new PreviewTexture(glTexture);
 }
 
 QString TextureManager::resolvePath(const MOBase::IPluginGame* game,
@@ -486,8 +883,7 @@ QString TextureManager::resolvePath(const MOBase::IPluginGame* game,
     return {};
   }
 
-  const auto dataPath =
-      game->dataDirectory().absoluteFilePath(QDir::cleanPath(path));
+  const auto dataPath = game->dataDirectory().absoluteFilePath(QDir::cleanPath(path));
 
   return QFileInfo::exists(dataPath) ? dataPath : QString();
 }

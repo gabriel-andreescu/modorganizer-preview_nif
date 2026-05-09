@@ -18,7 +18,6 @@ NifWidget::NifWidget(std::shared_ptr<nifly::NifFile> nifFile,
 {
   QSurfaceFormat format;
   format.setVersion(2, 1);
-  format.setProfile(QSurfaceFormat::CoreProfile);
 
   if (debugContext) {
     format.setOption(QSurfaceFormat::DebugContext);

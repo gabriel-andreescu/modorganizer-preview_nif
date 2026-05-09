@@ -6,6 +6,11 @@
 
 - Adds skinned mesh preview support.
 
+### Fixed
+
+- Fixes preview crashes and loading failures for valid luminance DDS parallax
+  height maps, which now load for parallax height-map preview.
+
 ## 0.4.4 - 2026-05-09
 
 ### Added
