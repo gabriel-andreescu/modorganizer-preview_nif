@@ -53,6 +53,7 @@ public:
   std::array<QOpenGLTexture*, 13> textures{nullptr};
 
   QMatrix4x4 modelMatrix;
+  nifly::BoundingSphere bounds;
   QVector3D specColor{1.0f, 1.0f, 1.0f};
   float specStrength   = 1.0f;
   float specGlossiness = 1.0f;

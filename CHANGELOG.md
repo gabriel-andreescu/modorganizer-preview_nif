@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 - Unreleased
+
+### Added
+
+- Adds skinned mesh preview support.
+
 ## 0.4.4 - 2026-05-09
 
 ### Added
