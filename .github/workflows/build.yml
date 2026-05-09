@@ -30,13 +30,22 @@ jobs:
             zip-name: "NIF Preview MO2-2.5.3beta11.zip"
 
     steps:
-      - name: Build MO2 dependencies
+      - name: Prepare mob workspace
         id: mob
         uses: ModOrganizer2/build-with-mob-action@master
         with:
+          mo2-owner: ModOrganizer2
           mo2-branch: ${{ matrix.mo2-branch }}
-          mo2-dependencies: DirectXTex cmake_common uibase
+          mo2-dependencies: ""
           mo2-skip-configure: "true"
+          qt-install: "false"
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.7.3
+          arch: win64_msvc2019_64
+          cache: true
 
       - name: Extract plugin version
         id: get_version
@@ -70,8 +79,8 @@ jobs:
           $abiInclude = Resolve-Path "$repoPath/${{ matrix.abi-include }}"
 
           Push-Location $repoPath
-          cmake --preset vs2022-windows `
-            "-DCMAKE_PREFIX_PATH=${{ steps.mob.outputs.cmake-prefix-path }}" `
+          cmake --preset vs2022-windows-standalone `
+            "-DCMAKE_PREFIX_PATH=$env:QT_ROOT_DIR" `
             "-DCMAKE_INSTALL_PREFIX=${{ steps.mob.outputs.cmake-install-path }}" `
             "-DMO2_UIBASE_INCLUDE_DIR:PATH=$abiInclude" `
             "-DPREVIEW_NIF_PACKAGE_MO2_VERSION:STRING=MO2-${{ matrix.mo2-version }}" `
@@ -81,7 +90,7 @@ jobs:
       - name: Build release ZIP for MO2 ${{ matrix.mo2-version }}
         shell: pwsh
         run: |
-          cmake --build --preset vs2022-windows --config RelWithDebInfo `
+          cmake --build --preset vs2022-windows-standalone --config RelWithDebInfo `
             --target preview_nif_zip --parallel 16
         working-directory: ./build/${{ github.event.repository.name }}
 
