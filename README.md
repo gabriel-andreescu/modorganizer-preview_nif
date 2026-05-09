@@ -53,8 +53,8 @@ cmake --build --preset package-ninja-multi-mo2-2.5.3beta11-relwithdebinfo
 
 Output:
 
-- `dist/NIF Preview MO2-2.5.2.zip`
-- `dist/NIF Preview MO2-2.5.3beta11.zip`
+- `dist/NIF.Preview.MO2-2.5.2.zip`
+- `dist/NIF.Preview.MO2-2.5.3beta11.zip`
 
 Each ZIP contains:
 
@@ -68,8 +68,8 @@ the plugin against the checked-in ABI header snapshot for each matrix entry.
 
 On tag pushes, the workflow uploads these release assets:
 
-- `NIF Preview MO2-2.5.2.zip`
-- `NIF Preview MO2-2.5.3beta11.zip`
+- `NIF.Preview.MO2-2.5.2.zip`
+- `NIF.Preview.MO2-2.5.3beta11.zip`
 
 Those asset names must stay in sync with `plugindefinition.json`.
 
@@ -78,8 +78,8 @@ Those asset names must stay in sync with `plugindefinition.json`.
 Extract the matching package into the matching MO2 install's `plugins/`
 directory:
 
-- MO2 2.5.2: extract `dist/NIF Preview MO2-2.5.2.zip` into `<MO2 2.5.2 install>/plugins/`
-- MO2 2.5.3beta11: extract `dist/NIF Preview MO2-2.5.3beta11.zip` into `<MO2 2.5.3beta11 install>/plugins/`
+- MO2 2.5.2: extract `dist/NIF.Preview.MO2-2.5.2.zip` into `<MO2 2.5.2 install>/plugins/`
+- MO2 2.5.3beta11: extract `dist/NIF.Preview.MO2-2.5.3beta11.zip` into `<MO2 2.5.3beta11 install>/plugins/`
 
 After extraction, the install should include:
 

@@ -23,11 +23,11 @@ jobs:
           - mo2-version: "2.5.2"
             mo2-branch: "2_5_x"
             abi-include: "mo2-abi/2.5.2/include"
-            zip-name: "NIF Preview MO2-2.5.2.zip"
+            zip-name: "NIF.Preview.MO2-2.5.2.zip"
           - mo2-version: "2.5.3beta11"
             mo2-branch: "2_5_x"
             abi-include: "mo2-abi/2.5.3beta11/include"
-            zip-name: "NIF Preview MO2-2.5.3beta11.zip"
+            zip-name: "NIF.Preview.MO2-2.5.3beta11.zip"
 
     steps:
       - name: Prepare mob workspace
@@ -119,15 +119,50 @@ jobs:
           path: ./dist
           merge-multiple: true
 
+      - name: Build release notes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $repo = "${{ github.repository }}"
+          $changelog = Get-Content -LiteralPath "CHANGELOG.md" -Raw
+          $escapedTag = [regex]::Escape($tag)
+          $match = [regex]::Match(
+            $changelog,
+            "(?ms)^##\s+$escapedTag\s+-[^\r\n]*\r?\n(?<body>.*?)(?=^##\s+|\z)"
+          )
+
+          if (-not $match.Success) {
+            Write-Error "Could not find CHANGELOG.md section for $tag"
+            exit 1
+          }
+
+          $notes = @("## Changelog", "", $match.Groups["body"].Value.Trim())
+          $generated = gh api "repos/$repo/releases/generate-notes" `
+            -f tag_name="$tag" | ConvertFrom-Json
+
+          if ($generated.body) {
+            $notes += ""
+            $notes += "## GitHub Generated Notes"
+            $notes += ""
+            $notes += $generated.body.Trim()
+          }
+
+          Set-Content -LiteralPath "release-notes.md" `
+            -Value ($notes -join "`n") `
+            -Encoding utf8
+
       - name: Upload assets to GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ github.ref_name }}"
+          $repo = "${{ github.repository }}"
           $assets = @(
-            "./dist/NIF Preview MO2-2.5.2.zip",
-            "./dist/NIF Preview MO2-2.5.3beta11.zip"
+            "./dist/NIF.Preview.MO2-2.5.2.zip",
+            "./dist/NIF.Preview.MO2-2.5.3beta11.zip"
           )
 
           foreach ($asset in $assets) {
@@ -137,9 +172,10 @@ jobs:
             }
           }
 
-          gh release view $tag *> $null
+          gh release view $tag --repo $repo *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag $assets --clobber
+            gh release edit $tag --repo $repo --title $tag --notes-file release-notes.md
+            gh release upload $tag $assets --repo $repo --clobber
           } else {
-            gh release create $tag $assets --title $tag --generate-notes
+            gh release create $tag $assets --repo $repo --title $tag --notes-file release-notes.md
           }

@@ -79,9 +79,9 @@ set(PREVIEW_NIF_PACKAGE_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../dist" CACHE P
 set(PREVIEW_NIF_PACKAGE_MO2_VERSION "" CACHE STRING
     "MO2 compatibility label appended to the release ZIP name")
 
-set(preview_nif_package_name "NIF Preview")
+set(preview_nif_package_name "NIF.Preview")
 if (PREVIEW_NIF_PACKAGE_MO2_VERSION)
-    string(APPEND preview_nif_package_name " ${PREVIEW_NIF_PACKAGE_MO2_VERSION}")
+    string(APPEND preview_nif_package_name ".${PREVIEW_NIF_PACKAGE_MO2_VERSION}")
 endif ()
 string(APPEND preview_nif_package_name ".zip")
 
