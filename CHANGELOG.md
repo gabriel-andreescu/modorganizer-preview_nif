@@ -5,6 +5,9 @@
 ### Added
 
 - Adds skinned mesh preview support.
+- Adds split-view NIF comparison with synchronized camera support.
+- Adds a dropdown for choosing which mod or archive the preview is shown from.
+- Adds a Reset Camera button.
 
 ### Fixed
 

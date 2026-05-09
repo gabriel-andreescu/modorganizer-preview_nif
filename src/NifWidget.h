@@ -21,14 +21,18 @@ class NifWidget final : public QOpenGLWidget
 
 public:
   NifWidget(std::shared_ptr<nifly::NifFile> nifFile, MOBase::IOrganizer* organizer,
-            bool debugContext = false, QWidget* parent = nullptr,
-            Qt::WindowFlags f = {0});
+            QSharedPointer<Camera> camera = {}, bool debugContext = false,
+            QWidget* parent = nullptr, Qt::WindowFlags f = {0});
 
   ~NifWidget() override;
   NifWidget(const NifWidget&)            = delete;
   NifWidget(NifWidget&&)                 = delete;
   NifWidget& operator=(const NifWidget&) = delete;
   NifWidget& operator=(NifWidget&&)      = delete;
+
+  [[nodiscard]] QSharedPointer<Camera> camera() const { return m_Camera; }
+  void setCamera(QSharedPointer<Camera> camera);
+  void resetCamera();
 
 protected:
   void mousePressEvent(QMouseEvent* event) override;
@@ -41,10 +45,9 @@ protected:
 
 private:
   void cleanup();
+  void frameCameraIfNeeded();
   void setProjectionMatrix();
   void updateCamera();
-
-  inline static QWeakPointer<Camera> SharedCamera;
 
   std::shared_ptr<nifly::NifFile> m_NifFile;
   MOBase::IOrganizer* m_MOInfo = nullptr;
@@ -58,6 +61,7 @@ private:
   std::vector<OpenGLShape> m_GLShapes;
 
   QSharedPointer<Camera> m_Camera;
+  QMetaObject::Connection m_CameraConnection;
 
   QMatrix4x4 m_ViewMatrix;
   QMatrix4x4 m_ProjectionMatrix;

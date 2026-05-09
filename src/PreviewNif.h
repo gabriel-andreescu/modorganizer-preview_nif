@@ -1,8 +1,10 @@
 #pragma once
 
-#include <NifFile.hpp>
-#include <QLabel>
+#include <QSharedPointer>
+#include <QWeakPointer>
 #include <uibase/ipluginpreview.h>
+
+class Camera;
 
 class PreviewNif final : public MOBase::IPluginPreview
 {
@@ -34,7 +36,8 @@ public:
                                         const QSize& maxSize) const override;
 
 private:
-  static QLabel* makeLabel(const nifly::NifFile* nifFile);
+  [[nodiscard]] QSharedPointer<Camera> sharedCamera() const;
 
   MOBase::IOrganizer* m_MOInfo{};
+  mutable QWeakPointer<Camera> m_SharedCamera;
 };

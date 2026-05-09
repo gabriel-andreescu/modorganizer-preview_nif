@@ -9,13 +9,23 @@
 #include <exception>
 #include <utility>
 
+namespace
+{
+QSharedPointer<Camera> makeCamera()
+{
+  return {new Camera(), &Camera::deleteLater};
+}
+}  // namespace
+
 NifWidget::NifWidget(std::shared_ptr<nifly::NifFile> nifFile,
-                     MOBase::IOrganizer* organizer, const bool debugContext,
-                     QWidget* parent, const Qt::WindowFlags f)
+                     MOBase::IOrganizer* organizer, QSharedPointer<Camera> camera,
+                     const bool debugContext, QWidget* parent, const Qt::WindowFlags f)
     : QOpenGLWidget(parent, f), m_NifFile{std::move(nifFile)}, m_MOInfo{organizer},
       m_TextureManager{std::make_unique<TextureManager>(organizer)},
       m_ShaderManager{std::make_unique<ShaderManager>(organizer)}
 {
+  setCamera(std::move(camera));
+
   QSurfaceFormat format;
   format.setVersion(2, 1);
 
@@ -79,6 +89,51 @@ void NifWidget::wheelEvent(QWheelEvent* event)
                        (static_cast<float>(event->angleDelta().y()) / 120.0f * 0.38f));
 }
 
+void NifWidget::setCamera(QSharedPointer<Camera> camera)
+{
+  if (camera.isNull()) {
+    camera = makeCamera();
+  }
+
+  if (m_Camera == camera) {
+    return;
+  }
+
+  if (m_CameraConnection) {
+    disconnect(m_CameraConnection);
+  }
+
+  m_Camera           = std::move(camera);
+  m_CameraConnection = connect(m_Camera.get(), &Camera::cameraMoved, this, [this]() {
+    updateCamera();
+    update();
+  });
+
+  updateCamera();
+  setProjectionMatrix();
+  update();
+}
+
+void NifWidget::resetCamera()
+{
+  if (!m_Camera) {
+    return;
+  }
+
+  float largestRadius = 0.0f;
+  QVector3D lookAt;
+  for (const auto& shape : m_GLShapes) {
+    if (shape.bounds.radius > largestRadius) {
+      largestRadius = shape.bounds.radius;
+      lookAt = {-shape.bounds.center.x, shape.bounds.center.z, shape.bounds.center.y};
+    }
+  }
+
+  if (largestRadius > 0.0f) {
+    m_Camera->setState({lookAt, 0.0f, 0.0f, largestRadius * 2.4f});
+  }
+}
+
 void NifWidget::messageLogged(const QOpenGLDebugMessage& message)
 {
   const auto msg = tr("OpenGL debug message: %1").arg(message.message());
@@ -116,29 +171,8 @@ void NifWidget::initializeGL()
     }
   }
 
-  m_Camera = SharedCamera;
-  if (m_Camera.isNull()) {
-    m_Camera     = {new Camera(), &Camera::deleteLater};
-    SharedCamera = m_Camera;
-
-    float largestRadius = 0.0f;
-    for (const auto& shape : m_GLShapes) {
-      if (shape.bounds.radius > largestRadius) {
-        largestRadius = shape.bounds.radius;
-
-        m_Camera->setDistance(shape.bounds.radius * 2.4f);
-        m_Camera->setLookAt(
-            {-shape.bounds.center.x, shape.bounds.center.z, shape.bounds.center.y});
-      }
-    }
-  }
-
+  frameCameraIfNeeded();
   updateCamera();
-
-  connect(m_Camera.get(), &Camera::cameraMoved, this, [this]() {
-    updateCamera();
-    update();
-  });
 
   const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
@@ -239,8 +273,21 @@ void NifWidget::cleanup()
   m_TextureManager->cleanup();
 }
 
+void NifWidget::frameCameraIfNeeded()
+{
+  if (!m_Camera || m_Camera->hasState()) {
+    return;
+  }
+
+  resetCamera();
+}
+
 void NifWidget::setProjectionMatrix()
 {
+  if (!m_Camera) {
+    return;
+  }
+
   const auto viewportWidth  = m_ViewportWidth > 0.0f ? m_ViewportWidth : 1.0f;
   const auto viewportHeight = m_ViewportHeight > 0.0f ? m_ViewportHeight : 1.0f;
 
@@ -252,6 +299,10 @@ void NifWidget::setProjectionMatrix()
 
 void NifWidget::updateCamera()
 {
+  if (!m_Camera) {
+    return;
+  }
+
   QMatrix4x4 m;
   m.translate(0.0f, 0.0f, -m_Camera->distance());
   m.rotate(m_Camera->pitch(), 1.0f, 0.0f, 0.0f);
