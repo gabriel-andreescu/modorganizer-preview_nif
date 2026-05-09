@@ -1,0 +1,35 @@
+[size=4][color=#00ffff]What's new[/color][/size]
+[list]
+[*]updated to latest Mod Organizer version[/*]
+[*]preview NIFs directly from BSA archives - yay[/*]
+[*]loads textures from loose files -> mod BSA archives -> vanilla BSAs (in that order)[/*]
+[*]fixed a long standing bug that made some meshes render invisible[/*]
+[*]fixed crashes and other bugs[/*]
+[*]infinite zoom-out[/*]
+[*]basic PBR support[/*]
+[*]tree anim flag support (plants with alpha vertex animations)[/*]
+[*]fixed z-fighting:
+[list]
+[*][img]https://i.imgur.com/bCPhDjR.gif[/img][/*]
+[/list]
+[/*]
+[*]actively working on improving it further[/*]
+[/list]
+
+
+[size=4][color=#00ffff]Compatibility[/color][/size]
+This requires Mod Organizer 2.5.2, versions lower than it don't provide BSA preview support for plugins.
+
+
+[size=4][color=#00ffff]Why not PRing the changes?[/color][/size]
+There is an open PR made by [i]aglowinthefield[/i] since Jul 30 to make the plugin work with 2.5.2, I simply decided to post my changes here.
+
+
+[size=4][color=#00ffff]Original Description[/color][/size]
+[quote][size=5]Overview[/size]
+This plugin allows you to preview NIF files in Mod Organizer by double-clicking them. This gives you a more convenient way to quickly view a NIF file without having to open Nifskope in the VFS each time.
+
+The preview will use loose textures from your enabled mods, or from vanilla game BSAs if applicable.
+
+[size=5]Installation[/size]
+Extract files to the Mod Organizer plugins directory (<MO2 DIR>\plugins).[/quote]
