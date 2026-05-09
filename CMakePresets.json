@@ -1,85 +1,160 @@
 {
-  "version": 3,
+  "version": 4,
   "configurePresets": [
     {
-      "name": "Release",
-      "generator": "Visual Studio 17 2022",
-      "binaryDir": "${sourceDir}/cmake-build-default",
-      "installDir": "${sourceDir}/../../../install",
+      "name": "cmake-dev",
+      "hidden": true,
+      "warnings": {
+        "dev": true,
+        "deprecated": true
+      }
+    },
+    {
+      "name": "vcpkg",
+      "hidden": true,
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": {
-          "type": "STRING",
-          "value": "Release"
-        },
-        "DEPENDENCIES_DIR": {
-          "type": "PATH",
-          "value": "${sourceDir}/../.."
-        },
-        "BOOST_ROOT": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../boost_1_83_0"
-        },
-        "BOOST_LIBRARYDIR": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../boost_1_83_0/lib64-msvc-14.3/lib"
-        },
-        "DIRECTXTEX_ROOT": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../DirectXTex"
-        },
-        "SPDLOG_ROOT": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../spdlog-v1.10.0"
-        },
-        "LOOT_PATH": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../libloot-0.22.1-win64"
-        },
-        "LZ4_ROOT": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../lz4-v1.9.4"
-        },
-        "QT_ROOT": {
-          "type": "PATH",
-          "value": "C:/Qt/6.7.1/msvc2019_64"
-        },
-        "ZLIB_ROOT": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../zlib-v1.3"
-        },
-        "PYTHON_ROOT": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../python-3.11.5"
-        },
-        "SEVENZ_ROOT": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../7zip-23.01"
-        },
-        "LIBBSARCH_ROOT": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../libbsarch-0.0.12-release-x64"
-        },
-        "BOOST_DI_ROOT": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../di"
-        },
-        "GTEST_ROOT": {
-          "type": "PATH",
-          "value": "${sourceDir}/../../googletest"
+        "VCPKG_MANIFEST_NO_DEFAULT_FEATURES": {
+          "type": "BOOL",
+          "value": "ON"
         }
       }
     },
     {
-      "name": "RelWithDebInfo",
-      "displayName": "RelWithDebInfo",
-      "inherits": "Release",
-      "binaryDir": "${sourceDir}/cmake-build-relwithdebinfo",
+      "name": "vcpkg-dev",
+      "hidden": true,
+      "inherits": ["vcpkg"]
+    },
+    {
+      "name": "vs2022-windows",
+      "inherits": ["cmake-dev", "vcpkg-dev"],
+      "generator": "Visual Studio 17 2022",
+      "toolset": "v143",
+      "architecture": {
+        "strategy": "set",
+        "value": "x64"
+      },
+      "binaryDir": "${sourceDir}/vsbuild",
+      "installDir": "${sourceDir}/../../../install",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": {
+        "CMAKE_CXX_FLAGS": "/EHsc /MP /W4",
+        "CMAKE_PREFIX_PATH": {
           "type": "STRING",
-          "value": "RelWithDebInfo"
+          "value": "C:/Qt/6.7.3/msvc2019_64;${sourceDir}/../../cmake_common;${sourceDir}/../../../install/lib/cmake"
+        },
+        "VCPKG_TARGET_TRIPLET": {
+          "type": "STRING",
+          "value": "x64-windows-static-md"
         }
       }
+    },
+    {
+      "name": "vs2022-windows-standalone",
+      "inherits": "vs2022-windows",
+      "cacheVariables": {
+        "VCPKG_MANIFEST_FEATURES": {
+          "type": "STRING",
+          "value": "standalone"
+        }
+      }
+    },
+    {
+      "name": "ninja-multi",
+      "inherits": ["cmake-dev", "vcpkg-dev"],
+      "generator": "Ninja Multi-Config",
+      "binaryDir": "${sourceDir}/cmake-build-ninja-multi",
+      "installDir": "${sourceDir}/../../../install",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "/EHsc /MP /W4",
+        "CMAKE_PREFIX_PATH": {
+          "type": "STRING",
+          "value": "C:/Qt/6.7.3/msvc2019_64;${sourceDir}/../../cmake_common;${sourceDir}/../../../install/lib/cmake"
+        },
+        "VCPKG_TARGET_TRIPLET": {
+          "type": "STRING",
+          "value": "x64-windows-static-md"
+        }
+      }
+    },
+    {
+      "name": "ninja-multi-mo2-2.5.2",
+      "inherits": "ninja-multi",
+      "binaryDir": "${sourceDir}/cmake-build-2.5.2",
+      "cacheVariables": {
+        "MO2_UIBASE_INCLUDE_DIR": {
+          "type": "PATH",
+          "value": "${sourceDir}/mo2-abi/2.5.2/include"
+        },
+        "PREVIEW_NIF_PACKAGE_MO2_VERSION": {
+          "type": "STRING",
+          "value": "MO2-2.5.2"
+        }
+      }
+    },
+    {
+      "name": "ninja-multi-mo2-2.5.3beta11",
+      "inherits": "ninja-multi",
+      "binaryDir": "${sourceDir}/cmake-build-2.5.3beta11",
+      "cacheVariables": {
+        "MO2_UIBASE_INCLUDE_DIR": {
+          "type": "PATH",
+          "value": "${sourceDir}/mo2-abi/2.5.3beta11/include"
+        },
+        "PREVIEW_NIF_PACKAGE_MO2_VERSION": {
+          "type": "STRING",
+          "value": "MO2-2.5.3beta11"
+        }
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "vs2022-windows",
+      "configurePreset": "vs2022-windows",
+      "resolvePackageReferences": "on"
+    },
+    {
+      "name": "vs2022-windows-standalone",
+      "configurePreset": "vs2022-windows-standalone",
+      "resolvePackageReferences": "on"
+    },
+    {
+      "name": "ninja-multi-release",
+      "configurePreset": "ninja-multi",
+      "configuration": "Release",
+      "resolvePackageReferences": "on"
+    },
+    {
+      "name": "ninja-multi-relwithdebinfo",
+      "configurePreset": "ninja-multi",
+      "configuration": "RelWithDebInfo",
+      "resolvePackageReferences": "on"
+    },
+    {
+      "name": "ninja-multi-mo2-2.5.2-relwithdebinfo",
+      "configurePreset": "ninja-multi-mo2-2.5.2",
+      "configuration": "RelWithDebInfo",
+      "resolvePackageReferences": "on"
+    },
+    {
+      "name": "ninja-multi-mo2-2.5.3beta11-relwithdebinfo",
+      "configurePreset": "ninja-multi-mo2-2.5.3beta11",
+      "configuration": "RelWithDebInfo",
+      "resolvePackageReferences": "on"
+    },
+    {
+      "name": "package-ninja-multi-mo2-2.5.2-relwithdebinfo",
+      "configurePreset": "ninja-multi-mo2-2.5.2",
+      "configuration": "RelWithDebInfo",
+      "targets": ["preview_nif_zip"],
+      "resolvePackageReferences": "on"
+    },
+    {
+      "name": "package-ninja-multi-mo2-2.5.3beta11-relwithdebinfo",
+      "configurePreset": "ninja-multi-mo2-2.5.3beta11",
+      "configuration": "RelWithDebInfo",
+      "targets": ["preview_nif_zip"],
+      "resolvePackageReferences": "on"
     }
   ]
 }
