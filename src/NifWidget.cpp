@@ -139,13 +139,13 @@ void NifWidget::resetCamera() {
     float largestRadius = 0.0f;
     QVector3D lookAt;
     for (const auto& shape : m_GLShapes) {
-        if (shape.isRefractionProxy) {
+        if (shape.isRefractionProxy()) {
             continue;
         }
 
-        if (shape.bounds.radius > largestRadius) {
-            largestRadius = shape.bounds.radius;
-            lookAt = {-shape.bounds.center.x, shape.bounds.center.z, shape.bounds.center.y};
+        if (shape.bounds().radius > largestRadius) {
+            largestRadius = shape.bounds().radius;
+            lookAt = {-shape.bounds().center.x, shape.bounds().center.z, shape.bounds().center.y};
         }
     }
 
@@ -211,11 +211,9 @@ void NifWidget::paintGL() {
     f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     const auto drawShape = [&](const OpenGLShape& shape) {
-        if (auto* const program = m_ShaderManager->getProgram(shape.shaderType);
+        if (auto* const program = m_ShaderManager->getProgram(shape.shaderType());
             program && program->isLinked() && program->bind()) {
-            auto binder = QOpenGLVertexArrayObject::Binder(shape.vertexArray.get());
-
-            const auto& modelMatrix = shape.modelMatrix;
+            const auto& modelMatrix = shape.modelMatrix();
             auto modelViewMatrix = m_ViewMatrix * modelMatrix;
             auto mvpMatrix = m_ProjectionMatrix * modelViewMatrix;
 
@@ -228,12 +226,7 @@ void NifWidget::paintGL() {
             program->setUniformValue("lightDirection", QVector3D(0, 0, 1));
 
             shape.setupShaders(program);
-
-            if (shape.indexBuffer && shape.indexBuffer->isCreated()) {
-                shape.indexBuffer->bind();
-                f->glDrawElements(GL_TRIANGLES, shape.elements, GL_UNSIGNED_SHORT, nullptr);
-                shape.indexBuffer->release();
-            }
+            shape.draw(f);
 
             program->release();
         }
@@ -243,7 +236,7 @@ void NifWidget::paintGL() {
     f->glPolygonOffset(1.0f, 2.0f);
 
     for (const auto& shape : m_GLShapes) {
-        if (!shape.isRefractionProxy && !shape.usesAlphaPass()) {
+        if (!shape.isRefractionProxy() && !shape.usesAlphaPass()) {
             drawShape(shape);
         }
     }
@@ -252,7 +245,7 @@ void NifWidget::paintGL() {
 
     bool hasRefractionProxy = false;
     for (const auto& shape : m_GLShapes) {
-        if (shape.isRefractionProxy) {
+        if (shape.isRefractionProxy()) {
             hasRefractionProxy = true;
             continue;
         }
@@ -451,13 +444,11 @@ void NifWidget::renderRefractionProxyPass(QOpenGLFunctions_2_1* f) {
     f->glDepthMask(GL_FALSE);
 
     for (const auto& shape : m_GLShapes) {
-        if (!shape.isRefractionProxy || !program->bind()) {
+        if (!shape.isRefractionProxy() || !program->bind()) {
             continue;
         }
 
-        auto binder = QOpenGLVertexArrayObject::Binder(shape.vertexArray.get());
-
-        const auto& modelMatrix = shape.modelMatrix;
+        const auto& modelMatrix = shape.modelMatrix();
         auto modelViewMatrix = m_ViewMatrix * modelMatrix;
         auto mvpMatrix = m_ProjectionMatrix * modelViewMatrix;
 
@@ -481,13 +472,8 @@ void NifWidget::renderRefractionProxyPass(QOpenGLFunctions_2_1* f) {
             "viewportSize",
             QVector2D(static_cast<float>(m_SceneColorTextureWidth), static_cast<float>(m_SceneColorTextureHeight))
         );
-        program->setUniformValue("refractionStrength", std::clamp(shape.refractionStrength, 0.0f, 1.0f));
-
-        if (shape.indexBuffer && shape.indexBuffer->isCreated()) {
-            shape.indexBuffer->bind();
-            f->glDrawElements(GL_TRIANGLES, shape.elements, GL_UNSIGNED_SHORT, nullptr);
-            shape.indexBuffer->release();
-        }
+        program->setUniformValue("refractionStrength", std::clamp(shape.refractionStrength(), 0.0f, 1.0f));
+        shape.draw(f);
 
         program->release();
     }

@@ -1,146 +1,50 @@
 #pragma once
 
-#include "OpenGLResources.h"
 #include "ShaderManager.h"
-#include "TextureSlotDescriptors.h"
-#include "TextureSlots.h"
 
-#include <Geometry.hpp>
-#include <NifFile.hpp>
+#include <memory>
 
-#include <QOpenGLShaderProgram>
-#include <array>
-#include <cstdint>
-
+class OpenGLShapeDrawState;
+class OpenGLShapeGeometry;
+class OpenGLShapeMaterial;
+class OpenGLShapeTextures;
+class QMatrix4x4;
 class QOpenGLFunctions_2_1;
-class PreviewTexture;
+class QOpenGLShaderProgram;
 class TextureManager;
 
-struct OpenGLShape {
+namespace nifly {
+struct BoundingSphere;
+class NifFile;
+class NiShape;
+}
+
+class OpenGLShape {
 public:
     OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape, TextureManager* textureManager);
-    ~OpenGLShape() = default;
+    ~OpenGLShape();
     OpenGLShape(const OpenGLShape&) = delete;
-    OpenGLShape(OpenGLShape&&) noexcept = default;
+    OpenGLShape(OpenGLShape&&) noexcept;
     OpenGLShape& operator=(const OpenGLShape&) = delete;
-    OpenGLShape& operator=(OpenGLShape&&) noexcept = default;
+    OpenGLShape& operator=(OpenGLShape&&) noexcept;
 
     void destroy();
     void setupShaders(QOpenGLShaderProgram* program) const;
+    void draw(QOpenGLFunctions_2_1* f) const;
+
+    [[nodiscard]] ShaderManager::ShaderType shaderType() const noexcept;
+    [[nodiscard]] const QMatrix4x4& modelMatrix() const noexcept;
+    [[nodiscard]] const nifly::BoundingSphere& bounds() const noexcept;
+    [[nodiscard]] bool isRefractionProxy() const noexcept;
+    [[nodiscard]] float refractionStrength() const noexcept;
     [[nodiscard]] bool usesAlphaPass() const;
     [[nodiscard]] bool usesBlendedPass() const;
 
-    static QVector2D convertVector2(nifly::Vector2 vector);
-    static QVector3D convertVector3(nifly::Vector3 vector);
-    static QColor convertColor(nifly::Color4 color);
-    static QMatrix4x4 convertTransform(const nifly::MatTransform& transform);
-
-    ShaderManager::ShaderType shaderType = ShaderManager::SKDefault;
-
-    OpenGLVertexArrayResource vertexArray;
-
-    std::array<OpenGLBufferResource, ATTRIB_COUNT> vertexBuffers;
-
-    OpenGLBufferResource indexBuffer;
-    GLsizei elements = 0;
-
-    std::array<PreviewTexture*, TextureSlotCount> textures {nullptr};
-    std::array<bool, TextureSlotCount> loadedTextures {};
-    TextureSlotDescriptorList slotDescriptors {};
-
-    QMatrix4x4 modelMatrix;
-    nifly::BoundingSphere bounds;
-    QVector3D specColor {1.0f, 1.0f, 1.0f};
-    float specStrength = 1.0f;
-    float specGlossiness = 1.0f;
-    float fresnelPower;
-
-    float paletteScale;
-
-    bool hasGlowMap = false;
-    bool hasHeightMap = false;
-    bool hasSourceTexture = false;
-    bool hasGreyscaleMap = false;
-    QColor glowColor = QColorConstants::White;
-    float glowMult = 1.0f;
-
-    float alpha = 1.0f;
-    QVector3D tintColor {1.0f, 1.0f, 1.0f};
-
-    QVector2D uvScale {1.0f, 1.0f};
-    QVector2D uvOffset {0.0f, 0.0f};
-
-    bool hasEmit = false;
-    bool hasSoftlight = false;
-    bool hasBacklight = false;
-    bool hasRimlight = false;
-    bool hasTintColor = false;
-    bool hasWeaponBlood = false;
-    bool hasRefraction = false;
-    bool isRefractionProxy = false;
-    bool greyscaleAlpha = false;
-    bool greyscaleColor = false;
-    bool useFalloff = false;
-
-    bool doubleSided = false;
-    float softlight = 0.3f;
-    float backlightPower = 0.0f;
-    float rimPower = 2.0f;
-    float subsurfaceRolloff {};
-    float envReflection = 1.0f;
-    QVector4D falloffParams {1.0f, 1.0f, 0.0f, 0.0f};
-    float falloffDepth = 0.0f;
-    float refractionStrength = 0.0f;
-
-    QVector2D innerScale;
-    float innerThickness;
-    float outerRefraction;
-    float outerReflection;
-
-    bool isPBR = false;
-    bool pbrHasSubsurface = false;
-    bool pbrHasTwoLayer = false;
-    bool pbrHasColoredCoat = false;
-    bool pbrHasInterlayerParallax = false;
-    bool pbrHasCoatNormal = false;
-    bool pbrHasFuzz = false;
-    bool pbrHasHairMarschner = false;
-    bool pbrHasGlint = false;
-    QVector3D pbrParams1 {1.0f, 1.0f, 0.04f};
-    QVector4D pbrParams2 {1.0f, 1.0f, 1.0f, 0.0f};
-    QVector4D pbrFeatureParams {0.0f, 0.0f, 0.0f, 0.0f};
-
-    bool zBufferWrite = true;
-    bool zBufferTest = true;
-
-    bool alphaBlendEnable = false;
-    GLenum srcBlendMode = GL_ONE;
-    GLenum dstBlendMode = GL_ONE;
-    bool alphaTestEnable = false;
-    GLenum alphaTestMode = GL_GREATER;
-    float alphaThreshold = 0.0f;
-
 private:
-    static void setDefaultVertexAttributes(QOpenGLFunctions_2_1* f);
-    void initializeGeometryBuffers(nifly::NifFile* nifFile, nifly::NiShape* niShape, nifly::NiShader* shader);
-    void initializeColorBuffer(nifly::NifFile* nifFile, nifly::NiShape* niShape, nifly::NiShader* shader);
-    void loadShaderTextures(nifly::NifFile* nifFile, nifly::NiShader* shader, TextureManager* textureManager);
-    void loadEffectShaderTextures(nifly::BSEffectShaderProperty* shader, TextureManager* textureManager);
-    void loadTextureSetTextures(nifly::NifFile* nifFile, nifly::NiShader* shader, TextureManager* textureManager);
-    void assignMissingTexture(TextureManager* textureManager, std::size_t textureSlot);
-    void applyShaderMaterial(nifly::NifFile* nifFile, nifly::NiShape* niShape, nifly::NiShader* shader);
-    void applyCommonShaderMaterial(nifly::NiShader* shader);
-    void applyAlphaProperty(nifly::NifFile* nifFile, nifly::NiShape* niShape);
-    void applyShaderBufferFlags(nifly::NiShader* shader);
-    void applyLightingShaderMaterial(nifly::BSLightingShaderProperty* shader);
-    void applyEffectShaderMaterial(nifly::BSEffectShaderProperty* shader);
-    void useDefaultTextures(TextureManager* textureManager);
-    void bindTextures() const;
-    void setupGlowUniforms(QOpenGLShaderProgram* program) const;
-    void setupPBRUniforms(QOpenGLShaderProgram* program) const;
-    void setupMultilayerUniforms(QOpenGLShaderProgram* program) const;
-    void setupVertexAttributes(QOpenGLFunctions_2_1* f) const;
-    void setupDepthState(QOpenGLFunctions_2_1* f) const;
-    void setupCullingState(QOpenGLFunctions_2_1* f) const;
-    void setupBlendState(QOpenGLFunctions_2_1* f) const;
+    std::unique_ptr<OpenGLShapeGeometry> m_Geometry;
+    std::unique_ptr<OpenGLShapeMaterial> m_Material;
+    std::unique_ptr<OpenGLShapeTextures> m_Textures;
+    std::unique_ptr<OpenGLShapeDrawState> m_DrawState;
+    ShaderManager::ShaderType m_ShaderType = ShaderManager::SKDefault;
+    bool m_IsRefractionProxy = false;
 };
