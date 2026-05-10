@@ -1,9 +1,11 @@
 #include "TextureManager.h"
+#include "Fo4Material.h"
 #include "TextureCache.h"
 #include "TextureLoader.h"
 
 #include <QDebug>
 #include <QString>
+#include <QStringList>
 
 #include <exception>
 #include <memory>
@@ -24,24 +26,35 @@ PreviewTexture* TextureManager::getTexture(const std::string& texturePath) {
 }
 
 PreviewTexture* TextureManager::getTexture(const QString& texturePath) {
-    if (texturePath.isEmpty()) {
+    const auto normalizedPath = normalizeTextureDataPath(texturePath);
+    if (normalizedPath.isEmpty()) {
         return nullptr;
     }
 
-    if (m_Cache->containsTexture(texturePath)) {
-        return m_Cache->texture(texturePath);
+    if (m_Cache->containsTexture(normalizedPath)) {
+        return m_Cache->texture(normalizedPath);
     }
 
     std::unique_ptr<PreviewTexture> texture;
     try {
-        texture = m_Loader->load(texturePath);
+        texture = m_Loader->load(normalizedPath);
     } catch (const std::exception& e) {
-        qWarning("Failed to load NIF texture '%s': %s", qUtf8Printable(texturePath), e.what());
+        qWarning("Failed to load NIF texture '%s': %s", qUtf8Printable(normalizedPath), e.what());
     } catch (...) {
-        qWarning("Failed to load NIF texture '%s': unknown exception", qUtf8Printable(texturePath));
+        qWarning("Failed to load NIF texture '%s': unknown exception", qUtf8Printable(normalizedPath));
     }
 
-    return m_Cache->storeTexture(texturePath, std::move(texture));
+    return m_Cache->storeTexture(normalizedPath, std::move(texture));
+}
+
+QStringList TextureManager::getFo4MaterialTextures(const QString& materialPath) const {
+    const auto normalizedPath = Fo4Material::normalizeMaterialDataPath(materialPath);
+    if (normalizedPath.isEmpty()) {
+        return {};
+    }
+
+    const auto material = Fo4Material::read(m_Loader->loadDataFile(normalizedPath));
+    return material.valid ? material.textures : QStringList {};
 }
 
 PreviewTexture* TextureManager::getErrorTexture() {

@@ -29,6 +29,11 @@
   black.
 - Fixes Fallout 4 effect-shader previews by loading their normal, environment,
   and environment mask texture slots.
+- Fixes Fallout 4 material-backed previews by loading textures from BGSM/BGEM
+  material files and resolving material texture paths that omit the `textures/`
+  prefix.
+- Fixes vanilla Fallout 4 archive texture lookup for previews whose referenced
+  DDS files live in texture index BA2 archives.
 - Fixes multilayer parallax texture source labels so inner-layer textures are
   identified correctly instead of being confused with height maps.
 

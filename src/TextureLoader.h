@@ -2,6 +2,7 @@
 
 #include "TextureSource.h"
 
+#include <QByteArray>
 #include <QString>
 #include <QStringList>
 
@@ -18,6 +19,7 @@ public:
     explicit TextureLoader(MOBase::IOrganizer* organizer, TextureSourceProvider textureSource = {});
 
     [[nodiscard]] std::unique_ptr<PreviewTexture> load(const QString& texturePath) const;
+    [[nodiscard]] QByteArray loadDataFile(const QString& dataPath) const;
 
 private:
     [[nodiscard]] std::unique_ptr<PreviewTexture> loadAuto(const QString& texturePath) const;
@@ -33,6 +35,16 @@ private:
         const QString& archivePath,
         const QString& texturePath
     );
+    [[nodiscard]] QByteArray loadDataFileAuto(const QString& dataPath) const;
+    [[nodiscard]] QByteArray tryLoadDataFileFromSource(const QString& dataPath) const;
+    [[nodiscard]] static QByteArray tryLoadDataFileFromArchives(
+        const QStringList& archivePaths,
+        const QString& dataPath
+    );
+    [[nodiscard]] QByteArray tryLoadDataFileFromMods(const QString& dataPath) const;
+    [[nodiscard]] QByteArray tryLoadDataFileFromGame(const QString& dataPath) const;
+    [[nodiscard]] static QByteArray loadLooseDataFile(const QString& path);
+    [[nodiscard]] static QByteArray loadDataFileFromArchive(const QString& archivePath, const QString& dataPath);
 
     MOBase::IOrganizer* m_MOInfo = nullptr;
     TextureSourceProvider m_TextureSource;

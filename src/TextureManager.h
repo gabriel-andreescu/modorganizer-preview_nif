@@ -2,6 +2,8 @@
 
 #include "TextureSource.h"
 
+#include <QStringList>
+
 #include <memory>
 #include <string>
 
@@ -23,6 +25,7 @@ public:
 
     PreviewTexture* getTexture(const std::string& texturePath);
     PreviewTexture* getTexture(const QString& texturePath);
+    [[nodiscard]] QStringList getFo4MaterialTextures(const QString& materialPath) const;
 
     PreviewTexture* getErrorTexture();
     PreviewTexture* getBlackTexture();

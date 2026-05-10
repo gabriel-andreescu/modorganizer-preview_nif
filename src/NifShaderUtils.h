@@ -31,6 +31,15 @@ inline bool IsPBRLightingShader(const nifly::NiShader* shader) {
     return bslsp && HasFlag(bslsp->shaderFlags2, SLSF2::PBR);
 }
 
+inline QString GetShaderMaterialPath(const nifly::NiShader* shader, const QString& suffix) {
+    if (!shader) {
+        return {};
+    }
+
+    const auto name = QString::fromStdString(shader->name.get()).trimmed();
+    return name.endsWith(suffix, Qt::CaseInsensitive) ? name : QString {};
+}
+
 inline bool IsNormalLikeTexturePath(const QString& texturePath) {
     const auto stem = QFileInfo(texturePath).completeBaseName().toLower();
     return stem.endsWith("_n") || stem.endsWith("_msn");

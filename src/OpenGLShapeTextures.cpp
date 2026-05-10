@@ -1,9 +1,12 @@
 #include "OpenGLShapeTextures.h"
+#include "Fo4Material.h"
+#include "NifShaderUtils.h"
 #include "PreviewTexture.h"
 #include "TextureManager.h"
 
 #include <QDebug>
 #include <QOpenGLShaderProgram>
+#include <QStringList>
 
 #include <NifFile.hpp>
 
@@ -72,6 +75,7 @@ bool textureFeatureEnabled(
 
     return false;
 }
+
 } // namespace
 
 void OpenGLShapeTextures::initializeDescriptors(
@@ -93,8 +97,18 @@ void OpenGLShapeTextures::load(
         return;
     }
 
+    const auto loadedFo4Material = shaderType
+                                   == ShaderManager::FO4Default
+                                   && loadFo4MaterialTextures(shader, textureManager);
+    if (loadedFo4Material) {
+        return;
+    }
+
     if (auto* const effectShader = dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
         loadEffectShaderTextures(effectShader, shaderType, textureManager);
+        if (shaderType == ShaderManager::FO4EffectShader && !GetShaderMaterialPath(shader, ".bgem").isEmpty()) {
+            loadFo4EffectMaterialTextures(shader, textureManager);
+        }
     } else if (shader->HasTextureSet()) {
         loadTextureSetTextures(nifFile, shader, textureManager);
     }
@@ -170,6 +184,60 @@ void OpenGLShapeTextures::loadEffectShaderTextures(
     assignEffectTexture(NormalMap, shader->normalTexture.get());
     assignEffectTexture(EnvironmentMap, shader->envMapTexture.get());
     assignEffectTexture(EnvironmentMask, shader->envMaskTexture.get());
+}
+
+bool OpenGLShapeTextures::loadFo4MaterialTextures(nifly::NiShader* shader, TextureManager* textureManager) {
+    const auto textures = textureManager->getFo4MaterialTextures(GetShaderMaterialPath(shader, ".bgsm"));
+    if (textures.isEmpty()) {
+        return false;
+    }
+
+    const auto assignMaterialTexture = [&](const std::size_t slot, const Fo4Material::TextureIndex index) {
+        if (index >= textures.size() || textures[index].isEmpty()) {
+            assignMissingTexture(textureManager, slot);
+            return;
+        }
+
+        m_Textures[slot] = textureManager->getTexture(textures[index]);
+        m_LoadedTextures[slot] = m_Textures[slot] != nullptr;
+        if (!m_Textures[slot]) {
+            assignMissingTexture(textureManager, slot);
+        }
+    };
+
+    assignMaterialTexture(TextureSlot::BaseMap, Fo4Material::Diffuse);
+    assignMaterialTexture(TextureSlot::NormalMap, Fo4Material::Normal);
+    assignMaterialTexture(TextureSlot::SpecularMap, Fo4Material::Specular);
+    assignMaterialTexture(TextureSlot::GreyscaleMap, Fo4Material::Greyscale);
+    assignMaterialTexture(TextureSlot::EnvironmentMap, Fo4Material::Environment);
+    assignMaterialTexture(TextureSlot::EnvironmentMask, Fo4Material::GlowOrEnvironmentMask);
+    assignMaterialTexture(TextureSlot::GlowMap, Fo4Material::GlowOrEnvironmentMask);
+    return true;
+}
+
+bool OpenGLShapeTextures::loadFo4EffectMaterialTextures(nifly::NiShader* shader, TextureManager* textureManager) {
+    const auto textures = textureManager->getFo4MaterialTextures(GetShaderMaterialPath(shader, ".bgem"));
+    if (textures.isEmpty()) {
+        return false;
+    }
+
+    const auto assignMaterialTexture = [&](const std::size_t slot, const int index) {
+        if (index >= textures.size() || textures[index].isEmpty()) {
+            return;
+        }
+
+        if (auto* const texture = textureManager->getTexture(textures[index])) {
+            m_Textures[slot] = texture;
+            m_LoadedTextures[slot] = true;
+        }
+    };
+
+    assignMaterialTexture(TextureSlot::BaseMap, 0);
+    assignMaterialTexture(TextureSlot::GreyscaleMap, 1);
+    assignMaterialTexture(TextureSlot::EnvironmentMap, 2);
+    assignMaterialTexture(TextureSlot::NormalMap, 3);
+    assignMaterialTexture(TextureSlot::EnvironmentMask, 4);
+    return true;
 }
 
 void OpenGLShapeTextures::loadTextureSetTextures(

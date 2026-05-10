@@ -41,6 +41,8 @@ private:
         ShaderManager::ShaderType shaderType,
         TextureManager* textureManager
     );
+    bool loadFo4MaterialTextures(nifly::NiShader* shader, TextureManager* textureManager);
+    bool loadFo4EffectMaterialTextures(nifly::NiShader* shader, TextureManager* textureManager);
     void loadTextureSetTextures(nifly::NifFile* nifFile, nifly::NiShader* shader, TextureManager* textureManager);
     void assignMissingTexture(TextureManager* textureManager, std::size_t textureSlot);
     void ensurePBRTextureDefaults(TextureManager* textureManager);

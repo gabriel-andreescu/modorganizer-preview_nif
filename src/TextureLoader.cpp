@@ -10,6 +10,7 @@
 
 #include <QDebug>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 
 #include <cstddef>
@@ -21,11 +22,20 @@ TextureLoader::TextureLoader(MOBase::IOrganizer* organizer, TextureSourceProvide
     , m_TextureSource {std::move(textureSource)} {}
 
 std::unique_ptr<PreviewTexture> TextureLoader::load(const QString& texturePath) const {
-    if (auto texture = tryLoadFromSource(texturePath)) {
+    const auto normalizedPath = normalizeTextureDataPath(texturePath);
+    if (auto texture = tryLoadFromSource(normalizedPath)) {
         return texture;
     }
 
-    return loadAuto(texturePath);
+    return loadAuto(normalizedPath);
+}
+
+QByteArray TextureLoader::loadDataFile(const QString& dataPath) const {
+    if (auto data = tryLoadDataFileFromSource(dataPath); !data.isEmpty()) {
+        return data;
+    }
+
+    return loadDataFileAuto(dataPath);
 }
 
 std::unique_ptr<PreviewTexture> TextureLoader::loadAuto(const QString& texturePath) const {
@@ -44,11 +54,13 @@ std::unique_ptr<PreviewTexture> TextureLoader::loadAuto(const QString& texturePa
         return nullptr;
     }
 
-    const auto realPath = MoDataPaths::resolveDataPath(m_MOInfo, texturePath);
-    const bool fileExists = !realPath.isEmpty() && QFileInfo::exists(realPath) && QFileInfo(realPath).isFile();
+    for (const auto& path : textureDataPathVariants(texturePath)) {
+        const auto realPath = MoDataPaths::resolveDataPath(m_MOInfo, path);
+        const bool fileExists = !realPath.isEmpty() && QFileInfo::exists(realPath) && QFileInfo(realPath).isFile();
 
-    if (fileExists) {
-        return loadLooseTexture(realPath);
+        if (fileExists) {
+            return loadLooseTexture(realPath);
+        }
     }
 
     if (auto texture = tryLoadFromMods(texturePath)) {
@@ -73,11 +85,12 @@ std::unique_ptr<PreviewTexture> TextureLoader::tryLoadFromSource(const QString& 
         case TextureSourceProviderKind::Mod:
         case TextureSourceProviderKind::GameData: {
             if (!m_TextureSource.sourcePath.isEmpty()) {
-                const auto realPath = QDir(m_TextureSource.sourcePath)
-                                          .absoluteFilePath(QDir::cleanPath(normalizeTextureDataPath(texturePath)));
-                if (QFileInfo::exists(realPath) && QFileInfo(realPath).isFile()) {
-                    if (auto texture = loadLooseTexture(realPath)) {
-                        return texture;
+                for (const auto& path : textureDataPathVariants(texturePath)) {
+                    const auto realPath = QDir(m_TextureSource.sourcePath).absoluteFilePath(QDir::cleanPath(path));
+                    if (QFileInfo::exists(realPath) && QFileInfo(realPath).isFile()) {
+                        if (auto texture = loadLooseTexture(realPath)) {
+                            return texture;
+                        }
                     }
                 }
             }
@@ -122,17 +135,20 @@ std::unique_ptr<PreviewTexture> TextureLoader::tryLoadFromMods(const QString& te
         return nullptr;
     }
 
-    const auto fileOrigins = m_MOInfo->getFileOrigins(texturePath);
-    if (fileOrigins.empty()) {
-        return nullptr;
-    }
+    for (const auto& path : textureDataPathVariants(texturePath)) {
+        const auto fileOrigins = m_MOInfo->getFileOrigins(path);
+        if (fileOrigins.empty()) {
+            continue;
+        }
 
-    const auto& modName = fileOrigins.constFirst();
-    if (auto* const mod = m_MOInfo->modList()->getMod(modName)) {
-        if (auto texture = tryLoadFromArchives(MoDataPaths::archivePathsFromMod(mod), texturePath)) {
-            return texture;
+        const auto& modName = fileOrigins.constFirst();
+        if (auto* const mod = m_MOInfo->modList()->getMod(modName)) {
+            if (auto texture = tryLoadFromArchives(MoDataPaths::archivePathsFromMod(mod), path)) {
+                return texture;
+            }
         }
     }
+
     return nullptr;
 }
 
@@ -175,4 +191,107 @@ std::unique_ptr<PreviewTexture> TextureLoader::loadFromArchive(const QString& ar
         );
         return nullptr;
     }
+}
+
+QByteArray TextureLoader::loadDataFileAuto(const QString& dataPath) const {
+    if (dataPath.isEmpty()) {
+        return {};
+    }
+
+    if (!m_MOInfo) {
+        qCritical("Failed to interface with Mod Organizer");
+        return {};
+    }
+
+    const auto realPath = MoDataPaths::resolveDataPath(m_MOInfo, dataPath);
+    const bool fileExists = !realPath.isEmpty() && QFileInfo::exists(realPath) && QFileInfo(realPath).isFile();
+
+    if (fileExists) {
+        return loadLooseDataFile(realPath);
+    }
+
+    if (auto data = tryLoadDataFileFromMods(dataPath); !data.isEmpty()) {
+        return data;
+    }
+
+    return tryLoadDataFileFromGame(dataPath);
+}
+
+QByteArray TextureLoader::tryLoadDataFileFromSource(const QString& dataPath) const {
+    if (m_TextureSource.kind == TextureSourceProviderKind::Auto) {
+        return {};
+    }
+
+    switch (m_TextureSource.kind) {
+        case TextureSourceProviderKind::Mod:
+        case TextureSourceProviderKind::GameData: {
+            if (!m_TextureSource.sourcePath.isEmpty()) {
+                const auto realPath = QDir(m_TextureSource.sourcePath).absoluteFilePath(QDir::cleanPath(dataPath));
+                if (QFileInfo::exists(realPath) && QFileInfo(realPath).isFile()) {
+                    if (auto data = loadLooseDataFile(realPath); !data.isEmpty()) {
+                        return data;
+                    }
+                }
+            }
+
+            return tryLoadDataFileFromArchives(m_TextureSource.archivePaths, dataPath);
+        }
+        case TextureSourceProviderKind::Auto: return {};
+    }
+
+    return {};
+}
+
+QByteArray TextureLoader::tryLoadDataFileFromArchives(const QStringList& archivePaths, const QString& dataPath) {
+    for (const auto& archivePath : archivePaths) {
+        if (auto data = loadDataFileFromArchive(archivePath, dataPath); !data.isEmpty()) {
+            return data;
+        }
+    }
+
+    return {};
+}
+
+QByteArray TextureLoader::tryLoadDataFileFromMods(const QString& dataPath) const {
+    if (!m_MOInfo) {
+        return {};
+    }
+
+    const auto fileOrigins = m_MOInfo->getFileOrigins(dataPath);
+    if (fileOrigins.empty()) {
+        return {};
+    }
+
+    const auto& modName = fileOrigins.constFirst();
+    if (auto* const mod = m_MOInfo->modList()->getMod(modName)) {
+        return tryLoadDataFileFromArchives(MoDataPaths::archivePathsFromMod(mod), dataPath);
+    }
+    return {};
+}
+
+QByteArray TextureLoader::tryLoadDataFileFromGame(const QString& dataPath) const {
+    if (!m_MOInfo) {
+        return {};
+    }
+
+    return tryLoadDataFileFromArchives(MoDataPaths::archivePathsFromGame(m_MOInfo), dataPath);
+}
+
+QByteArray TextureLoader::loadLooseDataFile(const QString& path) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning("Failed to read loose data file '%s'", qUtf8Printable(path));
+        return {};
+    }
+
+    return file.readAll();
+}
+
+QByteArray TextureLoader::loadDataFileFromArchive(const QString& archivePath, const QString& dataPath) {
+    libbsarch::bs_archive archive;
+    if (!ArchiveAccess::loadArchive(archive, archivePath)) {
+        return {};
+    }
+
+    return ArchiveAccess::extractBytes(archive, dataPath);
 }

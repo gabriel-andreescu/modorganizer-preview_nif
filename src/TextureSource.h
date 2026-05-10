@@ -49,5 +49,6 @@ public:
 QString makeTextureSummaryText(const TextureSourceSet& sourceSet);
 QString makeTextureToolTipText(const TextureSourceSet& sourceSet, int providerIndex);
 QString normalizeTextureDataPath(QString path);
+QStringList textureDataPathVariants(const QString& path);
 QString textureDataPathKey(const QString& path);
 bool textureProviderCoversPath(const TextureSourceProvider& provider, const QString& texturePath);

@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QStringList>
 
 #include <memory>
 #include <ranges>
@@ -38,6 +39,36 @@ void appendUnique(QStringList& values, const QString& value) {
 
 bool isArchiveName(const QString& name) {
     return name.endsWith(".bsa", Qt::CaseInsensitive) || name.endsWith(".ba2", Qt::CaseInsensitive);
+}
+
+void appendResolvedArchiveName(MOBase::IOrganizer* organizer, QStringList& archivePaths, const QString& archiveName) {
+    appendUnique(archivePaths, MoDataPaths::resolveDataPath(organizer, archiveName));
+}
+
+void appendResolvedArchiveNames(
+    MOBase::IOrganizer* organizer,
+    QStringList& archivePaths,
+    const QStringList& archiveNames
+) {
+    for (const auto& archiveName : std::ranges::reverse_view(archiveNames)) {
+        appendResolvedArchiveName(organizer, archivePaths, archiveName);
+    }
+}
+
+void appendGameDataArchiveFiles(MOBase::IOrganizer* organizer, QStringList& archivePaths) {
+    const auto* const game = organizer->managedGame();
+    if (!game) {
+        return;
+    }
+
+    const auto archives = game->dataDirectory().entryInfoList(
+        {"*.bsa", "*.ba2"},
+        QDir::Files | QDir::Readable,
+        QDir::Name | QDir::IgnoreCase | QDir::Reversed
+    );
+    for (const auto& archiveInfo : archives) {
+        appendUnique(archivePaths, QDir::fromNativeSeparators(archiveInfo.absoluteFilePath()));
+    }
 }
 } // namespace
 
@@ -103,12 +134,9 @@ QStringList archivePathsFromGame(MOBase::IOrganizer* organizer) {
         return archivePaths;
     }
 
-    for (
-        auto archives = gameArchives->archives(currentProfile(organizer));
-        const auto& archive : std::ranges::reverse_view(archives)
-    ) {
-        appendUnique(archivePaths, resolveDataPath(organizer, archive));
-    }
+    appendResolvedArchiveNames(organizer, archivePaths, gameArchives->archives(currentProfile(organizer)));
+    appendResolvedArchiveNames(organizer, archivePaths, gameArchives->vanillaArchives());
+    appendGameDataArchiveFiles(organizer, archivePaths);
 
     return archivePaths;
 }

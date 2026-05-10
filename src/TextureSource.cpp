@@ -1,8 +1,10 @@
 #include "TextureSource.h"
 #include "ArchiveAccess.h"
+#include "Fo4Material.h"
 #include "MoDataPaths.h"
 #include "NifShaderUtils.h"
 #include "ShaderClassification.h"
+#include "TextureLoader.h"
 #include "TextureSlotDescriptors.h"
 
 #include <NifFile.hpp>
@@ -205,7 +207,147 @@ void appendEffectShaderTextureReferences(
     );
 }
 
-QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile) {
+void appendFo4MaterialTextureReference(
+    QVector<TextureReference>& references,
+    QSet<QString>& seenPaths,
+    const nifly::NiShader* shader,
+    const ShaderManager::ShaderType shaderType,
+    const QStringList& textures,
+    const int slot,
+    const int materialIndex
+) {
+    if (materialIndex < 0 || materialIndex >= textures.size()) {
+        return;
+    }
+
+    appendTextureReference(references, seenPaths, shader, shaderType, slot, textures[materialIndex]);
+}
+
+void appendFo4MaterialTextureReferences(
+    QVector<TextureReference>& references,
+    QSet<QString>& seenPaths,
+    MOBase::IOrganizer* organizer,
+    const nifly::NiShader* shader,
+    const ShaderManager::ShaderType shaderType
+) {
+    const auto materialPath = shaderType == ShaderManager::FO4EffectShader ? GetShaderMaterialPath(shader, ".bgem")
+                                                                           : GetShaderMaterialPath(shader, ".bgsm");
+    if (materialPath.isEmpty()) {
+        return;
+    }
+
+    const TextureLoader loader(organizer);
+    const auto material = Fo4Material::read(loader.loadDataFile(Fo4Material::normalizeMaterialDataPath(materialPath)));
+    if (!material.valid) {
+        return;
+    }
+
+    if (shaderType == ShaderManager::FO4EffectShader) {
+        appendFo4MaterialTextureReference(
+            references,
+            seenPaths,
+            shader,
+            shaderType,
+            material.textures,
+            TextureSlot::BaseMap,
+            0
+        );
+        appendFo4MaterialTextureReference(
+            references,
+            seenPaths,
+            shader,
+            shaderType,
+            material.textures,
+            TextureSlot::GreyscaleMap,
+            1
+        );
+        appendFo4MaterialTextureReference(
+            references,
+            seenPaths,
+            shader,
+            shaderType,
+            material.textures,
+            TextureSlot::EnvironmentMap,
+            2
+        );
+        appendFo4MaterialTextureReference(
+            references,
+            seenPaths,
+            shader,
+            shaderType,
+            material.textures,
+            TextureSlot::NormalMap,
+            3
+        );
+        appendFo4MaterialTextureReference(
+            references,
+            seenPaths,
+            shader,
+            shaderType,
+            material.textures,
+            TextureSlot::EnvironmentMask,
+            4
+        );
+        return;
+    }
+
+    appendFo4MaterialTextureReference(
+        references,
+        seenPaths,
+        shader,
+        shaderType,
+        material.textures,
+        TextureSlot::BaseMap,
+        Fo4Material::Diffuse
+    );
+    appendFo4MaterialTextureReference(
+        references,
+        seenPaths,
+        shader,
+        shaderType,
+        material.textures,
+        TextureSlot::NormalMap,
+        Fo4Material::Normal
+    );
+    appendFo4MaterialTextureReference(
+        references,
+        seenPaths,
+        shader,
+        shaderType,
+        material.textures,
+        TextureSlot::SpecularMap,
+        Fo4Material::Specular
+    );
+    appendFo4MaterialTextureReference(
+        references,
+        seenPaths,
+        shader,
+        shaderType,
+        material.textures,
+        TextureSlot::GreyscaleMap,
+        Fo4Material::Greyscale
+    );
+    appendFo4MaterialTextureReference(
+        references,
+        seenPaths,
+        shader,
+        shaderType,
+        material.textures,
+        TextureSlot::EnvironmentMap,
+        Fo4Material::Environment
+    );
+    appendFo4MaterialTextureReference(
+        references,
+        seenPaths,
+        shader,
+        shaderType,
+        material.textures,
+        TextureSlot::EnvironmentMask,
+        Fo4Material::GlowOrEnvironmentMask
+    );
+}
+
+QVector<TextureReference> textureReferencesFor(MOBase::IOrganizer* organizer, const nifly::NifFile* nifFile) {
     QVector<TextureReference> references;
     QSet<QString> seenPaths;
     if (!nifFile) {
@@ -224,6 +366,10 @@ QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile) {
 
         const auto isRefractionProxy = IsRefractionDistortionProxy(nifFile, shape);
         const auto shaderType = classifyShaderType(nifFile, shader);
+
+        if (shaderType == ShaderManager::FO4Default || shaderType == ShaderManager::FO4EffectShader) {
+            appendFo4MaterialTextureReferences(references, seenPaths, organizer, shader, shaderType);
+        }
 
         if (auto* const effectShader = dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
             appendEffectShaderTextureReferences(references, seenPaths, effectShader, shaderType);
@@ -320,7 +466,43 @@ QString normalizeTextureDataPath(QString path) {
     while (path.startsWith('/')) {
         path.remove(0, 1);
     }
+    if (path.startsWith("data/", Qt::CaseInsensitive)) {
+        path.remove(0, 5);
+    }
+
+    const auto textureIndex = path.indexOf("textures/", 0, Qt::CaseInsensitive);
+    if (textureIndex > 0) {
+        path.remove(0, textureIndex);
+    } else if (
+        textureIndex
+        < 0
+        && !path.startsWith("shaders/", Qt::CaseInsensitive)
+        && path.endsWith(".dds", Qt::CaseInsensitive)
+    ) {
+        path.prepend("textures/");
+    }
+
     return path;
+}
+
+QStringList textureDataPathVariants(const QString& path) {
+    QStringList paths;
+
+    const auto normalized = normalizeTextureDataPath(path);
+    appendUnique(paths, normalized);
+
+    auto original = QDir::fromNativeSeparators(path).trimmed();
+    while (original.startsWith('/')) {
+        original.remove(0, 1);
+    }
+    appendUnique(paths, original);
+
+    if (original.startsWith("data/", Qt::CaseInsensitive)) {
+        original.remove(0, 5);
+        appendUnique(paths, original);
+    }
+
+    return paths;
 }
 
 QString textureDataPathKey(const QString& path) {
@@ -333,7 +515,7 @@ bool textureProviderCoversPath(const TextureSourceProvider& provider, const QStr
 
 TextureSourceSet TextureSourceResolver::resolve(MOBase::IOrganizer* organizer, const nifly::NifFile* nifFile) {
     TextureSourceSet sourceSet;
-    sourceSet.references = textureReferencesFor(nifFile);
+    sourceSet.references = textureReferencesFor(organizer, nifFile);
 
     TextureSourceProvider autoProvider;
     autoProvider.kind = TextureSourceProviderKind::Auto;
