@@ -399,6 +399,10 @@ QVector<TextureSlotSummary> textureSlotSummaries(const TextureSourceSet& sourceS
 
 QString textureSlotSummaryLabel(const TextureSlotSummary& summary)
 {
+  if (summary.count <= 1) {
+    return summary.name;
+  }
+
   return QObject::tr("%1 x%2").arg(summary.name).arg(summary.count);
 }
 
