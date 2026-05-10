@@ -1,4 +1,5 @@
 #include "TextureSource.h"
+#include "MoDataPaths.h"
 #include "NifExtensions.h"
 #include "TextureSlots.h"
 
@@ -14,11 +15,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <exception>
-#include <memory>
 #include <ranges>
-#include <uibase/game_features/dataarchives.h>
-#include <uibase/game_features/igamefeatures.h>
-#include <uibase/ifiletree.h>
 #include <uibase/imodinterface.h>
 #include <uibase/imodlist.h>
 #include <uibase/imoinfo.h>
@@ -41,101 +38,10 @@ struct TextureSlotSummary {
     int count = 0;
 };
 
-const MOBase::IProfile* profilePointer(const MOBase::IProfile* profile) {
-    return profile;
-}
-
-template <class Profile>
-const MOBase::IProfile* profilePointer(const std::shared_ptr<Profile>& profile) {
-    return profile.get();
-}
-
-const MOBase::IProfile* currentProfile(MOBase::IOrganizer* organizer) {
-    if (!organizer) {
-        return nullptr;
-    }
-
-    return profilePointer(organizer->profile());
-}
-
-bool isArchiveName(const QString& name) {
-    return name.endsWith(".bsa", Qt::CaseInsensitive) || name.endsWith(".ba2", Qt::CaseInsensitive);
-}
-
-QString resolveDataPath(MOBase::IOrganizer* organizer, const QString& path) {
-    if (!organizer) {
-        return {};
-    }
-
-    if (auto resolved = organizer->resolvePath(path); !resolved.isEmpty()) {
-        return QDir::fromNativeSeparators(QFileInfo(resolved).absoluteFilePath());
-    }
-
-    const auto* const game = organizer->managedGame();
-    if (!game) {
-        return {};
-    }
-
-    const auto dataPath = game->dataDirectory().absoluteFilePath(QDir::cleanPath(path));
-    return QFileInfo::exists(dataPath) ? QDir::fromNativeSeparators(QFileInfo(dataPath).absoluteFilePath()) : QString();
-}
-
 void appendUnique(QStringList& values, const QString& value) {
     if (!value.isEmpty() && !values.contains(value, Qt::CaseInsensitive)) {
         values.append(value);
     }
-}
-
-QStringList archivePathsFromMod(MOBase::IModInterface* mod) {
-    QStringList archivePaths;
-    if (!mod) {
-        return archivePaths;
-    }
-
-    const auto fileTree = mod->fileTree();
-    if (!fileTree) {
-        return archivePaths;
-    }
-
-    for (auto it = fileTree->begin(); it != fileTree->end(); ++it) {
-        const auto fileInfo = *it;
-        if (!fileInfo || !fileInfo->isFile() || !isArchiveName(fileInfo->name())) {
-            continue;
-        }
-
-        const QFileInfo archiveInfo(QDir(mod->absolutePath()).filePath(fileInfo->name()));
-        if (archiveInfo.exists() && archiveInfo.isFile()) {
-            appendUnique(archivePaths, QDir::fromNativeSeparators(archiveInfo.absoluteFilePath()));
-        }
-    }
-
-    return archivePaths;
-}
-
-QStringList archivePathsFromGame(MOBase::IOrganizer* organizer) {
-    QStringList archivePaths;
-    if (!organizer) {
-        return archivePaths;
-    }
-
-    auto* const features = organizer->gameFeatures();
-    if (!features) {
-        return archivePaths;
-    }
-
-    const auto gameArchives = features->gameFeature<MOBase::DataArchives>();
-    if (!gameArchives) {
-        return archivePaths;
-    }
-
-    for (
-        auto archives = gameArchives->archives(currentProfile(organizer));
-        const auto& archive : std::ranges::reverse_view(archives)
-    ) {
-        appendUnique(archivePaths, resolveDataPath(organizer, archive));
-    }
-
-    return archivePaths;
 }
 
 bool loadArchivePath(libbsarch::bs_archive& archive, const QString& archivePath) {
@@ -467,7 +373,7 @@ TextureSourceSet TextureSourceResolver::resolve(MOBase::IOrganizer* organizer, c
                     builder.sourceName = modName;
                     builder.sourcePath = QDir::fromNativeSeparators(mod->absolutePath());
                     builder.displayName = modList->displayName(modName);
-                    builder.archivePaths = archivePathsFromMod(mod);
+                    builder.archivePaths = MoDataPaths::archivePathsFromMod(mod);
                 }
                 appendUnique(builder.coveredTextureKeys, reference.key);
             }
@@ -488,7 +394,7 @@ TextureSourceSet TextureSourceResolver::resolve(MOBase::IOrganizer* organizer, c
     gameBuilder.sourcePath = organizer->managedGame()
                                  ? QDir::fromNativeSeparators(organizer->managedGame()->dataDirectory().absolutePath())
                                  : QString();
-    gameBuilder.archivePaths = archivePathsFromGame(organizer);
+    gameBuilder.archivePaths = MoDataPaths::archivePathsFromGame(organizer);
     for (const auto& reference : sourceSet.references) {
         if (gameDataContainsTexture(organizer, reference.path)) {
             appendUnique(gameBuilder.coveredTextureKeys, reference.key);

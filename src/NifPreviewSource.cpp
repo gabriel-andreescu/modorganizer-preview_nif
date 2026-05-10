@@ -1,4 +1,5 @@
 #include "NifPreviewSource.h"
+#include "MoDataPaths.h"
 
 #include <QDebug>
 #include <QDir>
@@ -9,12 +10,8 @@
 #include <exception>
 #include <filesystem>
 #include <limits>
-#include <memory>
 #include <ranges>
 #include <sstream>
-#include <uibase/game_features/dataarchives.h>
-#include <uibase/game_features/igamefeatures.h>
-#include <uibase/ifiletree.h>
 #include <uibase/imodinterface.h>
 #include <uibase/imodlist.h>
 #include <uibase/imoinfo.h>
@@ -24,23 +21,6 @@
 #include <libbsarch/bs_archive.h>
 
 namespace {
-const MOBase::IProfile* profilePointer(const MOBase::IProfile* profile) {
-    return profile;
-}
-
-template <class Profile>
-const MOBase::IProfile* profilePointer(const std::shared_ptr<Profile>& profile) {
-    return profile.get();
-}
-
-const MOBase::IProfile* currentProfile(MOBase::IOrganizer* organizer) {
-    if (!organizer) {
-        return nullptr;
-    }
-
-    return profilePointer(organizer->profile());
-}
-
 QString normalizeDataPath(QString path) {
     path = QDir::fromNativeSeparators(path).trimmed();
     while (path.startsWith('/')) {
@@ -248,10 +228,6 @@ void addArchiveProvider(
     );
 }
 
-bool isArchiveName(const QString& name) {
-    return name.endsWith(".bsa", Qt::CaseInsensitive) || name.endsWith(".ba2", Qt::CaseInsensitive);
-}
-
 void addArchiveProvidersFromMod(
     QVector<NifPreviewProvider>& providers,
     MOBase::IModInterface* mod,
@@ -261,38 +237,9 @@ void addArchiveProvidersFromMod(
         return;
     }
 
-    const auto fileTree = mod->fileTree();
-    if (!fileTree) {
-        return;
-    }
-
-    for (auto it = fileTree->begin(); it != fileTree->end(); ++it) {
-        const auto fileInfo = *it;
-        if (!fileInfo || !fileInfo->isFile() || !isArchiveName(fileInfo->name())) {
-            continue;
-        }
-
-        const auto archivePath = QDir(mod->absolutePath()).filePath(fileInfo->name());
+    for (const auto& archivePath : MoDataPaths::archivePathsFromMod(mod)) {
         addArchiveProvider(providers, mod->name(), virtualPath, archivePath);
     }
-}
-
-QString resolveDataPath(MOBase::IOrganizer* organizer, const QString& path) {
-    if (!organizer) {
-        return {};
-    }
-
-    if (auto resolved = organizer->resolvePath(path); !resolved.isEmpty()) {
-        return QDir::fromNativeSeparators(QFileInfo(resolved).absoluteFilePath());
-    }
-
-    const auto* const game = organizer->managedGame();
-    if (!game) {
-        return {};
-    }
-
-    const auto dataPath = game->dataDirectory().absoluteFilePath(QDir::cleanPath(path));
-    return QFileInfo::exists(dataPath) ? QDir::fromNativeSeparators(QFileInfo(dataPath).absoluteFilePath()) : QString();
 }
 
 void addGameArchiveProviders(
@@ -304,24 +251,10 @@ void addGameArchiveProviders(
         return;
     }
 
-    auto* const features = organizer->gameFeatures();
-    if (!features) {
-        return;
-    }
-
-    const auto gameArchives = features->gameFeature<MOBase::DataArchives>();
-    if (!gameArchives) {
-        return;
-    }
-
     const auto* const game = organizer->managedGame();
     const auto sourceName = game ? game->displayGameName() : QObject::tr("Game Data");
 
-    for (
-        auto archives = gameArchives->archives(currentProfile(organizer));
-        const auto& archive : std::ranges::reverse_view(archives)
-    ) {
-        const auto archivePath = resolveDataPath(organizer, archive);
+    for (const auto& archivePath : MoDataPaths::archivePathsFromGame(organizer)) {
         addArchiveProvider(providers, sourceName, virtualPath, archivePath);
     }
 }

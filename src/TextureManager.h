@@ -56,8 +56,6 @@ private:
     static PreviewTexture* makeTexture(const gli::texture& texture);
     static PreviewTexture* makeSolidColor(QVector4D color);
 
-    QString resolvePath(const MOBase::IPluginGame* game, const QString& path) const;
-
     MOBase::IOrganizer* m_MOInfo;
     TextureSourceProvider m_TextureSource;
     PreviewTexture* m_ErrorTexture = nullptr;

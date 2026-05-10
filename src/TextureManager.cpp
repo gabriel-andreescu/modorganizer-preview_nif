@@ -1,10 +1,6 @@
 #include "TextureManager.h"
+#include "MoDataPaths.h"
 #include "PreviewNif.h"
-
-#include <uibase/game_features/dataarchives.h>
-#include <uibase/game_features/igamefeatures.h>
-#include <uibase/ifiletree.h>
-#include <uibase/iplugingame.h>
 
 #include <gli/gli.hpp>
 #include <gli/load_dds.hpp>
@@ -32,7 +28,6 @@
 #include <exception>
 #include <limits>
 #include <memory>
-#include <ranges>
 #include <utility>
 
 namespace {
@@ -48,23 +43,6 @@ struct LegacyDdsFormatCandidate {
     gli::format format;
     glm::u32vec4 mask;
 };
-
-const MOBase::IProfile* profilePointer(const MOBase::IProfile* profile) {
-    return profile;
-}
-
-template <class Profile>
-const MOBase::IProfile* profilePointer(const std::shared_ptr<Profile>& profile) {
-    return profile.get();
-}
-
-const MOBase::IProfile* currentProfile(MOBase::IOrganizer* organizer) {
-    if (!organizer) {
-        return nullptr;
-    }
-
-    return profilePointer(organizer->profile());
-}
 
 bool sameMask(const glm::u32vec4& left, const glm::u32vec4& right) {
     return glm::all(glm::equal(left, right));
@@ -148,10 +126,6 @@ std::array<LegacyDdsFormatCandidate, 25> legacyDdsFormatCandidates(const gli::dx
             .format = gli::FORMAT_R32_SFLOAT_PACK32,
             .mask = dx.translate(gli::FORMAT_R32_SFLOAT_PACK32).Mask},
     }};
-}
-
-bool isArchiveName(const QString& name) {
-    return name.endsWith(".bsa", Qt::CaseInsensitive) || name.endsWith(".ba2", Qt::CaseInsensitive);
 }
 
 bool checkedAdd(const std::size_t left, const std::size_t right, std::size_t& result) {
@@ -855,7 +829,7 @@ PreviewTexture* TextureManager::loadTextureAuto(const QString& texturePath) cons
         return nullptr;
     }
 
-    const auto realPath = resolvePath(game, texturePath);
+    const auto realPath = MoDataPaths::resolveDataPath(m_MOInfo, texturePath);
     const bool fileExists = !realPath.isEmpty() && QFileInfo::exists(realPath) && QFileInfo(realPath).isFile();
 
     if (fileExists) {
@@ -950,24 +924,8 @@ PreviewTexture* TextureManager::tryLoadTextureFromMods(const QString& texturePat
 
     const auto& modName = fileOrigins.constFirst();
     if (auto* const mod = m_MOInfo->modList()->getMod(modName)) {
-        if (const auto fileTree = mod->fileTree()) {
-            for (auto it = fileTree->begin(); it != fileTree->end(); ++it) {
-                const auto fileInfo = *it;
-                if (!fileInfo) {
-                    continue;
-                }
-                if (!isArchiveName(fileInfo->name())) {
-                    continue;
-                }
-
-                const auto bsaPath = resolvePath(m_MOInfo->managedGame(), fileInfo->name());
-                if (bsaPath.isEmpty()) {
-                    continue;
-                }
-                if (auto* const texture = loadTextureFromBSA(bsaPath, texturePath)) {
-                    return texture;
-                }
-            }
+        if (auto* const texture = tryLoadTextureFromArchives(MoDataPaths::archivePathsFromMod(mod), texturePath)) {
+            return texture;
         }
     }
     return nullptr;
@@ -978,29 +936,7 @@ PreviewTexture* TextureManager::tryLoadTextureFromGame(const QString& texturePat
         return nullptr;
     }
 
-    auto* const features = m_MOInfo->gameFeatures();
-    if (!features) {
-        return nullptr;
-    }
-
-    const auto gameArchives = features->gameFeature<MOBase::DataArchives>();
-    if (!gameArchives) {
-        return nullptr;
-    }
-
-    for (
-        auto archives = gameArchives->archives(currentProfile(m_MOInfo));
-        const auto& archive : std::ranges::reverse_view(archives)
-    ) {
-        const auto bsaPath = resolvePath(m_MOInfo->managedGame(), archive);
-        if (bsaPath.isEmpty()) {
-            continue;
-        }
-        if (auto* const texture = loadTextureFromBSA(bsaPath, texturePath)) {
-            return texture;
-        }
-    }
-    return nullptr;
+    return tryLoadTextureFromArchives(MoDataPaths::archivePathsFromGame(m_MOInfo), texturePath);
 }
 
 PreviewTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath, const QString& texturePath) {
@@ -1101,22 +1037,4 @@ PreviewTexture* TextureManager::makeSolidColor(const QVector4D color) {
 
     glTexture->release();
     return new PreviewTexture(glTexture);
-}
-
-QString TextureManager::resolvePath(const MOBase::IPluginGame* game, const QString& path) const {
-    if (!m_MOInfo) {
-        return {};
-    }
-
-    if (auto resolved = m_MOInfo->resolvePath(path); !resolved.isEmpty()) {
-        return resolved;
-    }
-
-    if (!game) {
-        return {};
-    }
-
-    const auto dataPath = game->dataDirectory().absoluteFilePath(QDir::cleanPath(path));
-
-    return QFileInfo::exists(dataPath) ? dataPath : QString();
 }
