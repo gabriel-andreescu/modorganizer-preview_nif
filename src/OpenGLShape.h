@@ -10,6 +10,7 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
+#include <cstdint>
 
 struct OpenGLShape
 {
@@ -86,6 +87,23 @@ public:
   float innerThickness;
   float outerRefraction;
   float outerReflection;
+
+  bool isPBR                    = false;
+  bool pbrHasEmissive           = false;
+  bool pbrHasDisplacement       = false;
+  bool pbrHasFeaturesTexture0   = false;
+  bool pbrHasFeaturesTexture1   = false;
+  bool pbrHasSubsurface         = false;
+  bool pbrHasTwoLayer           = false;
+  bool pbrHasColoredCoat        = false;
+  bool pbrHasInterlayerParallax = false;
+  bool pbrHasCoatNormal         = false;
+  bool pbrHasFuzz               = false;
+  bool pbrHasHairMarschner      = false;
+  bool pbrHasGlint              = false;
+  QVector3D pbrParams1{1.0f, 1.0f, 0.04f};
+  QVector4D pbrParams2{1.0f, 1.0f, 1.0f, 0.0f};
+  QVector4D pbrFeatureParams{0.0f, 0.0f, 0.0f, 0.0f};
 
   bool zBufferWrite = true;
   bool zBufferTest  = true;

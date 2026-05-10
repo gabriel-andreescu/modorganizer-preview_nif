@@ -11,6 +11,8 @@
 - Adds a Reset Camera button.
 - Adds BSLighting refraction preview support for glass meshes with authored
   refractive surface textures.
+- Adds Community Shaders True PBR material preview support, including RMAOS,
+  displacement, emissive, and feature textures.
 
 ### Fixed
 

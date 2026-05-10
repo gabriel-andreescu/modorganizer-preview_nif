@@ -136,6 +136,11 @@ struct TriShape
   };
 };
 
+inline bool HasFlag(const std::uint32_t flags, const std::uint32_t flag)
+{
+  return (flags & flag) != 0;
+}
+
 struct NiAlphaPropertyFlags
 {
 public:
@@ -260,6 +265,12 @@ inline QString GetShaderTexturePath(nifly::BSShaderTextureSet* textureSet,
 inline bool TexturePathsEqual(const QString& left, const QString& right)
 {
   return QString::compare(left, right, Qt::CaseInsensitive) == 0;
+}
+
+inline bool IsPBRLightingShader(const nifly::NiShader* shader)
+{
+  const auto bslsp = dynamic_cast<const nifly::BSLightingShaderProperty*>(shader);
+  return bslsp && HasFlag(bslsp->shaderFlags2, SLSF2::PBR);
 }
 
 inline bool IsNormalLikeTexturePath(const QString& texturePath)

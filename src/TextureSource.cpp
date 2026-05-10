@@ -231,6 +231,27 @@ QString textureSlotName(const nifly::NiShader* shader, const std::size_t slot,
     return QObject::tr("Refraction");
   }
 
+  if (IsPBRLightingShader(shader)) {
+    switch (slot) {
+    case TextureSlot::BaseMap:
+      return QObject::tr("Base");
+    case TextureSlot::NormalMap:
+      return QObject::tr("Normal");
+    case TextureSlot::PBREmissiveMap:
+      return QObject::tr("Emissive");
+    case TextureSlot::PBRDisplacement:
+      return QObject::tr("Displacement");
+    case TextureSlot::PBRRMAOSMap:
+      return QObject::tr("RMAOS");
+    case TextureSlot::PBRFeatures1:
+      return QObject::tr("Fuzz / Coat Normal");
+    case TextureSlot::PBRFeatures0:
+      return QObject::tr("Subsurface / Coat Color");
+    default:
+      return QObject::tr("Slot %1").arg(slot + 1);
+    }
+  }
+
   switch (slot) {
   case TextureSlot::BaseMap:
     return QObject::tr("Base");
