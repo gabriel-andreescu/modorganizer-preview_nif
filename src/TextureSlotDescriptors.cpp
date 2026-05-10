@@ -23,12 +23,7 @@ bool usesHeightSlot(const nifly::NiShader* shader) {
     }
 
     const auto shaderType = bslsp->GetShaderType();
-    return shaderType
-           == nifly::BSLSP_PARALLAX
-           || shaderType
-           == nifly::BSLSP_PARALLAXOCC
-           || shaderType
-           == nifly::BSLSP_MULTILAYERPARALLAX;
+    return shaderType == nifly::BSLSP_PARALLAX || shaderType == nifly::BSLSP_PARALLAXOCC;
 }
 
 TextureSlotFamily textureSlotFamily(

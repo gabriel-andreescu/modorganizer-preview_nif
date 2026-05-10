@@ -29,6 +29,8 @@
   black.
 - Fixes Fallout 4 effect-shader previews by loading their normal, environment,
   and environment mask texture slots.
+- Fixes multilayer parallax texture source labels so inner-layer textures are
+  identified correctly instead of being confused with height maps.
 
 ## 0.4.4 - 2026-05-09
 
