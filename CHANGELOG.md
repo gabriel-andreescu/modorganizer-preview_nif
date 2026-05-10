@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.5.0 - 2026-05-11
+
+### Added
+
+- Adds skinned mesh preview support.
+- Adds split-view NIF comparison with synchronized camera support.
+- Adds a dropdown for choosing which mod or archive the preview is shown from.
+- Adds a per-pane texture source selector for comparing texture providers.
+- Adds a Reset Camera button.
+- Adds BSLighting refraction preview support for glass meshes with authored
+  refractive surface textures.
+- Adds Community Shaders True PBR material preview support, including RMAOS,
+  displacement, emissive, and feature textures.
+- Adds a Show Collision preview overlay for bhk collision shapes, BSBound, and
+  BSMultiBound volumes.
+
+### Fixed
+
+- Fixes preview crashes and loading failures for valid luminance DDS parallax
+  height maps, which now load for parallax height-map preview.
+- Fixes previews for alpha-blended and effect-shader meshes whose transparent
+  areas could incorrectly hide other geometry.
+- Fixes refraction distortion meshes rendering as blue/purple normal-map sheets
+  while preserving their heat-haze and glass distortion effect.
+- Fixes effect-shader previews that ignored direct source and greyscale
+  textures, causing embers, glow, fire, and similar effect surfaces to render
+  black.
+- Fixes Fallout 4 effect-shader previews by loading their normal, environment,
+  and environment mask texture slots.
+- Fixes Fallout 4 material-backed previews by loading textures from BGSM/BGEM
+  material files and resolving material texture paths that omit the `textures/`
+  prefix.
+- Fixes vanilla Fallout 4 archive texture lookup for previews whose referenced
+  DDS files live in texture index BA2 archives.
+- Fixes multilayer parallax texture source labels so inner-layer textures are
+  identified correctly instead of being confused with height maps.
+
 ## 0.4.4 - 2026-05-09
 
 ### Added

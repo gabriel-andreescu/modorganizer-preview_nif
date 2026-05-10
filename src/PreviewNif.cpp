@@ -1,126 +1,73 @@
-#include <NifFile.hpp>
-
-#include "NifExtensions.h"
-#include "NifWidget.h"
 #include "PreviewNif.h"
+#include "Camera.h"
+#include "NifPreviewSource.h"
+#include "NifPreviewWidget.h"
 
 #include <QDebug>
-#include <QGridLayout>
-#include <exception>
-#include <filesystem>
-#include <sstream>
+#include <algorithm>
+#include <utility>
 
-bool PreviewNif::init(MOBase::IOrganizer* moInfo)
-{
-  m_MOInfo = moInfo;
-  return true;
+bool PreviewNif::init(MOBase::IOrganizer* moInfo) {
+    m_MOInfo = moInfo;
+    return true;
 }
 
-QString PreviewNif::name() const
-{
-  return "Preview NIF";
+QString PreviewNif::name() const {
+    return "Preview NIF";
 }
 
-QString PreviewNif::author() const
-{
-  return "Parapets";
+QString PreviewNif::author() const {
+    return "Parapets";
 }
 
-QString PreviewNif::description() const
-{
-  return "Supports previewing NIF files";
+QString PreviewNif::description() const {
+    return "Supports previewing NIF files";
 }
 
-MOBase::VersionInfo PreviewNif::version() const
-{
-  return {0, 4, 4, 0, MOBase::VersionInfo::RELEASE_BETA};
+MOBase::VersionInfo PreviewNif::version() const {
+    return {0, 5, 0, 0, MOBase::VersionInfo::RELEASE_BETA};
 }
 
-QList<MOBase::PluginSetting> PreviewNif::settings() const
-{
-  return {};
+QList<MOBase::PluginSetting> PreviewNif::settings() const {
+    return {};
 }
 
-bool PreviewNif::enabledByDefault() const
-{
-  return true;
+bool PreviewNif::enabledByDefault() const {
+    return true;
 }
 
-std::set<QString> PreviewNif::supportedExtensions() const
-{
-  return {"bto", "btr", "nif"};
+std::set<QString> PreviewNif::supportedExtensions() const {
+    return {"bto", "btr", "nif"};
 }
 
-bool PreviewNif::supportsArchives() const
-{
-  return true;
+bool PreviewNif::supportsArchives() const {
+    return true;
 }
 
-QWidget* PreviewNif::genFilePreview(const QString& fileName, const QSize& maxSize) const
-{
-  return genDataPreview(nullptr, fileName, maxSize);
+QWidget* PreviewNif::genFilePreview(const QString& fileName, const QSize& maxSize) const {
+    return genDataPreview(nullptr, fileName, maxSize);
 }
 
-QWidget* PreviewNif::genDataPreview(const QByteArray& fileData, const QString& fileName,
-                                    const QSize& maxSize) const
-{
-  auto path = std::filesystem::path(fileName.toStdWString());
-  std::shared_ptr<nifly::NifFile> nifFile;
+QWidget* PreviewNif::genDataPreview(const QByteArray& fileData, const QString& fileName, const QSize& maxSize) const {
+    Q_UNUSED(maxSize);
 
-  try {
-    if (fileData != nullptr && !fileData.isEmpty()) {
-      const auto fileStream =
-          std::make_shared<std::istringstream>(fileData.toStdString());
-      nifFile = std::make_shared<nifly::NifFile>(*fileStream);
-    } else {
-      nifFile = std::make_shared<nifly::NifFile>(path);
+    auto sourceSet = NifPreviewSourceResolver::resolve(m_MOInfo, fileName, fileData);
+    if (sourceSet.providers.isEmpty()) {
+        qWarning("Failed to find previewable NIF provider for '%s'", qUtf8Printable(fileName));
+        return nullptr;
     }
-  } catch (const std::exception& e) {
-    qWarning("Failed to load NIF '%s': %s", qUtf8Printable(fileName), e.what());
-    return nullptr;
-  } catch (...) {
-    qWarning("Failed to load NIF '%s': unknown exception", qUtf8Printable(fileName));
-    return nullptr;
-  }
 
-  if (!nifFile || !nifFile->IsValid()) {
-    qWarning(qUtf8Printable(tr("Failed to load file: %1").arg(fileName)));
-    return nullptr;
-  }
-
-  const auto layout = new QGridLayout();
-  layout->setRowStretch(0, 1);
-  layout->setColumnStretch(0, 1);
-
-  layout->addWidget(makeLabel(nifFile.get()), 1, 0, 1, 1);
-
-  const auto nifWidget = new NifWidget(nifFile, m_MOInfo);
-  layout->addWidget(nifWidget, 0, 0, 1, 1);
-
-  const auto widget = new QWidget();
-  widget->setLayout(layout);
-  return widget;
+    const auto lastProviderIndex = static_cast<int>(sourceSet.providers.size()) - 1;
+    sourceSet.currentIndex = std::clamp(sourceSet.currentIndex, 0, lastProviderIndex);
+    return new NifPreviewWidget(std::move(sourceSet), m_MOInfo, sharedCamera());
 }
 
-QLabel* PreviewNif::makeLabel(const nifly::NifFile* nifFile)
-{
-  unsigned int shapes = 0;
-  unsigned int faces  = 0;
-  unsigned int verts  = 0;
-
-  for (const auto& shape : nifFile->GetShapes()) {
-    if (!shape) {
-      continue;
+QSharedPointer<Camera> PreviewNif::sharedCamera() const {
+    auto camera = m_SharedCamera.toStrongRef();
+    if (camera.isNull()) {
+        camera = {new Camera(), &Camera::deleteLater};
+        m_SharedCamera = camera;
     }
-    shapes++;
-    faces += shape->GetNumTriangles();
-    verts += shape->GetNumVertices();
-  }
 
-  const auto text =
-      tr("Verts: %1 | Faces: %2 | Shapes: %3").arg(verts).arg(faces).arg(shapes);
-  const auto label = new QLabel(text);
-  label->setWordWrap(true);
-  label->setTextInteractionFlags(Qt::TextSelectableByMouse);
-  return label;
+    return camera;
 }

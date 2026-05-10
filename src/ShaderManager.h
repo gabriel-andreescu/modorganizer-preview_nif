@@ -3,47 +3,46 @@
 #include <QOpenGLShaderProgram>
 #include <uibase/imoinfo.h>
 
-enum VertexAttrib
-{
-  AttribPosition = 0,
-  AttribNormal = 1,
-  AttribTangent = 2,
-  AttribBitangent = 3,
-  AttribTexCoord = 4,
-  AttribColor = 5,
+enum VertexAttrib {
+    AttribPosition = 0,
+    AttribNormal = 1,
+    AttribTangent = 2,
+    AttribBitangent = 3,
+    AttribTexCoord = 4,
+    AttribColor = 5,
 
-  ATTRIB_COUNT,
+    ATTRIB_COUNT,
 };
 
-class ShaderManager
-{
+class ShaderManager {
 public:
-  enum ShaderType
-  {
-    None = -1,
-    SKDefault,
-    SKMSN,
-    SKMultilayer,
-    SKEffectShader,
-    SKPBR,
-    FO4Default,
-    FO4EffectShader,
+    enum ShaderType {
+        None = -1,
+        SKDefault,
+        SKMSN,
+        SKMultilayer,
+        SKEffectShader,
+        SKPBR,
+        SKRefractionProxy,
+        CollisionWire,
+        FO4Default,
+        FO4EffectShader,
 
-    SHADER_COUNT,
-  };
+        SHADER_COUNT,
+    };
 
-  explicit ShaderManager(MOBase::IOrganizer* moInfo);
-  ~ShaderManager()                               = default;
-  ShaderManager(const ShaderManager&)            = delete;
-  ShaderManager(ShaderManager&&)                 = delete;
-  ShaderManager& operator=(const ShaderManager&) = delete;
-  ShaderManager& operator=(ShaderManager&&)      = delete;
+    explicit ShaderManager(MOBase::IOrganizer* moInfo);
+    ~ShaderManager() = default;
+    ShaderManager(const ShaderManager&) = delete;
+    ShaderManager(ShaderManager&&) = delete;
+    ShaderManager& operator=(const ShaderManager&) = delete;
+    ShaderManager& operator=(ShaderManager&&) = delete;
 
-  QOpenGLShaderProgram* getProgram(ShaderType type);
+    QOpenGLShaderProgram* getProgram(ShaderType type);
 
 private:
-  static QOpenGLShaderProgram* loadProgram(ShaderType type);
+    static QOpenGLShaderProgram* loadProgram(ShaderType type);
 
-  MOBase::IOrganizer* m_MOInfo;
-  QOpenGLShaderProgram* m_Programs[SHADER_COUNT]{nullptr};
+    MOBase::IOrganizer* m_MOInfo;
+    QOpenGLShaderProgram* m_Programs[SHADER_COUNT] {nullptr};
 };

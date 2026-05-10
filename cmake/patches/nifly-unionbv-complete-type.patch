@@ -1,0 +1,47 @@
+diff --git a/include/bhk.hpp b/include/bhk.hpp
+index fdcf440..7d1ff6f 100644
+--- a/include/bhk.hpp
++++ b/include/bhk.hpp
+@@ -397,18 +397,13 @@ struct BoundingVolume {
+ 	BoundingSphere bvSphere;
+ 	BoxBV bvBox;
+ 	CapsuleBV bvCapsule;
+-	std::unique_ptr<UnionBV> bvUnion = std::make_unique<UnionBV>();
++	std::unique_ptr<UnionBV> bvUnion;
+ 	HalfSpaceBV bvHalfSpace;
+ 
+-	BoundingVolume() = default;
++	BoundingVolume();
++	~BoundingVolume();
+ 
+-	BoundingVolume(const BoundingVolume& other)
+-		: collisionType(other.collisionType)
+-		, bvSphere(other.bvSphere)
+-		, bvBox(other.bvBox)
+-		, bvCapsule(other.bvCapsule)
+-		, bvUnion(std::make_unique<UnionBV>(*other.bvUnion))
+-		, bvHalfSpace(other.bvHalfSpace) {}
++	BoundingVolume(const BoundingVolume& other);
+ 
+ 	void Sync(NiStreamReversible& stream);
+ };
+@@ -426,6 +421,19 @@ struct UnionBV {
+ 	}
+ };
+ 
++inline BoundingVolume::BoundingVolume()
++	: bvUnion(std::make_unique<UnionBV>()) {}
++
++inline BoundingVolume::~BoundingVolume() = default;
++
++inline BoundingVolume::BoundingVolume(const BoundingVolume& other)
++	: collisionType(other.collisionType)
++	, bvSphere(other.bvSphere)
++	, bvBox(other.bvBox)
++	, bvCapsule(other.bvCapsule)
++	, bvUnion(other.bvUnion ? std::make_unique<UnionBV>(*other.bvUnion) : nullptr)
++	, bvHalfSpace(other.bvHalfSpace) {}
++
+ class NiCollisionData : public NiCloneableStreamable<NiCollisionData, NiCollisionObject> {
+ public:
+ 	PropagationMode propagationMode = PROPAGATE_ON_SUCCESS;
