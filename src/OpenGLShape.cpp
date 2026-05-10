@@ -1,5 +1,5 @@
 #include "OpenGLShape.h"
-#include "NifExtensions.h"
+#include "NifShaderUtils.h"
 #include "OpenGLShapeDrawState.h"
 #include "OpenGLShapeGeometry.h"
 #include "OpenGLShapeMaterial.h"

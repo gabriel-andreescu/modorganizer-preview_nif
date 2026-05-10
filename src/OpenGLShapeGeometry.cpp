@@ -1,5 +1,5 @@
 #include "OpenGLShapeGeometry.h"
-#include "NifExtensions.h"
+#include "NifShaderFlags.h"
 #include "ShapeRenderGeometry.h"
 
 #include <QDebug>

@@ -1,7 +1,7 @@
 #include "TextureSource.h"
 #include "ArchiveAccess.h"
 #include "MoDataPaths.h"
-#include "NifExtensions.h"
+#include "NifShaderUtils.h"
 #include "ShaderClassification.h"
 #include "TextureSlotDescriptors.h"
 

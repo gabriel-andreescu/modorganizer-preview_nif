@@ -1,9 +1,10 @@
 #pragma once
 
 #include "Camera.h"
+#include "CameraSynchronizer.h"
 #include "NifPreviewSource.h"
+#include "PreviewDialogChromeGuard.h"
 
-#include <QPointer>
 #include <QSharedPointer>
 #include <QWidget>
 
@@ -33,24 +34,18 @@ protected:
     void showEvent(QShowEvent* event) override;
 
 private:
-    struct HostChromeWidget {
-        QPointer<QWidget> widget;
-        bool wasVisible = false;
-    };
-
     void setSplitViewEnabled(bool enabled);
     void setShowCollisionEnabled(bool enabled);
     void setCameraSyncEnabled(bool enabled);
     void resetCameras();
     void updateGlobalControls();
     void updateHostChrome();
-    void restoreHostChrome();
-    void captureHostChrome();
     void initializeRightPaneForSplit();
     void handleCameraMoved(NifPreviewPane* pane);
-    void syncCameraDelta(NifPreviewPane* sourcePane, const CameraState& oldState, const CameraState& newState);
+    void syncCameraDelta(NifPreviewPane* sourcePane, const CameraState& newState);
     void updateCameraSnapshot(NifPreviewPane* pane);
     void updateCameraSnapshots();
+    [[nodiscard]] PreviewPaneSide sideForPane(NifPreviewPane* pane) const;
     [[nodiscard]] int secondaryProviderIndex() const;
 
     NifPreviewSourceSet m_SourceSet;
@@ -63,13 +58,8 @@ private:
     QSplitter* m_Splitter = nullptr;
     NifPreviewPane* m_LeftPane = nullptr;
     NifPreviewPane* m_RightPane = nullptr;
-    CameraState m_LeftCameraState;
-    CameraState m_RightCameraState;
-    bool m_HasLeftCameraState = false;
-    bool m_HasRightCameraState = false;
+    CameraSynchronizer m_CameraSynchronizer;
     bool m_ApplyingCameraSync = false;
     bool m_RightPaneInitialized = false;
-
-    QVector<HostChromeWidget> m_HostChrome;
-    QPointer<QWidget> m_HostWindow;
+    PreviewDialogChromeGuard m_HostChromeGuard;
 };

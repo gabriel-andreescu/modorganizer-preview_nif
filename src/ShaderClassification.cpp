@@ -1,5 +1,5 @@
 #include "ShaderClassification.h"
-#include "NifExtensions.h"
+#include "NifShaderUtils.h"
 
 #include <NifFile.hpp>
 

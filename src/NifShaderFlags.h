@@ -1,12 +1,7 @@
 #pragma once
 
-#include "TextureSlots.h"
-
-#include <NifFile.hpp>
-#include <QDir>
-#include <QFileInfo>
 #include <QOpenGLFunctions>
-#include <QString>
+
 #include <cstdint>
 #include <cstring>
 
@@ -205,97 +200,3 @@ private:
 };
 
 static_assert(sizeof(NiAlphaPropertyFlags) == 2);
-
-inline nifly::MatTransform GetObjectTransformToGlobal(const nifly::NifFile* nifFile, nifly::NiAVObject* object) {
-    nifly::MatTransform xform = object->GetTransformToParent();
-    nifly::NiNode* parent = nifFile->GetParentNode(object);
-    while (parent) {
-        xform = parent->GetTransformToParent().ComposeTransforms(xform);
-        parent = nifFile->GetParentNode(parent);
-    }
-
-    return xform;
-}
-
-inline nifly::MatTransform GetShapeTransformToGlobal(const nifly::NifFile* nifFile, nifly::NiShape* niShape) {
-    return GetObjectTransformToGlobal(nifFile, niShape);
-}
-
-inline QString GetShaderTexturePath(nifly::BSShaderTextureSet* textureSet, const std::size_t slot) {
-    if (!textureSet || slot >= textureSet->textures.size()) {
-        return {};
-    }
-
-    return QDir::fromNativeSeparators(
-        QString::fromStdString(textureSet->textures[static_cast<std::uint32_t>(slot)].get())
-    )
-        .trimmed();
-}
-
-inline bool TexturePathsEqual(const QString& left, const QString& right) {
-    return QString::compare(left, right, Qt::CaseInsensitive) == 0;
-}
-
-inline bool IsPBRLightingShader(const nifly::NiShader* shader) {
-    const auto bslsp = dynamic_cast<const nifly::BSLightingShaderProperty*>(shader);
-    return bslsp && HasFlag(bslsp->shaderFlags2, SLSF2::PBR);
-}
-
-inline bool IsNormalLikeTexturePath(const QString& texturePath) {
-    const auto stem = QFileInfo(texturePath).completeBaseName().toLower();
-    return stem.endsWith("_n") || stem.endsWith("_msn");
-}
-
-inline bool IsRefractionDistortionProxy(const nifly::NifFile* nifFile, nifly::NiShape* niShape) {
-    if (!nifFile || !niShape || nifFile->GetAlphaProperty(niShape)) {
-        return false;
-    }
-
-    const auto shader = dynamic_cast<nifly::BSLightingShaderProperty*>(nifFile->GetShader(niShape));
-    if (!shader || !(shader->shaderFlags1 & (SLSF1::Refraction | SLSF1::FireRefraction)) || !shader->HasTextureSet()) {
-        return false;
-    }
-
-    const auto textureSet = nifFile->GetHeader().GetBlock(shader->TextureSetRef());
-    const auto baseTexture = GetShaderTexturePath(textureSet, TextureSlot::BaseMap);
-    const auto normalTexture = GetShaderTexturePath(textureSet, TextureSlot::NormalMap);
-
-    return !baseTexture.isEmpty()
-           && ((!normalTexture.isEmpty() && TexturePathsEqual(baseTexture, normalTexture))
-               || IsNormalLikeTexturePath(baseTexture));
-}
-
-inline bool GetNodeTransformToAncestor(
-    const nifly::NifFile* nifFile,
-    nifly::NiNode* node,
-    const std::uint32_t ancestorId,
-    nifly::MatTransform& transform
-) {
-    transform.Clear();
-
-    while (node) {
-        const auto nodeId = nifFile->GetBlockID(node);
-        if (nodeId == ancestorId) {
-            return true;
-        }
-
-        transform = node->GetTransformToParent().ComposeTransforms(transform);
-        node = nifFile->GetParentNode(node);
-    }
-
-    return false;
-}
-
-inline nifly::BoundingSphere GetBoundingSphere(nifly::NifFile* nifFile, nifly::NiShape* niShape) {
-    if (const auto vertices = nifFile->GetVertsForShape(niShape)) {
-        auto bounds = nifly::BoundingSphere(*vertices);
-
-        const auto xform = GetShapeTransformToGlobal(nifFile, niShape);
-
-        bounds.center = xform.ApplyTransform(bounds.center);
-        bounds.radius = xform.ApplyTransformToDist(bounds.radius);
-        return bounds;
-    }
-
-    return {};
-}

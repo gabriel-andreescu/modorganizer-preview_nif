@@ -1,6 +1,6 @@
 #include "NifWidget.h"
 #include "CollisionGeometry.h"
-#include "NifExtensions.h"
+#include "NifShaderFlags.h"
 #include "OpenGLCollisionOverlay.h"
 
 #include <QDebug>

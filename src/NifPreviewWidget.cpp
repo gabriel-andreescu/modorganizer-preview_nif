@@ -9,8 +9,6 @@
 #include <QSharedPointer>
 #include <QShowEvent>
 #include <QSplitter>
-#include <QStackedWidget>
-#include <QStringList>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -19,18 +17,6 @@
 namespace {
 QSharedPointer<Camera> makePreviewCamera() {
     return {new Camera(), &Camera::deleteLater};
-}
-
-float shortestAngleDelta(const float oldAngle, const float newAngle) {
-    auto delta = newAngle - oldAngle;
-    while (delta > 180.0f) {
-        delta -= 360.0f;
-    }
-    while (delta < -180.0f) {
-        delta += 360.0f;
-    }
-
-    return delta;
 }
 } // namespace
 
@@ -103,7 +89,7 @@ NifPreviewWidget::NifPreviewWidget(
 }
 
 NifPreviewWidget::~NifPreviewWidget() {
-    restoreHostChrome();
+    m_HostChromeGuard.restore();
 }
 
 void NifPreviewWidget::showEvent(QShowEvent* event) {
@@ -184,53 +170,7 @@ void NifPreviewWidget::updateGlobalControls() {
 }
 
 void NifPreviewWidget::updateHostChrome() {
-    captureHostChrome();
-    if (m_HostChrome.isEmpty()) {
-        return;
-    }
-
-    for (const auto& hostWidget : m_HostChrome) {
-        if (hostWidget.widget) {
-            hostWidget.widget->hide();
-        }
-    }
-}
-
-void NifPreviewWidget::restoreHostChrome() {
-    for (const auto& hostWidget : m_HostChrome) {
-        if (hostWidget.widget) {
-            hostWidget.widget->setVisible(hostWidget.wasVisible);
-        }
-    }
-    m_HostChrome.clear();
-    m_HostWindow.clear();
-}
-
-void NifPreviewWidget::captureHostChrome() {
-    if (!m_HostChrome.isEmpty()) {
-        return;
-    }
-
-    auto* const hostWindow = window();
-    if (!hostWindow || hostWindow == this || hostWindow->objectName() != "PreviewDialog") {
-        return;
-    }
-
-    auto* const variantsStack = hostWindow->findChild<QStackedWidget*>("variantsStack");
-    if (!variantsStack || !variantsStack->isAncestorOf(this)) {
-        return;
-    }
-
-    const QStringList objectNames = {"nameLabel", "modLabel", "previousButton", "nextButton"};
-    for (const auto& objectName : objectNames) {
-        if (auto* const widget = hostWindow->findChild<QWidget*>(objectName)) {
-            m_HostChrome.push_back({.widget = widget, .wasVisible = widget->isVisible()});
-        }
-    }
-
-    if (!m_HostChrome.isEmpty()) {
-        m_HostWindow = hostWindow;
-    }
+    m_HostChromeGuard.hideFor(this);
 }
 
 int NifPreviewWidget::secondaryProviderIndex() const {
@@ -269,35 +209,31 @@ void NifPreviewWidget::handleCameraMoved(NifPreviewPane* pane) {
     }
 
     const auto newState = pane->camera()->state();
-    const auto oldState = pane == m_LeftPane ? m_LeftCameraState : m_RightCameraState;
-    const auto hasOldState = pane == m_LeftPane ? m_HasLeftCameraState : m_HasRightCameraState;
 
-    if (!m_ApplyingCameraSync && hasOldState && m_CameraSyncButton->isChecked() && m_RightPane->isVisible()) {
-        syncCameraDelta(pane, oldState, newState);
+    if (!m_ApplyingCameraSync && m_CameraSyncButton->isChecked() && m_RightPane->isVisible()) {
+        syncCameraDelta(pane, newState);
     }
 
     updateCameraSnapshot(pane);
 }
 
-void NifPreviewWidget::syncCameraDelta(
-    NifPreviewPane* sourcePane,
-    const CameraState& oldState,
-    const CameraState& newState
-) {
+void NifPreviewWidget::syncCameraDelta(NifPreviewPane* sourcePane, const CameraState& newState) {
     auto* const targetPane = sourcePane == m_LeftPane ? m_RightPane : m_LeftPane;
     if (!targetPane || !targetPane->camera() || !targetPane->camera()->hasState()) {
         return;
     }
 
-    auto targetState = targetPane->camera()->state();
-    targetState.lookAt += newState.lookAt - oldState.lookAt;
-    targetState.pitch += shortestAngleDelta(oldState.pitch, newState.pitch);
-    targetState.yaw += shortestAngleDelta(oldState.yaw, newState.yaw);
-    targetState.distance = oldState.distance > 0.0f ? targetState.distance * (newState.distance / oldState.distance)
-                                                    : targetState.distance + (newState.distance - oldState.distance);
+    const auto targetState = m_CameraSynchronizer.synchronizedTargetState(
+        sideForPane(sourcePane),
+        newState,
+        targetPane->camera()->state()
+    );
+    if (!targetState) {
+        return;
+    }
 
     m_ApplyingCameraSync = true;
-    targetPane->camera()->setState(targetState);
+    targetPane->camera()->setState(*targetState);
     m_ApplyingCameraSync = false;
     updateCameraSnapshot(targetPane);
 }
@@ -307,16 +243,14 @@ void NifPreviewWidget::updateCameraSnapshot(NifPreviewPane* pane) {
         return;
     }
 
-    if (pane == m_LeftPane) {
-        m_LeftCameraState = pane->camera()->state();
-        m_HasLeftCameraState = true;
-    } else if (pane == m_RightPane) {
-        m_RightCameraState = pane->camera()->state();
-        m_HasRightCameraState = true;
-    }
+    m_CameraSynchronizer.updateSnapshot(sideForPane(pane), pane->camera()->state());
 }
 
 void NifPreviewWidget::updateCameraSnapshots() {
     updateCameraSnapshot(m_LeftPane);
     updateCameraSnapshot(m_RightPane);
+}
+
+PreviewPaneSide NifPreviewWidget::sideForPane(NifPreviewPane* pane) const {
+    return pane == m_LeftPane ? PreviewPaneSide::Left : PreviewPaneSide::Right;
 }

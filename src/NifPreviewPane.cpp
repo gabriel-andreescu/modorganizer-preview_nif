@@ -2,8 +2,6 @@
 #include "NifWidget.h"
 
 #include <QComboBox>
-#include <QDebug>
-#include <QFileInfo>
 #include <QFontMetrics>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -14,7 +12,6 @@
 #include <QVBoxLayout>
 
 #include <algorithm>
-#include <exception>
 #include <utility>
 
 namespace {
@@ -31,6 +28,7 @@ QSharedPointer<Camera> makePaneCamera() {
 NifPreviewPane::NifPreviewPane(MOBase::IOrganizer* organizer, QWidget* parent)
     : QWidget(parent)
     , m_Organizer(organizer)
+    , m_Controller(organizer)
     , m_Camera(makePaneCamera()) {
     m_TitleLabel = new QLabel(this);
     m_TitleLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -131,17 +129,15 @@ void NifPreviewPane::resizeEvent(QResizeEvent* event) {
 }
 
 void NifPreviewPane::setProviders(QVector<NifPreviewProvider> providers, const int currentIndex) {
-    m_Providers = std::move(providers);
-    const auto lastProviderIndex = static_cast<int>(m_Providers.size()) - 1;
-    m_CurrentProviderIndex = std::clamp(currentIndex, 0, std::max(0, lastProviderIndex));
+    m_Controller.setProviders(std::move(providers), currentIndex);
 
     m_UpdatingControls = true;
     m_SourceCombo->clear();
-    for (const auto& provider : m_Providers) {
+    for (const auto& provider : m_Controller.providers()) {
         m_SourceCombo->addItem(provider.displayName);
         m_SourceCombo->setItemData(m_SourceCombo->count() - 1, provider.displayName, Qt::ToolTipRole);
     }
-    m_SourceCombo->setCurrentIndex(m_CurrentProviderIndex);
+    m_SourceCombo->setCurrentIndex(m_Controller.currentProviderIndex());
     m_UpdatingControls = false;
 
     updateSourceComboWidth();
@@ -183,59 +179,51 @@ void NifPreviewPane::resetCamera() {
 }
 
 void NifPreviewPane::selectProvider(const int index) {
-    if (index < 0 || index >= m_Providers.size() || index == m_CurrentProviderIndex) {
+    if (!m_Controller.selectProvider(index)) {
         return;
     }
 
-    m_CurrentProviderIndex = index;
     updateControls();
     loadCurrentProvider();
-    emit providerChanged(m_CurrentProviderIndex);
+    emit providerChanged(m_Controller.currentProviderIndex());
 }
 
 void NifPreviewPane::selectRelativeProvider(const int offset) {
-    if (m_Providers.isEmpty()) {
+    if (!m_Controller.selectRelativeProvider(offset)) {
         return;
     }
 
-    const auto providerCount = static_cast<int>(m_Providers.size());
-    selectProvider((m_CurrentProviderIndex + offset + providerCount) % providerCount);
+    updateControls();
+    loadCurrentProvider();
+    emit providerChanged(m_Controller.currentProviderIndex());
 }
 
 void NifPreviewPane::selectTextureSource(const int index) {
-    if (index
-        < 0
-        || index
-        >= m_TextureSourceSet.providers.size()
-        || index
-        == m_CurrentTextureSourceIndex
-        || m_TextureSourceSet.providers.size()
-        <= 2) {
+    if (!m_Controller.selectTextureSource(index)) {
         return;
     }
 
-    m_CurrentTextureSourceIndex = index;
     updateTextureControls();
     reloadCurrentNifWidget();
 }
 
 void NifPreviewPane::selectRelativeTextureSource(const int offset) {
-    if (m_TextureSourceSet.providers.size() <= 2) {
+    if (!m_Controller.selectRelativeTextureSource(offset)) {
         return;
     }
 
-    const auto providerCount = static_cast<int>(m_TextureSourceSet.providers.size());
-    selectTextureSource((m_CurrentTextureSourceIndex + offset + providerCount) % providerCount);
+    updateTextureControls();
+    reloadCurrentNifWidget();
 }
 
 void NifPreviewPane::updateControls() {
-    const auto hasMultipleProviders = m_Providers.size() > 1;
+    const auto hasMultipleProviders = m_Controller.providers().size() > 1;
     m_PrevButton->setEnabled(hasMultipleProviders);
     m_NextButton->setEnabled(hasMultipleProviders);
     m_SourceCombo->setEnabled(hasMultipleProviders);
 
     m_UpdatingControls = true;
-    m_SourceCombo->setCurrentIndex(m_CurrentProviderIndex);
+    m_SourceCombo->setCurrentIndex(m_Controller.currentProviderIndex());
     m_UpdatingControls = false;
 }
 
@@ -246,7 +234,7 @@ void NifPreviewPane::updateSourceComboWidth() {
 
     const QFontMetrics metrics(m_SourceCombo->font());
     int widestProvider = 0;
-    for (const auto& provider : m_Providers) {
+    for (const auto& provider : m_Controller.providers()) {
         widestProvider = std::max(widestProvider, metrics.horizontalAdvance(provider.displayName));
     }
 
@@ -257,16 +245,14 @@ void NifPreviewPane::updateSourceComboWidth() {
     m_SourceCombo->setMaximumWidth(desiredWidth);
 }
 
-void NifPreviewPane::setTextureSources(TextureSourceSet sourceSet) {
-    m_TextureSourceSet = std::move(sourceSet);
-    m_CurrentTextureSourceIndex = 0;
+void NifPreviewPane::updateTextureSourceComboItems() {
     m_UpdatingTextureControls = true;
     m_TextureSourceCombo->clear();
-    for (const auto& provider : m_TextureSourceSet.providers) {
+    for (const auto& provider : m_Controller.textureSources().providers) {
         m_TextureSourceCombo->addItem(provider.displayName);
         m_TextureSourceCombo->setItemData(m_TextureSourceCombo->count() - 1, provider.displayName, Qt::ToolTipRole);
     }
-    m_TextureSourceCombo->setCurrentIndex(m_CurrentTextureSourceIndex);
+    m_TextureSourceCombo->setCurrentIndex(m_Controller.currentTextureSourceIndex());
     m_UpdatingTextureControls = false;
 
     updateTextureSourceComboWidth();
@@ -274,22 +260,21 @@ void NifPreviewPane::setTextureSources(TextureSourceSet sourceSet) {
 }
 
 void NifPreviewPane::updateTextureControls() {
-    const auto hasMultipleTextureSources = m_TextureSourceSet.providers.size() > 2;
-    if (!hasMultipleTextureSources && m_CurrentTextureSourceIndex != 0) {
-        m_CurrentTextureSourceIndex = 0;
-    }
+    const auto& textureSources = m_Controller.textureSources();
+    const auto currentTextureSourceIndex = m_Controller.currentTextureSourceIndex();
+    const auto hasMultipleTextureSources = textureSources.providers.size() > 2;
 
     m_PrevTextureButton->setEnabled(hasMultipleTextureSources);
     m_NextTextureButton->setEnabled(hasMultipleTextureSources);
     m_TextureSourceCombo->setEnabled(hasMultipleTextureSources);
 
-    const auto toolTip = makeTextureToolTipText(m_TextureSourceSet, m_CurrentTextureSourceIndex);
-    m_TextureLabel->setText(makeTextureSummaryText(m_TextureSourceSet));
+    const auto toolTip = makeTextureToolTipText(textureSources, currentTextureSourceIndex);
+    m_TextureLabel->setText(makeTextureSummaryText(textureSources));
     m_TextureLabel->setToolTip(toolTip);
     m_TextureSourceCombo->setToolTip(toolTip);
 
     m_UpdatingTextureControls = true;
-    m_TextureSourceCombo->setCurrentIndex(m_CurrentTextureSourceIndex);
+    m_TextureSourceCombo->setCurrentIndex(currentTextureSourceIndex);
     m_UpdatingTextureControls = false;
 }
 
@@ -300,7 +285,7 @@ void NifPreviewPane::updateTextureSourceComboWidth() {
 
     const QFontMetrics metrics(m_TextureSourceCombo->font());
     int widestProvider = 0;
-    for (const auto& provider : m_TextureSourceSet.providers) {
+    for (const auto& provider : m_Controller.textureSources().providers) {
         widestProvider = std::max(widestProvider, metrics.horizontalAdvance(provider.displayName));
     }
 
@@ -312,62 +297,35 @@ void NifPreviewPane::updateTextureSourceComboWidth() {
 }
 
 void NifPreviewPane::loadCurrentProvider() {
-    if (m_CurrentProviderIndex < 0 || m_CurrentProviderIndex >= m_Providers.size()) {
-        setViewWidget(new QLabel(tr("No previewable NIF version"), this));
-        m_TitleLabel->clear();
-        m_StatsLabel->clear();
-        m_CurrentNifFile.reset();
-        setTextureSources({});
-        return;
-    }
+    const auto result = m_Controller.loadCurrentProvider();
+    m_TitleLabel->setText(result.title);
+    m_StatsLabel->setText(result.statsText);
+    updateTextureSourceComboItems();
 
-    const auto& provider = m_Providers[m_CurrentProviderIndex];
-    auto title = QFileInfo(provider.virtualPath).fileName();
-    if (title.isEmpty()) {
-        title = QFileInfo(provider.absolutePath).fileName();
-    }
-    if (title.isEmpty()) {
-        title = provider.displayName;
-    }
-    m_TitleLabel->setText(title);
-
-    try {
-        const auto nifFile = loadNifProvider(provider);
-        if (!nifFile) {
-            qWarning("Failed to load NIF preview provider '%s'", qUtf8Printable(provider.displayName));
-            setViewWidget(new QLabel(tr("Failed to load preview"), this));
-            m_StatsLabel->clear();
-            m_CurrentNifFile.reset();
-            setTextureSources({});
+    switch (result.status) {
+        case PreviewPaneLoadStatus::NoProvider:
+            m_TitleLabel->clear();
+            setViewWidget(new QLabel(tr("No previewable NIF version"), this));
             return;
-        }
-
-        m_StatsLabel->setText(makeNifStatsText(nifFile.get()));
-        m_CurrentNifFile = nifFile;
-        setTextureSources(TextureSourceResolver::resolve(m_Organizer, nifFile.get()));
-        reloadCurrentNifWidget();
-    } catch (const std::exception& e) {
-        qWarning("Failed to load NIF preview provider '%s': %s", qUtf8Printable(provider.displayName), e.what());
-        setViewWidget(new QLabel(tr("Failed to load preview"), this));
-        m_StatsLabel->clear();
-        m_CurrentNifFile.reset();
-        setTextureSources({});
-    } catch (...) {
-        qWarning("Failed to load NIF preview provider '%s': unknown exception", qUtf8Printable(provider.displayName));
-        setViewWidget(new QLabel(tr("Failed to load preview"), this));
-        m_StatsLabel->clear();
-        m_CurrentNifFile.reset();
-        setTextureSources({});
+        case PreviewPaneLoadStatus::Failed: setViewWidget(new QLabel(tr("Failed to load preview"), this)); return;
+        case PreviewPaneLoadStatus::Loaded: reloadCurrentNifWidget(); return;
     }
 }
 
 void NifPreviewPane::reloadCurrentNifWidget() {
-    if (!m_CurrentNifFile) {
+    const auto nifFile = m_Controller.currentNifFile();
+    if (!nifFile) {
         return;
     }
 
-    auto* const
-        nifWidget = new NifWidget(m_CurrentNifFile, m_Organizer, m_Camera, currentTextureSourceProvider(), false, this);
+    auto* const nifWidget = new NifWidget(
+        nifFile,
+        m_Organizer,
+        m_Camera,
+        m_Controller.currentTextureSourceProvider(),
+        false,
+        this
+    );
     nifWidget->setShowCollision(m_ShowCollision);
     nifWidget->setMinimumSize(240, 240);
     m_NifWidget = nifWidget;
@@ -388,12 +346,4 @@ void NifPreviewPane::setViewWidget(QWidget* widget) {
     }
 
     m_ViewLayout->addWidget(widget, 1);
-}
-
-TextureSourceProvider NifPreviewPane::currentTextureSourceProvider() const {
-    if (m_CurrentTextureSourceIndex < 0 || m_CurrentTextureSourceIndex >= m_TextureSourceSet.providers.size()) {
-        return {};
-    }
-
-    return m_TextureSourceSet.providers[m_CurrentTextureSourceIndex];
 }

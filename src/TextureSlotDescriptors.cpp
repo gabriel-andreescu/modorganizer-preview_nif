@@ -1,5 +1,5 @@
 #include "TextureSlotDescriptors.h"
-#include "NifExtensions.h"
+#include "NifShaderUtils.h"
 
 #include <QObject>
 

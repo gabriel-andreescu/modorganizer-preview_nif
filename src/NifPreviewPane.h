@@ -1,13 +1,10 @@
 #pragma once
 
 #include "Camera.h"
-#include "NifPreviewSource.h"
-#include "TextureSource.h"
+#include "PreviewPaneController.h"
 
 #include <QSharedPointer>
 #include <QWidget>
-
-#include <memory>
 
 class QComboBox;
 class QLabel;
@@ -34,7 +31,7 @@ public:
         return m_Camera;
     }
     [[nodiscard]] int currentProviderIndex() const {
-        return m_CurrentProviderIndex;
+        return m_Controller.currentProviderIndex();
     }
 
 signals:
@@ -51,20 +48,16 @@ private:
     void selectRelativeTextureSource(int offset);
     void updateControls();
     void updateSourceComboWidth();
-    void setTextureSources(TextureSourceSet sourceSet);
+    void updateTextureSourceComboItems();
     void updateTextureControls();
     void updateTextureSourceComboWidth();
     void loadCurrentProvider();
     void reloadCurrentNifWidget();
     void setViewWidget(QWidget* widget);
-    [[nodiscard]] TextureSourceProvider currentTextureSourceProvider() const;
 
     MOBase::IOrganizer* m_Organizer = nullptr;
-    QVector<NifPreviewProvider> m_Providers;
-    int m_CurrentProviderIndex = 0;
+    PreviewPaneController m_Controller;
     bool m_UpdatingControls = false;
-    TextureSourceSet m_TextureSourceSet;
-    int m_CurrentTextureSourceIndex = 0;
     bool m_UpdatingTextureControls = false;
     bool m_ShowCollision = false;
 
@@ -82,5 +75,4 @@ private:
     QVBoxLayout* m_ViewLayout = nullptr;
     QWidget* m_ViewWidget = nullptr;
     NifWidget* m_NifWidget = nullptr;
-    std::shared_ptr<nifly::NifFile> m_CurrentNifFile;
 };

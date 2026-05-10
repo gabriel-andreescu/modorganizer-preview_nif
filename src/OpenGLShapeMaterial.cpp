@@ -1,5 +1,5 @@
 #include "OpenGLShapeMaterial.h"
-#include "NifExtensions.h"
+#include "NifShaderFlags.h"
 
 #include <QOpenGLShaderProgram>
 

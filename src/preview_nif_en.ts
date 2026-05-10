@@ -4,34 +4,32 @@
 <context>
     <name>NifPreviewPane</name>
     <message>
-        <location filename="NifPreviewPane.cpp" line="40"/>
+        <location filename="NifPreviewPane.cpp" line="38"/>
         <source>Previous version</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewPane.cpp" line="51"/>
+        <location filename="NifPreviewPane.cpp" line="49"/>
         <source>Next version</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewPane.cpp" line="58"/>
+        <location filename="NifPreviewPane.cpp" line="56"/>
         <source>Previous texture source</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewPane.cpp" line="69"/>
+        <location filename="NifPreviewPane.cpp" line="67"/>
         <source>Next texture source</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewPane.cpp" line="316"/>
+        <location filename="NifPreviewPane.cpp" line="308"/>
         <source>No previewable NIF version</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewPane.cpp" line="338"/>
-        <location filename="NifPreviewPane.cpp" line="351"/>
-        <location filename="NifPreviewPane.cpp" line="357"/>
+        <location filename="NifPreviewPane.cpp" line="310"/>
         <source>Failed to load preview</source>
         <translation type="unfinished"></translation>
     </message>
@@ -39,60 +37,60 @@
 <context>
     <name>NifPreviewWidget</name>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="50"/>
-        <location filename="NifPreviewWidget.cpp" line="182"/>
+        <location filename="NifPreviewWidget.cpp" line="36"/>
+        <location filename="NifPreviewWidget.cpp" line="168"/>
         <source>Reset Camera</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="51"/>
-        <location filename="NifPreviewWidget.cpp" line="183"/>
+        <location filename="NifPreviewWidget.cpp" line="37"/>
+        <location filename="NifPreviewWidget.cpp" line="169"/>
         <source>Reset the preview camera</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="53"/>
+        <location filename="NifPreviewWidget.cpp" line="39"/>
         <source>Show Collision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="54"/>
+        <location filename="NifPreviewWidget.cpp" line="40"/>
         <source>Show collision preview overlay</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="56"/>
+        <location filename="NifPreviewWidget.cpp" line="42"/>
         <source>Split Preview</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="57"/>
-        <location filename="NifPreviewWidget.cpp" line="173"/>
+        <location filename="NifPreviewWidget.cpp" line="43"/>
+        <location filename="NifPreviewWidget.cpp" line="159"/>
         <source>Compare two previewable versions of this NIF</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="59"/>
+        <location filename="NifPreviewWidget.cpp" line="45"/>
         <source>Sync Cameras</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="60"/>
+        <location filename="NifPreviewWidget.cpp" line="46"/>
         <source>Synchronize cameras between preview panes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="174"/>
+        <location filename="NifPreviewWidget.cpp" line="160"/>
         <source>Split view requires at least two previewable versions of this NIF</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="182"/>
+        <location filename="NifPreviewWidget.cpp" line="168"/>
         <source>Reset Cameras</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="183"/>
+        <location filename="NifPreviewWidget.cpp" line="169"/>
         <source>Reset both preview cameras</source>
         <translation type="unfinished"></translation>
     </message>
