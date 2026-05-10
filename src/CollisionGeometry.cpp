@@ -146,6 +146,90 @@ public:
   }
 
 private:
+  class ConvexHullEdgeEmitter
+  {
+  public:
+    ConvexHullEdgeEmitter(Builder& builder,
+                          const std::vector<nifly::Vector3>& vertices,
+                          const nifly::MatTransform& transform,
+                          const CollisionColor& color)
+        : m_Builder(builder), m_Vertices(vertices), m_Transform(transform),
+          m_Color(color)
+    {}
+
+    void addEdges()
+    {
+      for (std::size_t i = 0; i + 2 < m_Vertices.size(); i++) {
+        for (std::size_t j = i + 1; j + 1 < m_Vertices.size(); j++) {
+          for (std::size_t k = j + 1; k < m_Vertices.size(); k++) {
+            const auto a      = m_Vertices[i];
+            const auto b      = m_Vertices[j];
+            const auto c      = m_Vertices[k];
+            const auto normal = (b - a).cross(c - a);
+            if (normal.length() <= Epsilon) {
+              continue;
+            }
+
+            if (isHullFace(a, b, c, normal)) {
+              addTriangleEdges(i, j, k);
+            }
+          }
+        }
+      }
+    }
+
+  private:
+    [[nodiscard]] bool isHullFace(const nifly::Vector3& a, const nifly::Vector3& b,
+                                  const nifly::Vector3& c,
+                                  const nifly::Vector3& normal) const
+    {
+      int side = 0;
+      for (const auto& vertex : m_Vertices) {
+        if (vertex == a || vertex == b || vertex == c) {
+          continue;
+        }
+
+        const auto distance = (vertex - a).dot(normal);
+        if (std::fabs(distance) <= Epsilon) {
+          continue;
+        }
+
+        const auto vertexSide = distance > 0.0f ? 1 : -1;
+        if (side != 0 && side != vertexSide) {
+          return false;
+        }
+        side = vertexSide;
+      }
+
+      return true;
+    }
+
+    void addTriangleEdges(const std::size_t first, const std::size_t second,
+                          const std::size_t third)
+    {
+      addEdge(first, second);
+      addEdge(second, third);
+      addEdge(third, first);
+    }
+
+    void addEdge(const std::size_t edgeStart, const std::size_t edgeEnd)
+    {
+      const auto minIndex = static_cast<std::uint64_t>(std::min(edgeStart, edgeEnd));
+      const auto maxIndex = static_cast<std::uint64_t>(std::max(edgeStart, edgeEnd));
+      const auto edgeKey  = (minIndex << 32U) | maxIndex;
+      if (m_HullEdges.insert(edgeKey).second) {
+        m_Builder.addLine(m_Transform, m_Vertices[edgeStart], m_Vertices[edgeEnd],
+                          m_Color);
+      }
+    }
+
+    Builder& m_Builder;
+    const std::vector<nifly::Vector3>& m_Vertices;
+    const nifly::MatTransform& m_Transform;
+    const CollisionColor& m_Color;
+    std::unordered_set<std::uint64_t> m_HullEdges;
+  };
+
   void visitObject(nifly::NiAVObject* object, const nifly::MatTransform& parent)
   {
     if (!object) {
@@ -363,73 +447,8 @@ private:
                           const nifly::MatTransform& transform,
                           const CollisionColor& color)
   {
-    std::unordered_set<std::uint64_t> hullEdges;
-    for (std::size_t i = 0; i + 2 < vertices.size(); i++) {
-      for (std::size_t j = i + 1; j + 1 < vertices.size(); j++) {
-        for (std::size_t k = j + 1; k < vertices.size(); k++) {
-          const auto a      = vertices[i];
-          const auto b      = vertices[j];
-          const auto c      = vertices[k];
-          const auto normal = (b - a).cross(c - a);
-          if (normal.length() <= Epsilon) {
-            continue;
-          }
-
-          if (isHullFace(vertices, a, b, c, normal)) {
-            addHullTriangleEdges(hullEdges, vertices, transform, color, i, j, k);
-          }
-        }
-      }
-    }
-  }
-
-  static bool isHullFace(const std::vector<nifly::Vector3>& vertices,
-                         const nifly::Vector3& a, const nifly::Vector3& b,
-                         const nifly::Vector3& c, const nifly::Vector3& normal)
-  {
-    int side = 0;
-    for (const auto& vertex : vertices) {
-      if (vertex == a || vertex == b || vertex == c) {
-        continue;
-      }
-
-      const auto distance = (vertex - a).dot(normal);
-      if (std::fabs(distance) <= Epsilon) {
-        continue;
-      }
-
-      const auto vertexSide = distance > 0.0f ? 1 : -1;
-      if (side != 0 && side != vertexSide) {
-        return false;
-      }
-      side = vertexSide;
-    }
-
-    return true;
-  }
-
-  void addHullTriangleEdges(std::unordered_set<std::uint64_t>& hullEdges,
-                            const std::vector<nifly::Vector3>& vertices,
-                            const nifly::MatTransform& transform,
-                            const CollisionColor& color, const std::size_t first,
-                            const std::size_t second, const std::size_t third)
-  {
-    addHullEdge(hullEdges, vertices, transform, color, first, second);
-    addHullEdge(hullEdges, vertices, transform, color, second, third);
-    addHullEdge(hullEdges, vertices, transform, color, third, first);
-  }
-
-  void addHullEdge(std::unordered_set<std::uint64_t>& hullEdges,
-                   const std::vector<nifly::Vector3>& vertices,
-                   const nifly::MatTransform& transform, const CollisionColor& color,
-                   const std::size_t edgeStart, const std::size_t edgeEnd)
-  {
-    const auto minIndex = static_cast<std::uint64_t>(std::min(edgeStart, edgeEnd));
-    const auto maxIndex = static_cast<std::uint64_t>(std::max(edgeStart, edgeEnd));
-    const auto edgeKey  = (minIndex << 32U) | maxIndex;
-    if (hullEdges.insert(edgeKey).second) {
-      addLine(transform, vertices[edgeStart], vertices[edgeEnd], color);
-    }
+    ConvexHullEdgeEmitter emitter(*this, vertices, transform, color);
+    emitter.addEdges();
   }
 
   void addCompressedMeshShape(nifly::bhkCompressedMeshShape* shape,
