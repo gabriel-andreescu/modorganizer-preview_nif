@@ -61,7 +61,6 @@ void main( void )
 
     vec4 baseMap = texture2D( BaseMap, offset );
     vec4 normalMap = texture2D( NormalMap, offset );
-    vec4 specMap = texture2D( SpecularMap, offset );
 
     vec3 normal = normalize(normalMap.rgb * 2.0 - 1.0);
     // Calculate missing blue channel
@@ -130,13 +129,14 @@ void main( void )
     float g = 1.0;
     float s = 1.0;
     if ( hasEnvMask ) {
+        vec4 specMap = texture2D( SpecularMap, offset );
         g = specMap.r;
         s = specMap.g;
     }
 
     // Environment
-    vec4 cube = textureCube( CubeMap, reflectedWS );
     if ( hasCubeMap ) {
+        vec4 cube = textureCube( CubeMap, reflectedWS );
         cube.rgb *= envReflection * s;
         cube.rgb = mix( cube.rgb, cube.rgb * D.rgb, lightingInfluence );
 

@@ -27,6 +27,8 @@
 - Fixes effect-shader previews that ignored direct source and greyscale
   textures, causing embers, glow, fire, and similar effect surfaces to render
   black.
+- Fixes Fallout 4 effect-shader previews by loading their normal, environment,
+  and environment mask texture slots.
 
 ## 0.4.4 - 2026-05-09
 

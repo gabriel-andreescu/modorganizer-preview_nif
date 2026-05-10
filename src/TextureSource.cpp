@@ -2,7 +2,8 @@
 #include "ArchiveAccess.h"
 #include "MoDataPaths.h"
 #include "NifExtensions.h"
-#include "TextureSlots.h"
+#include "ShaderClassification.h"
+#include "TextureSlotDescriptors.h"
 
 #include <NifFile.hpp>
 
@@ -117,62 +118,11 @@ bool gameDataContainsTexture(MOBase::IOrganizer* organizer, const QString& textu
     return QFileInfo::exists(dataPath) && QFileInfo(dataPath).isFile();
 }
 
-QString textureSlotName(const nifly::NiShader* shader, const std::size_t slot, const bool isRefractionProxy) {
-    if (isRefractionProxy && slot == TextureSlot::BaseMap) {
-        return QObject::tr("Refraction");
-    }
-
-    if (IsPBRLightingShader(shader)) {
-        switch (slot) {
-            case TextureSlot::BaseMap:         return QObject::tr("Base");
-            case TextureSlot::NormalMap:       return QObject::tr("Normal");
-            case TextureSlot::PBREmissiveMap:  return QObject::tr("Emissive");
-            case TextureSlot::PBRDisplacement: return QObject::tr("Displacement");
-            case TextureSlot::PBRRMAOSMap:     return QObject::tr("RMAOS");
-            case TextureSlot::PBRFeatures1:    return QObject::tr("Fuzz / Coat Normal");
-            case TextureSlot::PBRFeatures0:    return QObject::tr("Subsurface / Coat Color");
-            default:                           return QObject::tr("Slot %1").arg(slot + 1);
-        }
-    }
-
-    switch (slot) {
-        case TextureSlot::BaseMap:   return QObject::tr("Base");
-        case TextureSlot::NormalMap: return QObject::tr("Normal");
-        case TextureSlot::GlowMap:   return shader && shader->HasGlowmap() ? QObject::tr("Glow") : QObject::tr("Light");
-        case TextureSlot::HeightMap:
-            if (dynamic_cast<const nifly::BSEffectShaderProperty*>(shader)) {
-                return QObject::tr("Greyscale");
-            }
-            if (const auto* const bslsp = dynamic_cast<const nifly::BSLightingShaderProperty*>(shader)) {
-                const auto shaderType = bslsp->GetShaderType();
-                if (shaderType
-                    == nifly::BSLSP_PARALLAX
-                    || shaderType
-                    == nifly::BSLSP_PARALLAXOCC
-                    || shaderType
-                    == nifly::BSLSP_MULTILAYERPARALLAX) {
-                    return QObject::tr("Height");
-                }
-            }
-            return QObject::tr("Detail");
-        case TextureSlot::EnvironmentMap:  return QObject::tr("Environment");
-        case TextureSlot::EnvironmentMask: return QObject::tr("Env Mask");
-        case TextureSlot::TintMask:
-            if (const auto* const bslsp = dynamic_cast<const nifly::BSLightingShaderProperty*>(shader);
-                bslsp && bslsp->GetShaderType() == nifly::BSLSP_MULTILAYERPARALLAX) {
-                return QObject::tr("Inner");
-            }
-            return QObject::tr("Tint");
-        case TextureSlot::BacklightMap:
-            return shader && shader->HasBacklight() ? QObject::tr("Backlight") : QObject::tr("Specular");
-        default: return QObject::tr("Slot %1").arg(slot + 1);
-    }
-}
-
 void appendTextureReference(
     QVector<TextureReference>& references,
     QSet<QString>& seenPaths,
     const nifly::NiShader* shader,
+    const ShaderManager::ShaderType shaderType,
     const int slot,
     const QString& texturePath,
     const bool isRefractionProxy = false
@@ -183,7 +133,7 @@ void appendTextureReference(
         return;
     }
 
-    const auto slotName = textureSlotName(shader, static_cast<std::size_t>(slot), isRefractionProxy);
+    const auto slotName = textureSlotDisplayName(shader, shaderType, static_cast<std::size_t>(slot), isRefractionProxy);
 
     if (seenPaths.contains(key)) {
         if (isRefractionProxy && slot == TextureSlot::BaseMap) {
@@ -200,6 +150,59 @@ void appendTextureReference(
 
     seenPaths.insert(key);
     references.push_back({.slot = slot, .slotName = slotName, .path = path, .key = key});
+}
+
+void appendEffectShaderTextureReferences(
+    QVector<TextureReference>& references,
+    QSet<QString>& seenPaths,
+    const nifly::BSEffectShaderProperty* effectShader,
+    const ShaderManager::ShaderType shaderType
+) {
+    appendTextureReference(
+        references,
+        seenPaths,
+        effectShader,
+        shaderType,
+        TextureSlot::BaseMap,
+        QString::fromStdString(effectShader->sourceTexture.get())
+    );
+    appendTextureReference(
+        references,
+        seenPaths,
+        effectShader,
+        shaderType,
+        TextureSlot::GreyscaleMap,
+        QString::fromStdString(effectShader->greyscaleTexture.get())
+    );
+
+    if (shaderType != ShaderManager::FO4EffectShader) {
+        return;
+    }
+
+    appendTextureReference(
+        references,
+        seenPaths,
+        effectShader,
+        shaderType,
+        TextureSlot::NormalMap,
+        QString::fromStdString(effectShader->normalTexture.get())
+    );
+    appendTextureReference(
+        references,
+        seenPaths,
+        effectShader,
+        shaderType,
+        TextureSlot::EnvironmentMap,
+        QString::fromStdString(effectShader->envMapTexture.get())
+    );
+    appendTextureReference(
+        references,
+        seenPaths,
+        effectShader,
+        shaderType,
+        TextureSlot::EnvironmentMask,
+        QString::fromStdString(effectShader->envMaskTexture.get())
+    );
 }
 
 QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile) {
@@ -220,22 +223,10 @@ QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile) {
         }
 
         const auto isRefractionProxy = IsRefractionDistortionProxy(nifFile, shape);
+        const auto shaderType = classifyShaderType(nifFile, shader);
 
         if (auto* const effectShader = dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
-            appendTextureReference(
-                references,
-                seenPaths,
-                shader,
-                TextureSlot::BaseMap,
-                QString::fromStdString(effectShader->sourceTexture.get())
-            );
-            appendTextureReference(
-                references,
-                seenPaths,
-                shader,
-                TextureSlot::GreyscaleMap,
-                QString::fromStdString(effectShader->greyscaleTexture.get())
-            );
+            appendEffectShaderTextureReferences(references, seenPaths, effectShader, shaderType);
         }
 
         if (!shader->HasTextureSet()) {
@@ -253,6 +244,7 @@ QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile) {
                 references,
                 seenPaths,
                 shader,
+                shaderType,
                 static_cast<int>(i),
                 QString::fromStdString(textureSet->textures[static_cast<std::uint32_t>(i)].get()),
                 isRefractionProxy

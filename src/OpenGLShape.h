@@ -3,6 +3,7 @@
 #include "OpenGLResources.h"
 #include "ShaderManager.h"
 #include "TextureManager.h"
+#include "TextureSlotDescriptors.h"
 #include "TextureSlots.h"
 
 #include <Geometry.hpp>
@@ -43,6 +44,8 @@ public:
     GLsizei elements = 0;
 
     std::array<PreviewTexture*, TextureSlotCount> textures {nullptr};
+    std::array<bool, TextureSlotCount> loadedTextures {};
+    TextureSlotDescriptorList slotDescriptors {};
 
     QMatrix4x4 modelMatrix;
     nifly::BoundingSphere bounds;
@@ -94,10 +97,6 @@ public:
     float outerReflection;
 
     bool isPBR = false;
-    bool pbrHasEmissive = false;
-    bool pbrHasDisplacement = false;
-    bool pbrHasFeaturesTexture0 = false;
-    bool pbrHasFeaturesTexture1 = false;
     bool pbrHasSubsurface = false;
     bool pbrHasTwoLayer = false;
     bool pbrHasColoredCoat = false;
@@ -121,39 +120,18 @@ public:
     float alphaThreshold = 0.0f;
 
 private:
-    void configureShaderType(nifly::NifFile* nifFile, nifly::NiShader* shader);
     static void setDefaultVertexAttributes(QOpenGLFunctions_2_1* f);
     void initializeGeometryBuffers(nifly::NifFile* nifFile, nifly::NiShape* niShape, nifly::NiShader* shader);
     void initializeColorBuffer(nifly::NifFile* nifFile, nifly::NiShape* niShape, nifly::NiShader* shader);
-    void loadShaderTextures(
-        nifly::NifFile* nifFile,
-        nifly::NiShader* shader,
-        TextureManager* textureManager,
-        std::array<bool, TextureSlotCount>& loadedTextureSlots
-    );
+    void loadShaderTextures(nifly::NifFile* nifFile, nifly::NiShader* shader, TextureManager* textureManager);
     void loadEffectShaderTextures(nifly::BSEffectShaderProperty* shader, TextureManager* textureManager);
-    void loadTextureSetTextures(
-        nifly::NifFile* nifFile,
-        nifly::NiShader* shader,
-        TextureManager* textureManager,
-        std::array<bool, TextureSlotCount>& loadedTextureSlots
-    );
-    void assignMissingTexture(TextureManager* textureManager, nifly::NiShader* shader, std::size_t textureSlot);
-    void assignMissingPBRTexture(TextureManager* textureManager, std::size_t textureSlot);
-    void assignMissingStandardTexture(TextureManager* textureManager, nifly::NiShader* shader, std::size_t textureSlot);
-    void applyShaderMaterial(
-        nifly::NifFile* nifFile,
-        nifly::NiShape* niShape,
-        nifly::NiShader* shader,
-        const std::array<bool, TextureSlotCount>& loadedTextureSlots
-    );
+    void loadTextureSetTextures(nifly::NifFile* nifFile, nifly::NiShader* shader, TextureManager* textureManager);
+    void assignMissingTexture(TextureManager* textureManager, std::size_t textureSlot);
+    void applyShaderMaterial(nifly::NifFile* nifFile, nifly::NiShape* niShape, nifly::NiShader* shader);
     void applyCommonShaderMaterial(nifly::NiShader* shader);
     void applyAlphaProperty(nifly::NifFile* nifFile, nifly::NiShape* niShape);
     void applyShaderBufferFlags(nifly::NiShader* shader);
-    void applyLightingShaderMaterial(
-        nifly::BSLightingShaderProperty* shader,
-        const std::array<bool, TextureSlotCount>& loadedTextureSlots
-    );
+    void applyLightingShaderMaterial(nifly::BSLightingShaderProperty* shader);
     void applyEffectShaderMaterial(nifly::BSEffectShaderProperty* shader);
     void useDefaultTextures(TextureManager* textureManager);
     void bindTextures() const;
