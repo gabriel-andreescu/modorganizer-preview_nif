@@ -26,6 +26,8 @@
 #include <QtGui/qopenglext.h>
 
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <cstring>
 #include <exception>
 #include <limits>
@@ -37,6 +39,17 @@ namespace
 {
 
 constexpr std::size_t maxGliTextureLevels = 16;
+
+using DdsHeader = gli::detail::dds_header;
+using DdsHeader10 = gli::detail::dds_header10;
+using DdsPixelFormat = gli::detail::dds_pixel_format;
+
+struct LegacyDdsFormatCandidate
+{
+  std::uint32_t bitsPerPixel;
+  gli::format format;
+  glm::u32vec4 mask;
+};
 
 const MOBase::IProfile* profilePointer(const MOBase::IProfile* profile)
 {
@@ -61,6 +74,88 @@ const MOBase::IProfile* currentProfile(MOBase::IOrganizer* organizer)
 bool sameMask(const glm::u32vec4& left, const glm::u32vec4& right)
 {
   return glm::all(glm::equal(left, right));
+}
+
+std::array<LegacyDdsFormatCandidate, 25> legacyDdsFormatCandidates(
+    const gli::dx& dx)
+{
+  return {{
+      {.bitsPerPixel=8,
+       .format=gli::FORMAT_RG4_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_RG4_UNORM_PACK8).Mask},
+      {.bitsPerPixel=8,
+       .format=gli::FORMAT_L8_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_L8_UNORM_PACK8).Mask},
+      {.bitsPerPixel=8,
+       .format=gli::FORMAT_A8_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_A8_UNORM_PACK8).Mask},
+      {.bitsPerPixel=8,
+       .format=gli::FORMAT_R8_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_R8_UNORM_PACK8).Mask},
+      {.bitsPerPixel=8,
+       .format=gli::FORMAT_RG3B2_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_RG3B2_UNORM_PACK8).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_RGBA4_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_RGBA4_UNORM_PACK16).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_BGRA4_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_BGRA4_UNORM_PACK16).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_R5G6B5_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_R5G6B5_UNORM_PACK16).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_B5G6R5_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_B5G6R5_UNORM_PACK16).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_RGB5A1_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_RGB5A1_UNORM_PACK16).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_BGR5A1_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_BGR5A1_UNORM_PACK16).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_LA8_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_LA8_UNORM_PACK8).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_RG8_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_RG8_UNORM_PACK8).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_L16_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_L16_UNORM_PACK16).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_A16_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_A16_UNORM_PACK16).Mask},
+      {.bitsPerPixel=16,
+       .format=gli::FORMAT_R16_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_R16_UNORM_PACK16).Mask},
+      {.bitsPerPixel=24,
+       .format=gli::FORMAT_RGB8_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_RGB8_UNORM_PACK8).Mask},
+      {.bitsPerPixel=24,
+       .format=gli::FORMAT_BGR8_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_BGR8_UNORM_PACK8).Mask},
+      {.bitsPerPixel=32,
+       .format=gli::FORMAT_BGR8_UNORM_PACK32,
+       .mask=dx.translate(gli::FORMAT_BGR8_UNORM_PACK32).Mask},
+      {.bitsPerPixel=32,
+       .format=gli::FORMAT_BGRA8_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_BGRA8_UNORM_PACK8).Mask},
+      {.bitsPerPixel=32,
+       .format=gli::FORMAT_RGBA8_UNORM_PACK8,
+       .mask=dx.translate(gli::FORMAT_RGBA8_UNORM_PACK8).Mask},
+      {.bitsPerPixel=32,
+       .format=gli::FORMAT_RGB10A2_UNORM_PACK32,
+       .mask=dx.translate(gli::FORMAT_RGB10A2_UNORM_PACK32).Mask},
+      {.bitsPerPixel=32,
+       .format=gli::FORMAT_LA16_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_LA16_UNORM_PACK16).Mask},
+      {.bitsPerPixel=32,
+       .format=gli::FORMAT_RG16_UNORM_PACK16,
+       .mask=dx.translate(gli::FORMAT_RG16_UNORM_PACK16).Mask},
+      {.bitsPerPixel=32,
+       .format=gli::FORMAT_R32_SFLOAT_PACK32,
+       .mask=dx.translate(gli::FORMAT_R32_SFLOAT_PACK32).Mask},
+  }};
 }
 
 bool isArchiveName(const QString& name)
@@ -134,216 +229,254 @@ bool ddsPayloadSize(const gli::format format, const std::size_t width,
   return checkedMul(payloadSize, faces, payloadSize);
 }
 
-gli::format legacyDdsFormat(const gli::detail::dds_header& header)
+bool hasLegacyPixelFormat(const DdsPixelFormat& format)
+{
+  return (format.flags &
+          (gli::dx::DDPF_RGB | gli::dx::DDPF_ALPHAPIXELS | gli::dx::DDPF_ALPHA |
+           gli::dx::DDPF_YUV | gli::dx::DDPF_LUMINANCE)) &&
+         format.bpp != 0 && format.bpp < 64;
+}
+
+gli::format legacyDdsFormat(const DdsHeader& header)
 {
   gli::dx dx;
-  gli::format format = gli::FORMAT_UNDEFINED;
 
-  if (!(header.Format.flags &
-        (gli::dx::DDPF_RGB | gli::dx::DDPF_ALPHAPIXELS | gli::dx::DDPF_ALPHA |
-         gli::dx::DDPF_YUV | gli::dx::DDPF_LUMINANCE)) ||
-      header.Format.bpp == 0 || header.Format.bpp >= 64) {
+  if (!hasLegacyPixelFormat(header.Format)) {
+    return gli::FORMAT_UNDEFINED;
+  }
+
+  for (const auto& candidate : legacyDdsFormatCandidates(dx)) {
+    if (candidate.bitsPerPixel == header.Format.bpp &&
+        sameMask(header.Format.Mask, candidate.mask)) {
+      return candidate.format;
+    }
+  }
+
+  return gli::FORMAT_UNDEFINED;
+}
+
+DdsHeader10 emptyDdsHeader10()
+{
+  DdsHeader10 header;
+  std::memset(&header, 0, sizeof(header));
+  return header;
+}
+
+DdsHeader emptyDdsHeader()
+{
+  DdsHeader header;
+  std::memset(&header, 0, sizeof(header));
+  return header;
+}
+
+class DdsTextureReader
+{
+public:
+  DdsTextureReader(const char* data, const std::size_t size)
+      : m_Data(data), m_Size(size), m_Header(emptyDdsHeader()),
+        m_Header10(emptyDdsHeader10())
+  {}
+
+  gli::texture load()
+  {
+    if (!readHeader()) {
+      return {};
+    }
+
+    const auto format = resolveFormat();
+    if (format == gli::FORMAT_UNDEFINED) {
+      return {};
+    }
+
+    const auto target = gli::detail::get_target(m_Header, m_Header10);
+    if (!isSupportedTarget(target)) {
+      return {};
+    }
+
+    const auto mipMapCount = this->mipMapCount();
+    if (mipMapCount == 0) {
+      return {};
+    }
+
+    const auto faceCount = this->faceCount();
+    if (!hasValidFaceCount(target, faceCount)) {
+      return {};
+    }
+
+    const auto layerCount = this->layerCount();
+    if (layerCount != 1) {
+      return {};
+    }
+
+    const auto depthCount = this->depthCount();
+    if (depthCount == 0) {
+      return {};
+    }
+
+    const auto textureExtent =
+        gli::texture::extent_type(m_Header.Width, m_Header.Height, depthCount);
+    if (!hasValidMipCount(textureExtent, mipMapCount) ||
+        !hasValidPayload(format, depthCount, faceCount, mipMapCount)) {
+      return {};
+    }
+
+    gli::texture texture(target, format, textureExtent, layerCount, faceCount,
+                         mipMapCount);
+    if (!canCopyTexture(texture)) {
+      return {};
+    }
+
+    std::memcpy(texture.data(), m_Data + m_Offset, texture.size());
+    return texture;
+  }
+
+private:
+  bool readHeader()
+  {
+    if (!hasBaseHeader()) {
+      return false;
+    }
+
+    m_Offset = sizeof(gli::detail::FOURCC_DDS);
+    std::memcpy(&m_Header, m_Data + m_Offset, sizeof(m_Header));
+    m_Offset += sizeof(DdsHeader);
+
+    if (!hasValidHeader()) {
+      return false;
+    }
+
+    return !hasDx10Header() || readDx10Header();
+  }
+
+  [[nodiscard]] bool hasBaseHeader() const
+  {
+    return m_Data && m_Size >= sizeof(gli::detail::FOURCC_DDS) + sizeof(DdsHeader) &&
+           std::strncmp(m_Data, gli::detail::FOURCC_DDS,
+                        sizeof(gli::detail::FOURCC_DDS)) == 0;
+  }
+
+  [[nodiscard]] bool hasValidHeader() const
+  {
+    return m_Header.Size == sizeof(DdsHeader) &&
+           m_Header.Format.size == sizeof(DdsPixelFormat) && m_Header.Width != 0 &&
+           m_Header.Height != 0;
+  }
+
+  [[nodiscard]] bool hasFourCc() const
+  {
+    return (m_Header.Format.flags & gli::dx::DDPF_FOURCC) != 0;
+  }
+
+  [[nodiscard]] bool hasDx10Header() const
+  {
+    return hasFourCc() && (m_Header.Format.fourCC == gli::dx::D3DFMT_DX10 ||
+                           m_Header.Format.fourCC == gli::dx::D3DFMT_GLI1);
+  }
+
+  bool readDx10Header()
+  {
+    if (m_Size < m_Offset + sizeof(DdsHeader10)) {
+      return false;
+    }
+
+    std::memcpy(&m_Header10, m_Data + m_Offset, sizeof(m_Header10));
+    m_Offset += sizeof(DdsHeader10);
+    return true;
+  }
+
+  [[nodiscard]] gli::format resolveFormat() const
+  {
+    gli::dx dxTranslator;
+    auto format = legacyDdsFormat(m_Header);
+
+    if (hasDx10Header()) {
+      return dxTranslator.find(m_Header.Format.fourCC, m_Header10.Format);
+    }
+
+    if (hasFourCc() && format == gli::FORMAT_UNDEFINED) {
+      return dxTranslator.find(gli::detail::remap_four_cc(m_Header.Format.fourCC));
+    }
+
     return format;
   }
 
-  switch (header.Format.bpp) {
-  case 8:
-    if (sameMask(header.Format.Mask, dx.translate(gli::FORMAT_RG4_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_RG4_UNORM_PACK8;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_L8_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_L8_UNORM_PACK8;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_A8_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_A8_UNORM_PACK8;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_R8_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_R8_UNORM_PACK8;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_RG3B2_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_RG3B2_UNORM_PACK8;
-    }
-    break;
-  case 16:
-    if (sameMask(header.Format.Mask,
-                 dx.translate(gli::FORMAT_RGBA4_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_RGBA4_UNORM_PACK16;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_BGRA4_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_BGRA4_UNORM_PACK16;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_R5G6B5_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_R5G6B5_UNORM_PACK16;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_B5G6R5_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_B5G6R5_UNORM_PACK16;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_RGB5A1_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_RGB5A1_UNORM_PACK16;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_BGR5A1_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_BGR5A1_UNORM_PACK16;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_LA8_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_LA8_UNORM_PACK8;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_RG8_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_RG8_UNORM_PACK8;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_L16_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_L16_UNORM_PACK16;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_A16_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_A16_UNORM_PACK16;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_R16_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_R16_UNORM_PACK16;
-    }
-    break;
-  case 24:
-    if (sameMask(header.Format.Mask, dx.translate(gli::FORMAT_RGB8_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_RGB8_UNORM_PACK8;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_BGR8_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_BGR8_UNORM_PACK8;
-    }
-    break;
-  case 32:
-    if (sameMask(header.Format.Mask,
-                 dx.translate(gli::FORMAT_BGR8_UNORM_PACK32).Mask)) {
-      format = gli::FORMAT_BGR8_UNORM_PACK32;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_BGRA8_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_BGRA8_UNORM_PACK8;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_RGBA8_UNORM_PACK8).Mask)) {
-      format = gli::FORMAT_RGBA8_UNORM_PACK8;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_RGB10A2_UNORM_PACK32).Mask)) {
-      format = gli::FORMAT_RGB10A2_UNORM_PACK32;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_LA16_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_LA16_UNORM_PACK16;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_RG16_UNORM_PACK16).Mask)) {
-      format = gli::FORMAT_RG16_UNORM_PACK16;
-    } else if (sameMask(header.Format.Mask,
-                        dx.translate(gli::FORMAT_R32_SFLOAT_PACK32).Mask)) {
-      format = gli::FORMAT_R32_SFLOAT_PACK32;
-    }
-    break;
-  default:
-    break;
+  [[nodiscard]] static bool isSupportedTarget(const gli::target target)
+  {
+    return target == gli::TARGET_2D || target == gli::TARGET_CUBE;
   }
 
-  return format;
-}
+  [[nodiscard]] std::size_t mipMapCount() const
+  {
+    return (m_Header.Flags & gli::detail::DDSD_MIPMAPCOUNT) ? m_Header.MipMapLevels
+                                                            : 1;
+  }
+
+  [[nodiscard]] std::size_t faceCount() const
+  {
+    if (m_Header.CubemapFlags & gli::detail::DDSCAPS2_CUBEMAP) {
+      return static_cast<std::size_t>(glm::bitCount(
+          m_Header.CubemapFlags & gli::detail::DDSCAPS2_CUBEMAP_ALLFACES));
+    }
+
+    if (m_Header10.MiscFlag & gli::detail::D3D10_RESOURCE_MISC_TEXTURECUBE) {
+      return 6;
+    }
+
+    return 1;
+  }
+
+  [[nodiscard]] static bool hasValidFaceCount(const gli::target target,
+                                              const std::size_t faceCount)
+  {
+    return (target == gli::TARGET_2D && faceCount == 1) ||
+           (target == gli::TARGET_CUBE && faceCount == 6);
+  }
+
+  [[nodiscard]] std::size_t layerCount() const
+  {
+    return std::max<gli::texture::size_type>(m_Header10.ArraySize, 1);
+  }
+
+  [[nodiscard]] std::size_t depthCount() const
+  {
+    return (m_Header.CubemapFlags & gli::detail::DDSCAPS2_VOLUME) ? m_Header.Depth
+                                                                  : 1;
+  }
+
+  [[nodiscard]] static bool hasValidMipCount(
+      const gli::texture::extent_type textureExtent, const std::size_t mipMapCount)
+  {
+    return mipMapCount <=
+           std::min<std::size_t>(gli::levels(textureExtent), maxGliTextureLevels);
+  }
+
+  [[nodiscard]] bool hasValidPayload(const gli::format format,
+                                     const std::size_t depthCount,
+                                     const std::size_t faceCount,
+                                     const std::size_t mipMapCount) const
+  {
+    std::size_t payloadSize = 0;
+    return ddsPayloadSize(format, m_Header.Width, m_Header.Height, depthCount,
+                          faceCount, mipMapCount, payloadSize) &&
+           payloadSize <= m_Size - m_Offset;
+  }
+
+  [[nodiscard]] bool canCopyTexture(const gli::texture& texture) const
+  {
+    return !texture.empty() && texture.layers() == 1 && texture.size() <= m_Size - m_Offset;
+  }
+
+  const char* m_Data = nullptr;
+  std::size_t m_Size = 0;
+  std::size_t m_Offset = 0;
+  DdsHeader m_Header;
+  DdsHeader10 m_Header10;
+};
 
 gli::texture loadDdsIfValid(const char* data, const std::size_t size)
 {
-  using namespace gli;
-  using namespace gli::detail;
-
-  if (!data || size < sizeof(FOURCC_DDS) + sizeof(dds_header) ||
-      std::strncmp(data, FOURCC_DDS, sizeof(FOURCC_DDS)) != 0) {
-    return {};
-  }
-
-  std::size_t offset = sizeof(FOURCC_DDS);
-
-  dds_header header;
-  std::memcpy(&header, data + offset, sizeof(header));
-  offset += sizeof(dds_header);
-
-  if (header.Size != sizeof(dds_header) ||
-      header.Format.size != sizeof(dds_pixel_format) || header.Width == 0 ||
-      header.Height == 0) {
-    return {};
-  }
-
-  dds_header10 header10{};
-  const bool hasFourCc = (header.Format.flags & dx::DDPF_FOURCC) != 0;
-  if (hasFourCc && (header.Format.fourCC == dx::D3DFMT_DX10 ||
-                    header.Format.fourCC == dx::D3DFMT_GLI1)) {
-    if (size < offset + sizeof(dds_header10)) {
-      return {};
-    }
-    std::memcpy(&header10, data + offset, sizeof(header10));
-    offset += sizeof(dds_header10);
-  }
-
-  dx dxTranslator;
-  auto format = legacyDdsFormat(header);
-
-  if (hasFourCc && header.Format.fourCC != dx::D3DFMT_DX10 &&
-      header.Format.fourCC != dx::D3DFMT_GLI1 && format == FORMAT_UNDEFINED) {
-    format = dxTranslator.find(remap_four_cc(header.Format.fourCC));
-  } else if (hasFourCc && (header.Format.fourCC == dx::D3DFMT_DX10 ||
-                           header.Format.fourCC == dx::D3DFMT_GLI1)) {
-    format = dxTranslator.find(header.Format.fourCC, header10.Format);
-  }
-
-  if (format == FORMAT_UNDEFINED) {
-    return {};
-  }
-
-  const auto target = get_target(header, header10);
-  if (target != TARGET_2D && target != TARGET_CUBE) {
-    return {};
-  }
-
-  const std::size_t mipMapCount =
-      (header.Flags & DDSD_MIPMAPCOUNT) ? header.MipMapLevels : 1;
-  if (mipMapCount == 0) {
-    return {};
-  }
-
-  std::size_t faceCount = 1;
-  if (header.CubemapFlags & DDSCAPS2_CUBEMAP) {
-    faceCount = static_cast<std::size_t>(
-        glm::bitCount(header.CubemapFlags & DDSCAPS2_CUBEMAP_ALLFACES));
-  } else if (header10.MiscFlag & D3D10_RESOURCE_MISC_TEXTURECUBE) {
-    faceCount = 6;
-  }
-
-  if ((target == TARGET_2D && faceCount != 1) ||
-      (target == TARGET_CUBE && faceCount != 6)) {
-    return {};
-  }
-
-  const std::size_t layerCount = std::max<texture::size_type>(header10.ArraySize, 1);
-  if (layerCount != 1) {
-    return {};
-  }
-
-  const std::size_t depthCount =
-      (header.CubemapFlags & DDSCAPS2_VOLUME) ? header.Depth : 1;
-  if (depthCount == 0) {
-    return {};
-  }
-
-  const auto textureExtent =
-      texture::extent_type(header.Width, header.Height, depthCount);
-  if (mipMapCount >
-      std::min<std::size_t>(gli::levels(textureExtent), maxGliTextureLevels)) {
-    return {};
-  }
-
-  std::size_t payloadSize = 0;
-  if (!ddsPayloadSize(format, header.Width, header.Height, depthCount, faceCount,
-                      mipMapCount, payloadSize) ||
-      payloadSize > size - offset) {
-    return {};
-  }
-
-  texture texture(target, format, textureExtent, layerCount, faceCount, mipMapCount);
-
-  if (texture.empty() || texture.layers() != 1 || texture.size() > size - offset) {
-    return {};
-  }
-
-  std::memcpy(texture.data(), data + offset, texture.size());
-  return texture;
+  DdsTextureReader reader(data, size);
+  return reader.load();
 }
 
 gli::texture loadDdsFileIfValid(const QString& path)
@@ -404,6 +537,19 @@ GLenum textureFaceTarget(const gli::texture& texture, const GLenum target,
   return gli::is_target_cube(texture.target())
              ? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face)
              : target;
+}
+
+GLenum textureUploadTarget(const gli::target target)
+{
+  if (target == gli::TARGET_2D) {
+    return GL_TEXTURE_2D;
+  }
+
+  if (target == gli::TARGET_CUBE) {
+    return GL_TEXTURE_CUBE_MAP;
+  }
+
+  return 0;
 }
 
 void setTextureParameters(QOpenGLFunctions_2_1* f, const GLenum target,
@@ -919,7 +1065,11 @@ PreviewTexture* TextureManager::makeTexture(const gli::texture& texture)
 
   const gli::gl gl(gli::gl::PROFILE_GL33);
   const auto format = gl.translate(texture.format(), texture.swizzles());
-  const auto target = static_cast<GLenum>(gl.translate(texture.target()));
+  const auto target = textureUploadTarget(texture.target());
+  if (target == 0) {
+    qWarning("Skipping DDS texture with unsupported OpenGL texture target");
+    return nullptr;
+  }
 
   const auto textureId =
       makeRawTexture(texture, f, target, format, resolveTexStorage2D(context));
