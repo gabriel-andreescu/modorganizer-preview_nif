@@ -35,6 +35,8 @@ set(gli_clang22_enum_bitmask_patch
         "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/gli-clang22-enum-bitmask.patch")
 set(gli_clang_tidy_texture_cache_patch
         "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/gli-clang-tidy-texture-cache.patch")
+set(gli_clang_tidy_swizzle_translate_patch
+        "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/gli-clang-tidy-swizzle-translate.patch")
 
 FetchContent_Declare(
         gli
@@ -45,6 +47,7 @@ FetchContent_Declare(
                       "-DWORKING_DIR=<SOURCE_DIR>"
                       "-DPATCH_FILE=${gli_clang22_enum_bitmask_patch}"
                       "-DPATCH_FILE_1=${gli_clang_tidy_texture_cache_patch}"
+                      "-DPATCH_FILE_2=${gli_clang_tidy_swizzle_translate_patch}"
                       -P "${CMAKE_CURRENT_LIST_DIR}/cmake/apply_fetchcontent_patch.cmake"
 )
 set(GLI_TEST_ENABLE OFF CACHE BOOL "Build gli unit tests")

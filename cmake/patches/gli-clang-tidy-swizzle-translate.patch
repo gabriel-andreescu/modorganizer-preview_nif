@@ -1,0 +1,57 @@
+diff --git a/gli/core/gl.inl b/gli/core/gl.inl
+--- a/gli/core/gl.inl
++++ b/gli/core/gl.inl
+@@ -3,25 +3,32 @@
+ namespace gli{
+ namespace detail
+ {
+-	inline gl::swizzles translate(gli::swizzles const& Swizzles)
+-	{
+-		static gl::swizzle const Table[] =
+-		{
+-			gl::SWIZZLE_RED,
+-			gl::SWIZZLE_GREEN,
+-			gl::SWIZZLE_BLUE,
+-			gl::SWIZZLE_ALPHA,
+-			gl::SWIZZLE_ZERO,
+-			gl::SWIZZLE_ONE
+-		};
+-		static_assert(sizeof(Table) / sizeof(Table[0]) == SWIZZLE_COUNT, "GLI error: swizzle descriptor list doesn't match number of supported swizzles");
+-
+-		return gl::swizzles(Table[Swizzles.r], Table[Swizzles.g], Table[Swizzles.b], Table[Swizzles.a]);
+-	}
+-
+-	enum format_property
+-	{
+-		FORMAT_PROPERTY_BGRA_FORMAT_BIT = (1 << 0),
+-		FORMAT_PROPERTY_BGRA_TYPE_BIT = (1 << 1)
+-	};
++	inline gl::swizzle translate(gli::swizzle Swizzle)
++	{
++		static_assert(SWIZZLE_COUNT == 6, "GLI error: swizzle descriptor list doesn't match number of supported swizzles");
++
++		switch(Swizzle)
++		{
++		case SWIZZLE_RED: return gl::SWIZZLE_RED;
++		case SWIZZLE_GREEN: return gl::SWIZZLE_GREEN;
++		case SWIZZLE_BLUE: return gl::SWIZZLE_BLUE;
++		case SWIZZLE_ALPHA: return gl::SWIZZLE_ALPHA;
++		case SWIZZLE_ZERO: return gl::SWIZZLE_ZERO;
++		case SWIZZLE_ONE: return gl::SWIZZLE_ONE;
++		default: return gl::SWIZZLE_ZERO;
++		}
++	}
++
++	inline gl::swizzles translate(gli::swizzles const& Swizzles)
++	{
++		return gl::swizzles(
++			translate(Swizzles.r), translate(Swizzles.g),
++			translate(Swizzles.b), translate(Swizzles.a));
++	}
++
++	enum format_property
++	{
++		FORMAT_PROPERTY_BGRA_FORMAT_BIT = (1 << 0),
++		FORMAT_PROPERTY_BGRA_TYPE_BIT = (1 << 1)
++	};
+ }//namespace detail

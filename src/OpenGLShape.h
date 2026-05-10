@@ -2,7 +2,6 @@
 
 #include "OpenGLResources.h"
 #include "ShaderManager.h"
-#include "TextureManager.h"
 #include "TextureSlotDescriptors.h"
 #include "TextureSlots.h"
 
@@ -14,6 +13,8 @@
 #include <cstdint>
 
 class QOpenGLFunctions_2_1;
+class PreviewTexture;
+class TextureManager;
 
 struct OpenGLShape {
 public:

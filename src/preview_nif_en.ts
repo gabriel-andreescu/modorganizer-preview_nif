@@ -129,103 +129,103 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="522"/>
+        <location filename="TextureSlotDescriptors.cpp" line="517"/>
         <source>Refraction</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="504"/>
+        <location filename="TextureSlotDescriptors.cpp" line="499"/>
         <source>Base</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="505"/>
+        <location filename="TextureSlotDescriptors.cpp" line="500"/>
         <source>Normal</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="517"/>
+        <location filename="TextureSlotDescriptors.cpp" line="512"/>
         <source>Emissive</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="518"/>
+        <location filename="TextureSlotDescriptors.cpp" line="513"/>
         <source>Displacement</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="519"/>
+        <location filename="TextureSlotDescriptors.cpp" line="514"/>
         <source>RMAOS</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="520"/>
+        <location filename="TextureSlotDescriptors.cpp" line="515"/>
         <source>Fuzz / Coat Normal</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="521"/>
+        <location filename="TextureSlotDescriptors.cpp" line="516"/>
         <source>Subsurface / Coat Color</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="523"/>
-        <location filename="TextureSlotDescriptors.cpp" line="526"/>
+        <location filename="TextureSlotDescriptors.cpp" line="518"/>
+        <location filename="TextureSlotDescriptors.cpp" line="521"/>
         <source>Slot %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="506"/>
+        <location filename="TextureSlotDescriptors.cpp" line="501"/>
         <source>Glow</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="507"/>
+        <location filename="TextureSlotDescriptors.cpp" line="502"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="508"/>
+        <location filename="TextureSlotDescriptors.cpp" line="503"/>
         <source>Greyscale</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="509"/>
+        <location filename="TextureSlotDescriptors.cpp" line="504"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="510"/>
+        <location filename="TextureSlotDescriptors.cpp" line="505"/>
         <source>Detail</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="511"/>
+        <location filename="TextureSlotDescriptors.cpp" line="506"/>
         <source>Environment</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="512"/>
+        <location filename="TextureSlotDescriptors.cpp" line="507"/>
         <source>Env Mask</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="514"/>
+        <location filename="TextureSlotDescriptors.cpp" line="509"/>
         <source>Inner</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="513"/>
+        <location filename="TextureSlotDescriptors.cpp" line="508"/>
         <source>Tint</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="515"/>
+        <location filename="TextureSlotDescriptors.cpp" line="510"/>
         <source>Backlight</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSlotDescriptors.cpp" line="516"/>
+        <location filename="TextureSlotDescriptors.cpp" line="511"/>
         <source>Specular</source>
         <translation type="unfinished"></translation>
     </message>

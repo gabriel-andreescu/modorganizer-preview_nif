@@ -1,6 +1,8 @@
 #include "OpenGLShape.h"
 #include "NifExtensions.h"
+#include "PreviewTexture.h"
 #include "ShaderClassification.h"
+#include "TextureManager.h"
 #include "TextureSlotDescriptors.h"
 
 #include <QDebug>
