@@ -1,15 +1,12 @@
 #include "TextureManager.h"
+#include "ArchiveAccess.h"
 #include "MoDataPaths.h"
 #include "PreviewNif.h"
 
 #include <gli/gli.hpp>
 #include <gli/load_dds.hpp>
 
-#if __has_include(<libbsarch/libbsarch.h>)
-#include <libbsarch/libbsarch.h>
-#else
-#include <libbsarch.h>
-#endif
+#include <libbsarch/bs_archive.h>
 
 #include <QDebug>
 #include <QDir>
@@ -27,7 +24,6 @@
 #include <cstring>
 #include <exception>
 #include <limits>
-#include <memory>
 #include <utility>
 
 namespace {
@@ -657,27 +653,6 @@ GLuint makeRawTexture(
 
 } // namespace
 
-struct BsaPtrDeleter {
-    void operator()(void* ptr) const {
-        bsa_free(ptr);
-    }
-};
-
-using UniqueBsaPtr = std::unique_ptr<void, BsaPtrDeleter>;
-
-struct BsaBufferDeleter {
-    explicit BsaBufferDeleter(void* bsa)
-        : m_bsa(bsa) {}
-
-    void operator()(const bsa_result_buffer_t* buffer) const {
-        bsa_file_data_free(m_bsa, *buffer);
-    }
-
-    void* m_bsa;
-};
-
-using UniqueBufferPtr = std::unique_ptr<bsa_result_buffer_t, BsaBufferDeleter>;
-
 PreviewTexture::PreviewTexture(QOpenGLTexture* texture)
     : m_QtTexture(texture) {}
 
@@ -904,7 +879,7 @@ PreviewTexture* TextureManager::tryLoadTextureFromArchives(
     const QString& texturePath
 ) {
     for (const auto& archivePath : archivePaths) {
-        if (auto* const texture = loadTextureFromBSA(archivePath, texturePath)) {
+        if (auto* const texture = loadTextureFromArchive(archivePath, texturePath)) {
             return texture;
         }
     }
@@ -939,42 +914,24 @@ PreviewTexture* TextureManager::tryLoadTextureFromGame(const QString& texturePat
     return tryLoadTextureFromArchives(MoDataPaths::archivePathsFromGame(m_MOInfo), texturePath);
 }
 
-PreviewTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath, const QString& texturePath) {
-    const UniqueBsaPtr bsaHandle(bsa_create());
-    if (!bsaHandle) {
-        qWarning("Failed to create BSA handle while loading '%s'", qUtf8Printable(texturePath));
+PreviewTexture* TextureManager::loadTextureFromArchive(const QString& archivePath, const QString& texturePath) {
+    libbsarch::bs_archive archive;
+    if (!ArchiveAccess::loadArchive(archive, archivePath)) {
         return nullptr;
     }
 
-    static_assert(sizeof(wchar_t) == 2, "Expected wchar_t to be 2 bytes");
-
-    const auto* const bsaPathUtf16 = reinterpret_cast<const wchar_t*>(bsaPath.utf16());
-    const auto [code, _text] = bsa_load_from_file(bsaHandle.get(), bsaPathUtf16);
-    if (code == BSA_RESULT_EXCEPTION) {
+    const auto buffer = ArchiveAccess::extractBytes(archive, texturePath);
+    if (buffer.isEmpty()) {
         return nullptr;
     }
 
-    const auto archiveTexturePath = QDir::toNativeSeparators(texturePath);
-    const auto* const texturePathUtf16 = reinterpret_cast<const wchar_t*>(archiveTexturePath.utf16());
-    auto [rBuffer, msg] = bsa_extract_file_data_by_filename(bsaHandle.get(), texturePathUtf16);
-    if (msg.code == BSA_RESULT_EXCEPTION) {
-        return nullptr;
-    }
-
-    if (!rBuffer.data || rBuffer.size == 0) {
-        return nullptr;
-    }
-
-    const UniqueBufferPtr buffer(&rBuffer, BsaBufferDeleter(bsaHandle.get()));
-
-    const auto* const data = static_cast<const char*>(buffer->data);
     try {
-        auto texture = loadDdsIfValid(data, static_cast<std::size_t>(buffer->size));
+        auto texture = loadDdsIfValid(buffer.constData(), static_cast<std::size_t>(buffer.size()));
         if (texture.empty()) {
             qWarning(
                 "Failed to decode BSA DDS '%s' from '%s': invalid or unsupported DDS",
                 qUtf8Printable(texturePath),
-                qUtf8Printable(bsaPath)
+                qUtf8Printable(archivePath)
             );
             return nullptr;
         }
@@ -983,7 +940,7 @@ PreviewTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath, const
         qWarning(
             "Failed to decode BSA DDS '%s' from '%s': %s",
             qUtf8Printable(texturePath),
-            qUtf8Printable(bsaPath),
+            qUtf8Printable(archivePath),
             e.what()
         );
         return nullptr;

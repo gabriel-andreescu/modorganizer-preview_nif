@@ -52,7 +52,7 @@ private:
     static PreviewTexture* tryLoadTextureFromArchives(const QStringList& archivePaths, const QString& texturePath);
     PreviewTexture* tryLoadTextureFromMods(const QString& texturePath) const;
     PreviewTexture* tryLoadTextureFromGame(const QString& texturePath) const;
-    static PreviewTexture* loadTextureFromBSA(const QString& bsaPath, const QString& texturePath);
+    static PreviewTexture* loadTextureFromArchive(const QString& archivePath, const QString& texturePath);
     static PreviewTexture* makeTexture(const gli::texture& texture);
     static PreviewTexture* makeSolidColor(QVector4D color);
 

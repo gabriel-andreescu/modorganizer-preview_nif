@@ -108,186 +108,186 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="NifPreviewSource.cpp" line="175"/>
+        <location filename="NifPreviewSource.cpp" line="153"/>
         <source>%1 - %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewSource.cpp" line="255"/>
-        <location filename="TextureSource.cpp" line="393"/>
+        <location filename="NifPreviewSource.cpp" line="233"/>
+        <location filename="TextureSource.cpp" line="392"/>
         <source>Game Data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewSource.cpp" line="351"/>
+        <location filename="NifPreviewSource.cpp" line="329"/>
         <source>Current Archive Preview</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewSource.cpp" line="421"/>
+        <location filename="NifPreviewSource.cpp" line="399"/>
         <source>Verts: %1 | Faces: %2 | Shapes: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="123"/>
+        <location filename="TextureSource.cpp" line="122"/>
         <source>Refraction</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="TextureSource.cpp" line="127"/>
+        <location filename="TextureSource.cpp" line="139"/>
+        <source>Base</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="TextureSource.cpp" line="128"/>
         <location filename="TextureSource.cpp" line="140"/>
-        <source>Base</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="TextureSource.cpp" line="129"/>
-        <location filename="TextureSource.cpp" line="141"/>
         <source>Normal</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="130"/>
+        <location filename="TextureSource.cpp" line="129"/>
         <source>Emissive</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="131"/>
+        <location filename="TextureSource.cpp" line="130"/>
         <source>Displacement</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="132"/>
+        <location filename="TextureSource.cpp" line="131"/>
         <source>RMAOS</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="133"/>
+        <location filename="TextureSource.cpp" line="132"/>
         <source>Fuzz / Coat Normal</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="134"/>
+        <location filename="TextureSource.cpp" line="133"/>
         <source>Subsurface / Coat Color</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="135"/>
-        <location filename="TextureSource.cpp" line="169"/>
+        <location filename="TextureSource.cpp" line="134"/>
+        <location filename="TextureSource.cpp" line="168"/>
         <source>Slot %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="142"/>
+        <location filename="TextureSource.cpp" line="141"/>
         <source>Glow</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="142"/>
+        <location filename="TextureSource.cpp" line="141"/>
         <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="145"/>
+        <location filename="TextureSource.cpp" line="144"/>
         <source>Greyscale</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="155"/>
+        <location filename="TextureSource.cpp" line="154"/>
         <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="158"/>
+        <location filename="TextureSource.cpp" line="157"/>
         <source>Detail</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="159"/>
+        <location filename="TextureSource.cpp" line="158"/>
         <source>Environment</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="160"/>
+        <location filename="TextureSource.cpp" line="159"/>
         <source>Env Mask</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="164"/>
+        <location filename="TextureSource.cpp" line="163"/>
         <source>Inner</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="166"/>
+        <location filename="TextureSource.cpp" line="165"/>
         <source>Tint</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="168"/>
+        <location filename="TextureSource.cpp" line="167"/>
         <source>Backlight</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="168"/>
+        <location filename="TextureSource.cpp" line="167"/>
         <source>Specular</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="268"/>
+        <location filename="TextureSource.cpp" line="267"/>
         <source>%1 (%2/%3)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="293"/>
+        <location filename="TextureSource.cpp" line="292"/>
         <source>%1 x%2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="302"/>
+        <location filename="TextureSource.cpp" line="301"/>
         <source>, </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="349"/>
+        <location filename="TextureSource.cpp" line="348"/>
         <source>Auto: MO2 winners</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="416"/>
+        <location filename="TextureSource.cpp" line="415"/>
         <source>Textures: none</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="423"/>
+        <location filename="TextureSource.cpp" line="422"/>
         <source>%1 +%2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="426"/>
+        <location filename="TextureSource.cpp" line="425"/>
         <source>Textures: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="431"/>
+        <location filename="TextureSource.cpp" line="430"/>
         <source>No referenced textures</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="437"/>
+        <location filename="TextureSource.cpp" line="436"/>
         <source>Texture source: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="439"/>
+        <location filename="TextureSource.cpp" line="438"/>
         <source>Texture slots: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="440"/>
+        <location filename="TextureSource.cpp" line="439"/>
         <source>Referenced textures:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="442"/>
+        <location filename="TextureSource.cpp" line="441"/>
         <source>%1: %2</source>
         <translation type="unfinished"></translation>
     </message>

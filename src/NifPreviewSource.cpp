@@ -1,4 +1,5 @@
 #include "NifPreviewSource.h"
+#include "ArchiveAccess.h"
 #include "MoDataPaths.h"
 
 #include <QDebug>
@@ -7,7 +8,6 @@
 #include <QObject>
 
 #include <algorithm>
-#include <exception>
 #include <filesystem>
 #include <limits>
 #include <ranges>
@@ -129,41 +129,19 @@ bool hasArchiveProvider(
 QByteArray extractArchiveFile(const QString& archivePath, const QString& virtualPath) {
     libbsarch::bs_archive archive;
 
-    try {
-        archive.load_from_disk(QDir::toNativeSeparators(archivePath).toStdWString());
-    } catch (const std::exception& exception) {
-        qWarning("Failed to load BSA archive '%s': %s", qUtf8Printable(archivePath), exception.what());
+    QString error;
+    if (!ArchiveAccess::loadArchive(archive, archivePath, &error)) {
+        qWarning("Failed to load BSA archive '%s': %s", qUtf8Printable(archivePath), qUtf8Printable(error));
         return {};
     }
 
-    const auto loadPath = [&](const QString& path) -> QByteArray {
-        try {
-            const auto blob = archive.extract_to_memory(path.toStdWString());
-            if (!blob.data || blob.size == 0 || blob.size > static_cast<uint32_t>(std::numeric_limits<int>::max())) {
-                if (blob.size > static_cast<uint32_t>(std::numeric_limits<int>::max())) {
-                    qWarning(
-                        "Skipping oversized NIF '%s' from BSA '%s'",
-                        qUtf8Printable(virtualPath),
-                        qUtf8Printable(archivePath)
-                    );
-                }
-                return {};
-            }
-
-            return {static_cast<const char*>(blob.data), static_cast<int>(blob.size)};
-        } catch (const std::exception&) {
-            return {};
-        }
-    };
-
-    const auto dataPath = normalizeDataPath(virtualPath);
-    auto data = loadPath(dataPath);
-    if (!data.isEmpty()) {
-        return data;
+    ArchiveAccess::ExtractResult result;
+    auto data = ArchiveAccess::extractBytes(archive, virtualPath, std::numeric_limits<int>::max(), &result);
+    if (result.status == ArchiveAccess::ExtractStatus::Oversized) {
+        qWarning("Skipping oversized NIF '%s' from BSA '%s'", qUtf8Printable(virtualPath), qUtf8Printable(archivePath));
     }
 
-    const auto nativePath = QDir::toNativeSeparators(dataPath);
-    return nativePath == dataPath ? QByteArray {} : loadPath(nativePath);
+    return data;
 }
 
 QString providerDisplayName(const QString& sourceName, const QString& archivePath) {

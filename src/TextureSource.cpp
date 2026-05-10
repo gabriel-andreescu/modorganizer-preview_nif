@@ -1,4 +1,5 @@
 #include "TextureSource.h"
+#include "ArchiveAccess.h"
 #include "MoDataPaths.h"
 #include "NifExtensions.h"
 #include "TextureSlots.h"
@@ -14,7 +15,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <exception>
 #include <ranges>
 #include <uibase/imodinterface.h>
 #include <uibase/imodlist.h>
@@ -45,33 +45,32 @@ void appendUnique(QStringList& values, const QString& value) {
 }
 
 bool loadArchivePath(libbsarch::bs_archive& archive, const QString& archivePath) {
-    try {
-        archive.load_from_disk(QDir::toNativeSeparators(archivePath).toStdWString());
+    QString error;
+    if (ArchiveAccess::loadArchive(archive, archivePath, &error)) {
         return true;
-    } catch (const std::exception& exception) {
-        qWarning(
-            "Failed to load BSA archive '%s' while resolving texture sources: %s",
-            qUtf8Printable(archivePath),
-            exception.what()
-        );
-        return false;
     }
+
+    qWarning(
+        "Failed to load BSA archive '%s' while resolving texture sources: %s",
+        qUtf8Printable(archivePath),
+        qUtf8Printable(error)
+    );
+    return false;
 }
 
 bool archiveContainsTexture(libbsarch::bs_archive& archive, const QString& texturePath) {
-    const auto dataPath = normalizeTextureDataPath(texturePath);
-    auto paths = QStringList {dataPath};
-    const auto nativePath = QDir::toNativeSeparators(dataPath);
-    appendUnique(paths, nativePath);
+    QString errorPath;
+    QString error;
+    if (ArchiveAccess::containsDataPath(archive, texturePath, &errorPath, &error)) {
+        return true;
+    }
 
-    for (const auto& path : paths) {
-        try {
-            if (archive.find_file_record(path.toStdWString())) {
-                return true;
-            }
-        } catch (const std::exception& exception) {
-            qWarning("Failed to inspect BSA archive texture path '%s': %s", qUtf8Printable(path), exception.what());
-        }
+    if (!errorPath.isEmpty()) {
+        qWarning(
+            "Failed to inspect BSA archive texture path '%s': %s",
+            qUtf8Printable(errorPath),
+            qUtf8Printable(error)
+        );
     }
 
     return false;
