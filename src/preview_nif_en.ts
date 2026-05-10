@@ -39,17 +39,6 @@
 <context>
     <name>NifPreviewWidget</name>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="57"/>
-        <location filename="NifPreviewWidget.cpp" line="184"/>
-        <source>Compare two previewable versions of this NIF</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="NifPreviewWidget.cpp" line="56"/>
-        <source>Split Preview</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="NifPreviewWidget.cpp" line="50"/>
         <location filename="NifPreviewWidget.cpp" line="192"/>
         <source>Reset Camera</source>
@@ -69,6 +58,17 @@
     <message>
         <location filename="NifPreviewWidget.cpp" line="54"/>
         <source>Show collision preview overlay</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="NifPreviewWidget.cpp" line="56"/>
+        <source>Split Preview</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="NifPreviewWidget.cpp" line="57"/>
+        <location filename="NifPreviewWidget.cpp" line="184"/>
+        <source>Compare two previewable versions of this NIF</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -129,6 +129,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="TextureSource.cpp" line="233"/>
+        <source>Refraction</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="TextureSource.cpp" line="239"/>
         <location filename="TextureSource.cpp" line="259"/>
         <source>Base</source>
@@ -163,6 +168,12 @@
     <message>
         <location filename="TextureSource.cpp" line="251"/>
         <source>Subsurface / Coat Color</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="TextureSource.cpp" line="253"/>
+        <location filename="TextureSource.cpp" line="292"/>
+        <source>Slot %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -221,12 +232,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="253"/>
-        <location filename="TextureSource.cpp" line="292"/>
-        <source>Slot %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="TextureSource.cpp" line="382"/>
         <source>%1 (%2/%3)</source>
         <translation type="unfinished"></translation>
@@ -237,6 +242,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="TextureSource.cpp" line="419"/>
+        <source>, </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="TextureSource.cpp" line="469"/>
         <source>Auto: MO2 winners</source>
         <translation type="unfinished"></translation>
@@ -244,16 +254,6 @@
     <message>
         <location filename="TextureSource.cpp" line="538"/>
         <source>Textures: none</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="TextureSource.cpp" line="419"/>
-        <source>, </source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="TextureSource.cpp" line="233"/>
-        <source>Refraction</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

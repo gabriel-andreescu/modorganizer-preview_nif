@@ -12,6 +12,8 @@
 #include <QOpenGLVertexArrayObject>
 #include <cstdint>
 
+class QOpenGLFunctions_2_1;
+
 struct OpenGLShape
 {
 public:
@@ -114,4 +116,14 @@ public:
   bool alphaTestEnable  = false;
   GLenum alphaTestMode  = GL_GREATER;
   float alphaThreshold  = 0.0f;
+
+private:
+  void bindTextures() const;
+  void setupGlowUniforms(QOpenGLShaderProgram* program) const;
+  void setupPBRUniforms(QOpenGLShaderProgram* program) const;
+  void setupMultilayerUniforms(QOpenGLShaderProgram* program) const;
+  void setupVertexAttributes(QOpenGLFunctions_2_1* f) const;
+  void setupDepthState(QOpenGLFunctions_2_1* f) const;
+  void setupCullingState(QOpenGLFunctions_2_1* f) const;
+  void setupBlendState(QOpenGLFunctions_2_1* f) const;
 };

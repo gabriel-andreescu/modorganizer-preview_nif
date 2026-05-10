@@ -964,6 +964,109 @@ void OpenGLShape::destroy()
   }
 }
 
+void OpenGLShape::bindTextures() const
+{
+  for (int i = 0; i < textures.size(); i++) {
+    if (textures[i]) {
+      textures[i]->bind(i + 1);
+    }
+  }
+}
+
+void OpenGLShape::setupGlowUniforms(QOpenGLShaderProgram* program) const
+{
+  program->setUniformValue("paletteScale", paletteScale);
+  if (usesEffectShader(shaderType)) {
+    program->setUniformValue("glowColor", colorRgba(glowColor));
+  } else {
+    program->setUniformValue("glowColor", colorRgb(glowColor));
+  }
+  program->setUniformValue("glowMult", glowMult);
+}
+
+void OpenGLShape::setupPBRUniforms(QOpenGLShaderProgram* program) const
+{
+  if (!isPBR) {
+    return;
+  }
+
+  program->setUniformValue("pbrHasEmissive", pbrHasEmissive);
+  program->setUniformValue("pbrHasDisplacement", pbrHasDisplacement);
+  program->setUniformValue("pbrHasFeaturesTexture0", pbrHasFeaturesTexture0);
+  program->setUniformValue("pbrHasFeaturesTexture1", pbrHasFeaturesTexture1);
+  program->setUniformValue("pbrHasSubsurface", pbrHasSubsurface);
+  program->setUniformValue("pbrHasTwoLayer", pbrHasTwoLayer);
+  program->setUniformValue("pbrHasColoredCoat", pbrHasColoredCoat);
+  program->setUniformValue("pbrHasInterlayerParallax", pbrHasInterlayerParallax);
+  program->setUniformValue("pbrHasCoatNormal", pbrHasCoatNormal);
+  program->setUniformValue("pbrHasFuzz", pbrHasFuzz);
+  program->setUniformValue("pbrHasHairMarschner", pbrHasHairMarschner);
+  program->setUniformValue("pbrHasGlint", pbrHasGlint);
+  program->setUniformValue("pbrParams1", pbrParams1);
+  program->setUniformValue("pbrParams2", pbrParams2);
+  program->setUniformValue("pbrFeatureParams", pbrFeatureParams);
+}
+
+void OpenGLShape::setupMultilayerUniforms(QOpenGLShaderProgram* program) const
+{
+  if (shaderType != ShaderManager::SKMultilayer) {
+    return;
+  }
+
+  program->setUniformValue("innerScale", innerScale);
+  program->setUniformValue("innerThickness", innerThickness);
+  program->setUniformValue("outerRefraction", outerRefraction);
+  program->setUniformValue("outerReflection", outerReflection);
+}
+
+void OpenGLShape::setupVertexAttributes(QOpenGLFunctions_2_1* f) const
+{
+  for (std::size_t i = 0; i < ATTRIB_COUNT; i++) {
+    if (vertexBuffers[i]) {
+      f->glEnableVertexAttribArray(static_cast<GLuint>(i));
+    } else {
+      f->glDisableVertexAttribArray(static_cast<GLuint>(i));
+    }
+  }
+}
+
+void OpenGLShape::setupDepthState(QOpenGLFunctions_2_1* f) const
+{
+  f->glDepthMask(zBufferWrite ? GL_TRUE : GL_FALSE);
+
+  if (zBufferTest) {
+    f->glEnable(GL_DEPTH_TEST);
+    f->glDepthFunc(GL_LEQUAL);
+  } else {
+    f->glDisable(GL_DEPTH_TEST);
+  }
+}
+
+void OpenGLShape::setupCullingState(QOpenGLFunctions_2_1* f) const
+{
+  if (doubleSided) {
+    f->glDisable(GL_CULL_FACE);
+  } else {
+    f->glEnable(GL_CULL_FACE);
+    f->glCullFace(GL_BACK);
+  }
+}
+
+void OpenGLShape::setupBlendState(QOpenGLFunctions_2_1* f) const
+{
+  if (usesBlendedPass()) {
+    f->glDisable(GL_POLYGON_OFFSET_FILL);
+    f->glEnable(GL_BLEND);
+    if (alphaBlendEnable) {
+      f->glBlendFunc(srcBlendMode, dstBlendMode);
+    } else {
+      f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+  } else {
+    f->glDisable(GL_BLEND);
+  }
+}
+
 void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
 {
   program->setUniformValue("BaseMap", BaseMap + 1);
@@ -992,11 +1095,7 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   program->setUniformValue("PBRFeaturesTexture0", PBRFeatures0 + 1);
   program->setUniformValue("PBRFeaturesTexture1", PBRFeatures1 + 1);
 
-  for (int i = 0; i < textures.size(); i++) {
-    if (textures[i]) {
-      textures[i]->bind(i + 1);
-    }
-  }
+  bindTextures();
 
   program->setUniformValue("ambientColor", QVector4D(0.2f, 0.2f, 0.2f, 1.0f));
   program->setUniformValue("diffuseColor", QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
@@ -1013,13 +1112,7 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
   program->setUniformValue("specGlossiness", specGlossiness);
   program->setUniformValue("fresnelPower", fresnelPower);
 
-  program->setUniformValue("paletteScale", paletteScale);
-  if (usesEffectShader(shaderType)) {
-    program->setUniformValue("glowColor", colorRgba(glowColor));
-  } else {
-    program->setUniformValue("glowColor", colorRgb(glowColor));
-  }
-  program->setUniformValue("glowMult", glowMult);
+  setupGlowUniforms(program);
 
   program->setUniformValue("hasEmit", hasEmit);
   program->setUniformValue("hasSoftlight", hasSoftlight);
@@ -1045,69 +1138,16 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
 
   program->setUniformValue("envReflection", envReflection);
 
-  if (isPBR) {
-    program->setUniformValue("pbrHasEmissive", pbrHasEmissive);
-    program->setUniformValue("pbrHasDisplacement", pbrHasDisplacement);
-    program->setUniformValue("pbrHasFeaturesTexture0", pbrHasFeaturesTexture0);
-    program->setUniformValue("pbrHasFeaturesTexture1", pbrHasFeaturesTexture1);
-    program->setUniformValue("pbrHasSubsurface", pbrHasSubsurface);
-    program->setUniformValue("pbrHasTwoLayer", pbrHasTwoLayer);
-    program->setUniformValue("pbrHasColoredCoat", pbrHasColoredCoat);
-    program->setUniformValue("pbrHasInterlayerParallax", pbrHasInterlayerParallax);
-    program->setUniformValue("pbrHasCoatNormal", pbrHasCoatNormal);
-    program->setUniformValue("pbrHasFuzz", pbrHasFuzz);
-    program->setUniformValue("pbrHasHairMarschner", pbrHasHairMarschner);
-    program->setUniformValue("pbrHasGlint", pbrHasGlint);
-    program->setUniformValue("pbrParams1", pbrParams1);
-    program->setUniformValue("pbrParams2", pbrParams2);
-    program->setUniformValue("pbrFeatureParams", pbrFeatureParams);
-  }
-
-  if (shaderType == ShaderManager::SKMultilayer) {
-    program->setUniformValue("innerScale", innerScale);
-    program->setUniformValue("innerThickness", innerThickness);
-    program->setUniformValue("outerRefraction", outerRefraction);
-    program->setUniformValue("outerReflection", outerReflection);
-  }
+  setupPBRUniforms(program);
+  setupMultilayerUniforms(program);
 
   auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
 
-  for (std::size_t i = 0; i < ATTRIB_COUNT; i++) {
-    if (vertexBuffers[i]) {
-      f->glEnableVertexAttribArray(static_cast<GLuint>(i));
-    } else {
-      f->glDisableVertexAttribArray(static_cast<GLuint>(i));
-    }
-  }
-
-  f->glDepthMask(zBufferWrite ? GL_TRUE : GL_FALSE);
-
-  if (zBufferTest) {
-    f->glEnable(GL_DEPTH_TEST);
-    f->glDepthFunc(GL_LEQUAL);
-  } else {
-    f->glDisable(GL_DEPTH_TEST);
-  }
-
-  if (doubleSided) {
-    f->glDisable(GL_CULL_FACE);
-  } else {
-    f->glEnable(GL_CULL_FACE);
-    f->glCullFace(GL_BACK);
-  }
-
-  if (usesBlendedPass()) {
-    f->glDisable(GL_POLYGON_OFFSET_FILL);
-    f->glEnable(GL_BLEND);
-    if (alphaBlendEnable) {
-      f->glBlendFunc(srcBlendMode, dstBlendMode);
-    } else {
-      f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    }
-  } else {
-    f->glDisable(GL_BLEND);
-  }
+  setupVertexAttributes(f);
+  setupDepthState(f);
+  setupCullingState(f);
+  setupBlendState(f);
 
   if (alphaTestEnable) {
     f->glDisable(GL_ALPHA_TEST);
