@@ -34,8 +34,11 @@ FetchContent_Declare(
         gli
         GIT_REPOSITORY https://github.com/g-truc/gli.git
         GIT_TAG 3542f8830178061e0661f5df1e89d36ba7d7b0ab
-        PATCH_COMMAND "${GIT_EXECUTABLE}" -C <SOURCE_DIR> apply --ignore-whitespace
-                      "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/gli-clang22-enum-bitmask.patch"
+        PATCH_COMMAND "${CMAKE_COMMAND}"
+                      "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+                      "-DWORKING_DIR=<SOURCE_DIR>"
+                      "-DPATCH_FILE=${CMAKE_CURRENT_LIST_DIR}/cmake/patches/gli-clang22-enum-bitmask.patch"
+                      -P "${CMAKE_CURRENT_LIST_DIR}/cmake/apply_fetchcontent_patch.cmake"
 )
 set(GLI_TEST_ENABLE OFF CACHE BOOL "Build gli unit tests")
 
@@ -43,8 +46,11 @@ FetchContent_Declare(
         nifly
         GIT_REPOSITORY https://github.com/ousnius/nifly.git
         GIT_TAG 77bb1b2373d9fd6147945eca2ff6ba22a281da80
-        PATCH_COMMAND "${GIT_EXECUTABLE}" -C <SOURCE_DIR> apply --ignore-whitespace
-                      "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/nifly-unionbv-complete-type.patch"
+        PATCH_COMMAND "${CMAKE_COMMAND}"
+                      "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+                      "-DWORKING_DIR=<SOURCE_DIR>"
+                      "-DPATCH_FILE=${CMAKE_CURRENT_LIST_DIR}/cmake/patches/nifly-unionbv-complete-type.patch"
+                      -P "${CMAKE_CURRENT_LIST_DIR}/cmake/apply_fetchcontent_patch.cmake"
 )
 
 FetchContent_MakeAvailable(gli nifly)
