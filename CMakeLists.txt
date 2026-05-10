@@ -29,6 +29,7 @@ set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE STRING "Additional package pr
 
 include(FetchContent)
 find_package(Git REQUIRED)
+find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy)
 
 set(gli_clang22_enum_bitmask_patch
         "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/gli-clang22-enum-bitmask.patch")
@@ -63,3 +64,19 @@ FetchContent_MakeAvailable(gli nifly)
 
 add_subdirectory(src)
 target_link_libraries(preview_nif PRIVATE nifly gli)
+
+if (CLANG_TIDY_EXECUTABLE)
+    add_custom_target(preview_nif_clang_tidy
+        COMMAND "${CMAKE_COMMAND}"
+            "-DCLANG_TIDY_EXECUTABLE=${CLANG_TIDY_EXECUTABLE}"
+            "-DCOMPILE_COMMANDS_FILE=${CMAKE_BINARY_DIR}/compile_commands.json"
+            "-DBUILD_DIR=${CMAKE_BINARY_DIR}"
+            "-DSOURCE_ROOT=${CMAKE_CURRENT_LIST_DIR}/src"
+            -P "${CMAKE_CURRENT_LIST_DIR}/cmake/run_clang_tidy.cmake"
+        COMMENT "Running clang-tidy on preview_nif source files"
+        VERBATIM)
+else ()
+    add_custom_target(preview_nif_clang_tidy
+        COMMAND "${CMAKE_COMMAND}" -E false
+        COMMENT "clang-tidy was not found")
+endif ()
