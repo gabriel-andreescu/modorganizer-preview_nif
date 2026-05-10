@@ -1,0 +1,55 @@
+diff --git a/gli/core/texture.inl b/gli/core/texture.inl
+--- a/gli/core/texture.inl
++++ b/gli/core/texture.inl
+@@ -4,7 +4,7 @@ namespace gli
+ {
+ 	inline texture::texture()
+ 		: Storage(nullptr)
+-		, Target(static_cast<gli::target>(TARGET_INVALID))
++		, Target(TARGET_INVALID)
+ 		, Format(gli::FORMAT_UNDEFINED)
+ 		, BaseLayer(0), MaxLayer(0)
+ 		, BaseFace(0), MaxFace(0)
+diff --git a/gli/target.hpp b/gli/target.hpp
+--- a/gli/target.hpp
++++ b/gli/target.hpp
+@@ -7,7 +7,8 @@ namespace gli
+ 	/// Texture target: type/shape of the texture storage_linear
+ 	enum target
+ 	{
+-		TARGET_1D = 0, TARGET_FIRST = TARGET_1D,
++		TARGET_INVALID = -1,
++		TARGET_1D = 0, TARGET_FIRST = TARGET_1D,
+ 		TARGET_1D_ARRAY,
+ 		TARGET_2D,
+ 		TARGET_2D_ARRAY,
+@@ -18,11 +19,7 @@ namespace gli
+ 		TARGET_CUBE,
+ 		TARGET_CUBE_ARRAY, TARGET_LAST = TARGET_CUBE_ARRAY
+ 	};
+-
+-	enum
+-	{
+-		TARGET_COUNT = TARGET_LAST - TARGET_FIRST + 1,
+-		TARGET_INVALID = -1
+-	};
++
++	static constexpr int TARGET_COUNT = TARGET_LAST - TARGET_FIRST + 1;
+ 
+ 	/// Check whether a target is a 1D target
+ 	inline bool is_target_1d(target Target)
+diff --git a/gli/texture.hpp b/gli/texture.hpp
+--- a/gli/texture.hpp
++++ b/gli/texture.hpp
+@@ -218,4 +218,9 @@ namespace gli
+ 			};
+ 
+ 			explicit cache(ctor)
++				: Faces(0)
++				, Levels(0)
++				, ImageExtent{}
++				, ImageMemorySize{}
++				, GlobalMemorySize(0)
+ 			{}
+ 
+ 			cache

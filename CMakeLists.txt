@@ -30,6 +30,11 @@ set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE STRING "Additional package pr
 include(FetchContent)
 find_package(Git REQUIRED)
 
+set(gli_clang22_enum_bitmask_patch
+        "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/gli-clang22-enum-bitmask.patch")
+set(gli_clang_tidy_texture_cache_patch
+        "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/gli-clang-tidy-texture-cache.patch")
+
 FetchContent_Declare(
         gli
         GIT_REPOSITORY https://github.com/g-truc/gli.git
@@ -37,7 +42,8 @@ FetchContent_Declare(
         PATCH_COMMAND "${CMAKE_COMMAND}"
                       "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
                       "-DWORKING_DIR=<SOURCE_DIR>"
-                      "-DPATCH_FILE=${CMAKE_CURRENT_LIST_DIR}/cmake/patches/gli-clang22-enum-bitmask.patch"
+                      "-DPATCH_FILE=${gli_clang22_enum_bitmask_patch}"
+                      "-DPATCH_FILE_1=${gli_clang_tidy_texture_cache_patch}"
                       -P "${CMAKE_CURRENT_LIST_DIR}/cmake/apply_fetchcontent_patch.cmake"
 )
 set(GLI_TEST_ENABLE OFF CACHE BOOL "Build gli unit tests")
