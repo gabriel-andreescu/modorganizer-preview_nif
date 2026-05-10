@@ -62,8 +62,16 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(gli nifly)
 
+function(preview_nif_use_system_interface_includes target_name dependency_name)
+    get_target_property(include_dirs "${dependency_name}" INTERFACE_INCLUDE_DIRECTORIES)
+    if (include_dirs)
+        target_include_directories("${target_name}" SYSTEM PRIVATE ${include_dirs})
+    endif ()
+endfunction()
+
 add_subdirectory(src)
-target_link_libraries(preview_nif PRIVATE nifly gli)
+preview_nif_use_system_interface_includes(preview_nif gli)
+target_link_libraries(preview_nif PRIVATE nifly)
 
 if (CLANG_TIDY_EXECUTABLE)
     add_custom_target(preview_nif_clang_tidy

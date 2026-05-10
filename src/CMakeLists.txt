@@ -65,7 +65,7 @@ set(MO2_UIBASE_INCLUDE_DIR "" CACHE PATH
     "Optional uibase include directory to build against a specific MO2 ABI")
 if (MO2_UIBASE_INCLUDE_DIR)
     message(STATUS "[preview_nif] Using MO2 uibase ABI headers: ${MO2_UIBASE_INCLUDE_DIR}")
-    target_include_directories(preview_nif BEFORE PRIVATE "${MO2_UIBASE_INCLUDE_DIR}")
+    target_include_directories(preview_nif SYSTEM BEFORE PRIVATE "${MO2_UIBASE_INCLUDE_DIR}")
 endif ()
 target_link_libraries(preview_nif PRIVATE Qt6::OpenGLWidgets mo2::libbsarch mo2::uibase)
 mo2_install_plugin(preview_nif)
