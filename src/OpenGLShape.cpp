@@ -587,6 +587,7 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
   }
 
   const auto shader = nifFile->GetShader(niShape);
+  isRefractionProxy = IsRefractionDistortionProxy(nifFile, niShape);
 
   if (const auto& version = nifFile->GetHeader().GetVersion();
       shader && version.IsFO4()) {
@@ -777,6 +778,8 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
     }
 
     if (const auto bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
+      hasRefraction = bslsp->shaderFlags1 & (SLSF1::Refraction | SLSF1::FireRefraction);
+      refractionStrength   = bslsp->refractionStrength;
       const auto bslspType = bslsp->GetShaderType();
       if (bslspType == nifly::BSLSP_SKINTINT || bslspType == nifly::BSLSP_FACE) {
         tintColor    = convertVector3(bslsp->skinTintColor);
@@ -972,7 +975,7 @@ bool OpenGLShape::usesAlphaPass() const
 
 bool OpenGLShape::usesBlendedPass() const
 {
-  return alphaBlendEnable || alpha < 1.0f;
+  return alphaBlendEnable || alpha < 1.0f || hasRefraction;
 }
 
 QVector2D OpenGLShape::convertVector2(nifly::Vector2 vector)

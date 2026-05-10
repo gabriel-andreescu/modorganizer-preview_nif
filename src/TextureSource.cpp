@@ -224,8 +224,13 @@ bool gameDataContainsTexture(MOBase::IOrganizer* organizer, const QString& textu
   return QFileInfo::exists(dataPath) && QFileInfo(dataPath).isFile();
 }
 
-QString textureSlotName(const nifly::NiShader* shader, const std::size_t slot)
+QString textureSlotName(const nifly::NiShader* shader, const std::size_t slot,
+                        const bool isRefractionProxy)
 {
+  if (isRefractionProxy && slot == TextureSlot::BaseMap) {
+    return QObject::tr("Refraction");
+  }
+
   switch (slot) {
   case TextureSlot::BaseMap:
     return QObject::tr("Base");
@@ -267,17 +272,33 @@ QString textureSlotName(const nifly::NiShader* shader, const std::size_t slot)
 
 void appendTextureReference(QVector<TextureReference>& references,
                             QSet<QString>& seenPaths, const nifly::NiShader* shader,
-                            const int slot, const QString& texturePath)
+                            const int slot, const QString& texturePath,
+                            const bool isRefractionProxy = false)
 {
   const auto path = normalizeTextureDataPath(texturePath);
   const auto key  = textureDataPathKey(path);
-  if (path.isEmpty() || seenPaths.contains(key)) {
+  if (path.isEmpty()) {
+    return;
+  }
+
+  const auto slotName =
+      textureSlotName(shader, static_cast<std::size_t>(slot), isRefractionProxy);
+
+  if (seenPaths.contains(key)) {
+    if (isRefractionProxy && slot == TextureSlot::BaseMap) {
+      const auto it = std::ranges::find_if(references, [&](const auto& reference) {
+        return reference.key == key;
+      });
+      if (it != references.end()) {
+        it->slot     = slot;
+        it->slotName = slotName;
+      }
+    }
     return;
   }
 
   seenPaths.insert(key);
-  references.push_back(
-      {slot, textureSlotName(shader, static_cast<std::size_t>(slot)), path, key});
+  references.push_back({slot, slotName, path, key});
 }
 
 QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile)
@@ -297,6 +318,8 @@ QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile)
     if (!shader) {
       continue;
     }
+
+    const auto isRefractionProxy = IsRefractionDistortionProxy(nifFile, shape);
 
     if (const auto effectShader =
             dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
@@ -322,7 +345,8 @@ QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile)
       appendTextureReference(
           references, seenPaths, shader, static_cast<int>(i),
           QString::fromStdString(
-              textureSet->textures[static_cast<std::uint32_t>(i)].get()));
+              textureSet->textures[static_cast<std::uint32_t>(i)].get()),
+          isRefractionProxy);
     }
   }
 

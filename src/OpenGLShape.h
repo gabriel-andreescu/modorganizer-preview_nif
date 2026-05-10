@@ -60,15 +60,17 @@ public:
   QVector2D uvScale{1.0f, 1.0f};
   QVector2D uvOffset{0.0f, 0.0f};
 
-  bool hasEmit        = false;
-  bool hasSoftlight   = false;
-  bool hasBacklight   = false;
-  bool hasRimlight    = false;
-  bool hasTintColor   = false;
-  bool hasWeaponBlood = false;
-  bool greyscaleAlpha = false;
-  bool greyscaleColor = false;
-  bool useFalloff     = false;
+  bool hasEmit           = false;
+  bool hasSoftlight      = false;
+  bool hasBacklight      = false;
+  bool hasRimlight       = false;
+  bool hasTintColor      = false;
+  bool hasWeaponBlood    = false;
+  bool hasRefraction     = false;
+  bool isRefractionProxy = false;
+  bool greyscaleAlpha    = false;
+  bool greyscaleColor    = false;
+  bool useFalloff        = false;
 
   bool doubleSided     = false;
   float softlight      = 0.3f;
@@ -77,7 +79,8 @@ public:
   float subsurfaceRolloff{};
   float envReflection = 1.0f;
   QVector4D falloffParams{1.0f, 1.0f, 0.0f, 0.0f};
-  float falloffDepth = 0.0f;
+  float falloffDepth       = 0.0f;
+  float refractionStrength = 0.0f;
 
   QVector2D innerScale;
   float innerThickness;

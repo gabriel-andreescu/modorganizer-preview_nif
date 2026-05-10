@@ -7,6 +7,7 @@
 #include "TextureSource.h"
 
 #include <QOpenGLDebugLogger>
+#include <QOpenGLFunctions_2_1>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLWidget>
 #include <QSharedPointer>
@@ -47,7 +48,11 @@ protected:
 
 private:
   void cleanup();
+  void copySceneColorTexture(QOpenGLFunctions_2_1* f);
+  void ensureSceneColorTexture(QOpenGLFunctions_2_1* f);
   void frameCameraIfNeeded();
+  void releaseSceneColorTexture(QOpenGLFunctions_2_1* f);
+  void renderRefractionProxyPass(QOpenGLFunctions_2_1* f);
   void setProjectionMatrix();
   void updateCamera();
 
@@ -67,6 +72,10 @@ private:
 
   QMatrix4x4 m_ViewMatrix;
   QMatrix4x4 m_ProjectionMatrix;
+
+  GLuint m_SceneColorTexture    = 0;
+  int m_SceneColorTextureWidth  = 0;
+  int m_SceneColorTextureHeight = 0;
 
   float m_ViewportWidth{};
   float m_ViewportHeight{};

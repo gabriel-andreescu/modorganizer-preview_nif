@@ -6,11 +6,14 @@
 #include <QOpenGLFunctions_2_1>
 #include <QOpenGLVersionFunctionsFactory>
 #include <QWheelEvent>
+#include <algorithm>
 #include <exception>
 #include <utility>
 
 namespace
 {
+constexpr int SceneTextureUnit = 0;
+
 QSharedPointer<Camera> makeCamera()
 {
   return {new Camera(), &Camera::deleteLater};
@@ -125,6 +128,10 @@ void NifWidget::resetCamera()
   float largestRadius = 0.0f;
   QVector3D lookAt;
   for (const auto& shape : m_GLShapes) {
+    if (shape.isRefractionProxy) {
+      continue;
+    }
+
     if (shape.bounds.radius > largestRadius) {
       largestRadius = shape.bounds.radius;
       lookAt = {-shape.bounds.center.x, shape.bounds.center.z, shape.bounds.center.y};
@@ -185,7 +192,7 @@ void NifWidget::initializeGL()
 
   f->glEnable(GL_DEPTH_TEST);
   f->glDepthFunc(GL_LEQUAL);
-  f->glClearColor(0.18, 0.18, 0.18, 1.0);
+  f->glClearColor(0.18f, 0.18f, 0.18f, 1.0f);
 }
 
 void NifWidget::paintGL()
@@ -231,17 +238,28 @@ void NifWidget::paintGL()
   f->glPolygonOffset(1.0f, 2.0f);
 
   for (const auto& shape : m_GLShapes) {
-    if (!shape.usesAlphaPass()) {
+    if (!shape.isRefractionProxy && !shape.usesAlphaPass()) {
       drawShape(shape);
     }
   }
 
   f->glDisable(GL_POLYGON_OFFSET_FILL);
 
+  bool hasRefractionProxy = false;
   for (const auto& shape : m_GLShapes) {
+    if (shape.isRefractionProxy) {
+      hasRefractionProxy = true;
+      continue;
+    }
+
     if (shape.usesAlphaPass()) {
       drawShape(shape);
     }
+  }
+
+  if (hasRefractionProxy) {
+    copySceneColorTexture(f);
+    renderRefractionProxyPass(f);
   }
 
   f->glDepthMask(GL_TRUE);
@@ -268,7 +286,69 @@ void NifWidget::cleanup()
   }
   m_GLShapes.clear();
 
+  const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+      QOpenGLContext::currentContext());
+  releaseSceneColorTexture(f);
+
   m_TextureManager->cleanup();
+}
+
+void NifWidget::copySceneColorTexture(QOpenGLFunctions_2_1* f)
+{
+  ensureSceneColorTexture(f);
+  if (!f || !m_SceneColorTexture) {
+    return;
+  }
+
+  f->glActiveTexture(GL_TEXTURE0 + SceneTextureUnit);
+  f->glBindTexture(GL_TEXTURE_2D, m_SceneColorTexture);
+  f->glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, m_SceneColorTextureWidth,
+                         m_SceneColorTextureHeight);
+}
+
+void NifWidget::ensureSceneColorTexture(QOpenGLFunctions_2_1* f)
+{
+  if (!f) {
+    return;
+  }
+
+  const auto textureWidth  = std::max(1, static_cast<int>(m_ViewportWidth));
+  const auto textureHeight = std::max(1, static_cast<int>(m_ViewportHeight));
+  if (m_SceneColorTexture && m_SceneColorTextureWidth == textureWidth &&
+      m_SceneColorTextureHeight == textureHeight) {
+    return;
+  }
+
+  releaseSceneColorTexture(f);
+
+  f->glGenTextures(1, &m_SceneColorTexture);
+  if (!m_SceneColorTexture) {
+    qWarning("Failed to create scene color texture for refraction preview");
+    return;
+  }
+
+  m_SceneColorTextureWidth  = textureWidth;
+  m_SceneColorTextureHeight = textureHeight;
+
+  f->glActiveTexture(GL_TEXTURE0 + SceneTextureUnit);
+  f->glBindTexture(GL_TEXTURE_2D, m_SceneColorTexture);
+  f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  f->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0, GL_RGBA,
+                  GL_UNSIGNED_BYTE, nullptr);
+}
+
+void NifWidget::releaseSceneColorTexture(QOpenGLFunctions_2_1* f)
+{
+  if (f && m_SceneColorTexture) {
+    f->glDeleteTextures(1, &m_SceneColorTexture);
+  }
+
+  m_SceneColorTexture       = 0;
+  m_SceneColorTextureWidth  = 0;
+  m_SceneColorTextureHeight = 0;
 }
 
 void NifWidget::frameCameraIfNeeded()
@@ -312,4 +392,62 @@ void NifWidget::updateCamera()
   m_ViewMatrix = m;
 
   setProjectionMatrix();
+}
+
+void NifWidget::renderRefractionProxyPass(QOpenGLFunctions_2_1* f)
+{
+  if (!f || !m_SceneColorTexture) {
+    return;
+  }
+
+  auto* program = m_ShaderManager->getProgram(ShaderManager::SKRefractionProxy);
+  if (!program || !program->isLinked()) {
+    return;
+  }
+
+  f->glDisable(GL_POLYGON_OFFSET_FILL);
+  f->glDisable(GL_BLEND);
+  f->glDepthMask(GL_FALSE);
+
+  for (const auto& shape : m_GLShapes) {
+    if (!shape.isRefractionProxy || !program->bind()) {
+      continue;
+    }
+
+    auto binder = QOpenGLVertexArrayObject::Binder(shape.vertexArray);
+
+    const auto& modelMatrix = shape.modelMatrix;
+    auto modelViewMatrix    = m_ViewMatrix * modelMatrix;
+    auto mvpMatrix          = m_ProjectionMatrix * modelViewMatrix;
+
+    program->setUniformValue("worldMatrix", modelMatrix);
+    program->setUniformValue("viewMatrix", m_ViewMatrix);
+    program->setUniformValue("modelViewMatrix", modelViewMatrix);
+    program->setUniformValue("modelViewMatrixInverse", modelViewMatrix.inverted());
+    program->setUniformValue("normalMatrix", modelViewMatrix.normalMatrix());
+    program->setUniformValue("mvpMatrix", mvpMatrix);
+    program->setUniformValue("lightDirection", QVector3D(0, 0, 1));
+
+    shape.setupShaders(program);
+
+    f->glDisable(GL_BLEND);
+    f->glDepthMask(GL_FALSE);
+    f->glActiveTexture(GL_TEXTURE0 + SceneTextureUnit);
+    f->glBindTexture(GL_TEXTURE_2D, m_SceneColorTexture);
+
+    program->setUniformValue("SceneMap", SceneTextureUnit);
+    program->setUniformValue("viewportSize",
+                             QVector2D(static_cast<float>(m_SceneColorTextureWidth),
+                                       static_cast<float>(m_SceneColorTextureHeight)));
+    program->setUniformValue("refractionStrength",
+                             std::clamp(shape.refractionStrength, 0.0f, 1.0f));
+
+    if (shape.indexBuffer && shape.indexBuffer->isCreated()) {
+      shape.indexBuffer->bind();
+      f->glDrawElements(GL_TRIANGLES, shape.elements, GL_UNSIGNED_SHORT, nullptr);
+      shape.indexBuffer->release();
+    }
+
+    program->release();
+  }
 }
