@@ -8,42 +8,39 @@
 
 #include <memory>
 
-namespace MOBase
-{
+namespace MOBase {
 class IOrganizer;
 }
 
-enum class NifPreviewProviderKind
-{
-  LooseFile,
-  Archive,
-  InMemory
+enum class NifPreviewProviderKind {
+    LooseFile,
+    Archive,
+    InMemory
 };
 
-struct NifPreviewProvider
-{
-  QString displayName;
-  QString virtualPath;
-  NifPreviewProviderKind kind = NifPreviewProviderKind::LooseFile;
-  QString absolutePath;
-  QString archivePath;
-  QString archiveName;
-  QByteArray data;
+struct NifPreviewProvider {
+    QString displayName;
+    QString virtualPath;
+    NifPreviewProviderKind kind = NifPreviewProviderKind::LooseFile;
+    QString absolutePath;
+    QString archivePath;
+    QString archiveName;
+    QByteArray data;
 };
 
-struct NifPreviewSourceSet
-{
-  QVector<NifPreviewProvider> providers;
-  QString virtualPath;
-  int currentIndex = 0;
+struct NifPreviewSourceSet {
+    QVector<NifPreviewProvider> providers;
+    QString virtualPath;
+    int currentIndex = 0;
 };
 
-class NifPreviewSourceResolver
-{
+class NifPreviewSourceResolver {
 public:
-  static NifPreviewSourceSet resolve(MOBase::IOrganizer* organizer,
-                                     const QString& fileName,
-                                     const QByteArray& fileData);
+    static NifPreviewSourceSet resolve(
+        MOBase::IOrganizer* organizer,
+        const QString& fileName,
+        const QByteArray& fileData
+    );
 };
 
 std::shared_ptr<nifly::NifFile> loadNifProvider(const NifPreviewProvider& provider);
