@@ -1,0 +1,25 @@
+CompileFlags:
+  CompilationDatabase: cmake-build-lint
+  Compiler: clang-cl
+  Add:
+    - --target=x86_64-pc-windows-msvc
+
+Diagnostics:
+  UnusedIncludes: None
+  ClangTidy:
+    Remove:
+      - misc-unused-alias-decls
+
+Index:
+  StandardLibrary: false
+
+---
+
+If:
+  PathMatch: (mo2-abi|cmake-build[^/]*/_deps|cmake-build[^/]*/src/preview_nif_autogen)/.*
+
+Index:
+  Background: Skip
+
+Diagnostics:
+  Suppress: ['*']

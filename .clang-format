@@ -1,41 +1,81 @@
----
-# We'll use defaults from the LLVM style, but with 4 columns indentation.
-BasedOnStyle: LLVM
-IndentWidth: 2
+#file: noinspection YAMLSchemaValidation
 ---
 Language: Cpp
-DeriveLineEnding: false
-UseCRLF: true
+BasedOnStyle: WebKit
+
+# Basics
+ColumnLimit: 120
+IndentWidth: 4
+ContinuationIndentWidth: 4
+IndentCaseLabels: true
 DerivePointerAlignment: false
 PointerAlignment: Left
-AlignConsecutiveAssignments: true
-AllowShortFunctionsOnASingleLine: Inline
-AllowShortIfStatementsOnASingleLine: Never
+BreakStringLiterals: false
+InsertBraces: true
+SpaceInEmptyBraces: Never
+SpaceInEmptyBlock: false
+SpacesInParens: Never
+
+# Short constructs on a single line
 AllowShortLambdasOnASingleLine: Empty
-AlwaysBreakTemplateDeclarations: Yes
-AccessModifierOffset: -2
-AlignTrailingComments: true
-SpacesBeforeTrailingComments: 2
-NamespaceIndentation: Inner
-MaxEmptyLinesToKeep: 1
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortCaseExpressionOnASingleLine: true
+
+# Alignment
+AlignTrailingComments:
+  Kind: Always
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+  AlignCaseArrows: false
+  AlignCaseColons: false
+AlignOperands: Align
+
+# Operators / expressions breaking
+BreakBinaryOperations: OnePerLine
+BreakBeforeBinaryOperators: All
+BreakBeforeTernaryOperators: true
+PenaltyBreakAssignment: 1000
+PenaltyBreakBeforeFirstCallParameter: 2
+
+# Return types
+BreakAfterReturnType: ExceptShortType
+PenaltyReturnTypeOnItsOwnLine: 1000
+
+# Parameters / arguments
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllArgumentsOnNextLine: false
+BinPackParameters: OnePerLine
+BinPackArguments: false
+
+# Braces & inheritance
 BreakBeforeBraces: Custom
 BraceWrapping:
-  AfterCaseLabel: false
-  AfterClass: true
-  AfterControlStatement: false
-  AfterEnum: true
-  AfterFunction: true
-  AfterNamespace: true
-  AfterStruct: true
-  AfterUnion: true
-  AfterExternBlock: true
-  BeforeCatch: false
-  BeforeElse: false
-  BeforeLambdaBody: false
-  BeforeWhile: false
-  IndentBraces: false
-  SplitEmptyFunction: false
-  SplitEmptyRecord: false
-  SplitEmptyNamespace: true
-ColumnLimit: 88
-ForEachMacros: [ 'Q_FOREACH', 'foreach' ]
+  AfterFunction: false
+BreakInheritanceList: AfterColon
+
+# Braced lists & templates
+Cpp11BracedListStyle: FunctionCall
+BreakTemplateDeclarations: Yes
+BreakAfterOpenBracketBracedList: true
+BreakBeforeCloseBracketBracedList: true
+
+# Control statements and function calls
+BreakAfterOpenBracketFunction: true
+BreakAfterOpenBracketIf: true
+BreakAfterOpenBracketLoop: true
+BreakAfterOpenBracketSwitch: true
+BreakBeforeCloseBracketFunction: true
+BreakBeforeCloseBracketIf: true
+BreakBeforeCloseBracketLoop: true
+BreakBeforeCloseBracketSwitch: true
+
+# Concepts
+BreakBeforeConceptDeclarations: Always
+...

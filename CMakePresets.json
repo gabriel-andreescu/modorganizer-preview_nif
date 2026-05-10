@@ -77,6 +77,40 @@
       }
     },
     {
+      "name": "ninja-lint",
+      "inherits": ["cmake-dev", "vcpkg-dev"],
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/cmake-build-lint",
+      "installDir": "${sourceDir}/../../../install",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "RelWithDebInfo"
+        },
+        "CMAKE_EXPORT_COMPILE_COMMANDS": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "CMAKE_CXX_FLAGS": "/EHsc /MP /W4",
+        "CMAKE_PREFIX_PATH": {
+          "type": "STRING",
+          "value": "C:/Qt/6.7.3/msvc2019_64;${sourceDir}/../../cmake_common;${sourceDir}/../../../install/lib/cmake"
+        },
+        "VCPKG_TARGET_TRIPLET": {
+          "type": "STRING",
+          "value": "x64-windows-static-md"
+        },
+        "MO2_UIBASE_INCLUDE_DIR": {
+          "type": "PATH",
+          "value": "${sourceDir}/mo2-abi/2.5.2/include"
+        },
+        "PREVIEW_NIF_PACKAGE_MO2_VERSION": {
+          "type": "STRING",
+          "value": "MO2-2.5.2"
+        }
+      }
+    },
+    {
       "name": "ninja-multi-mo2-2.5.2",
       "inherits": "ninja-multi",
       "binaryDir": "${sourceDir}/cmake-build-2.5.2",
