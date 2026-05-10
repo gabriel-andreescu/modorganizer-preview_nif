@@ -26,12 +26,12 @@ OpenGLCollisionOverlay::OpenGLCollisionOverlay(const CollisionGeometry& geometry
         return;
     }
 
-    m_VertexArray = new QOpenGLVertexArrayObject();
-    m_VertexArray->create();
-    auto binder = QOpenGLVertexArrayObject::Binder(m_VertexArray);
+    auto* const glVertexArray = m_VertexArray.create();
+    glVertexArray->create();
+    auto binder = QOpenGLVertexArrayObject::Binder(glVertexArray);
 
-    m_VertexBuffer = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-    if (!m_VertexBuffer->create() || !m_VertexBuffer->bind()) {
+    auto* const glVertexBuffer = m_VertexBuffer.create(QOpenGLBuffer::VertexBuffer);
+    if (!glVertexBuffer->create() || !glVertexBuffer->bind()) {
         qWarning("Skipping NIF collision overlay: failed to create vertex buffer");
         m_VertexCount = 0;
         return;
@@ -41,11 +41,11 @@ OpenGLCollisionOverlay::OpenGLCollisionOverlay(const CollisionGeometry& geometry
     if (byteSize > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
         qWarning("Skipping oversized NIF collision overlay vertex buffer");
         m_VertexCount = 0;
-        m_VertexBuffer->release();
+        glVertexBuffer->release();
         return;
     }
 
-    m_VertexBuffer->allocate(geometry.vertices.data(), static_cast<int>(byteSize));
+    glVertexBuffer->allocate(geometry.vertices.data(), static_cast<int>(byteSize));
 
     f->glEnableVertexAttribArray(AttribPosition);
     f->glVertexAttribPointer(AttribPosition, 3, GL_FLOAT, GL_FALSE, sizeof(CollisionVertex), nullptr);
@@ -66,21 +66,12 @@ OpenGLCollisionOverlay::OpenGLCollisionOverlay(const CollisionGeometry& geometry
         }
     }
 
-    m_VertexBuffer->release();
+    glVertexBuffer->release();
 }
 
 void OpenGLCollisionOverlay::destroy() {
-    if (m_VertexBuffer) {
-        m_VertexBuffer->destroy();
-        delete m_VertexBuffer;
-        m_VertexBuffer = nullptr;
-    }
-
-    if (m_VertexArray) {
-        m_VertexArray->destroy();
-        m_VertexArray->deleteLater();
-        m_VertexArray = nullptr;
-    }
+    m_VertexBuffer.destroyWithCurrentContext();
+    m_VertexArray.destroyWithCurrentContext();
 
     m_VertexCount = 0;
 }
@@ -100,7 +91,7 @@ void OpenGLCollisionOverlay::render(
         return;
     }
 
-    auto binder = QOpenGLVertexArrayObject::Binder(m_VertexArray);
+    auto binder = QOpenGLVertexArrayObject::Binder(m_VertexArray.get());
 
     program->setUniformValue("mvpMatrix", projectionMatrix * viewMatrix);
 

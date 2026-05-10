@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Camera.h"
+#include "OpenGLResources.h"
 #include "OpenGLShape.h"
 #include "ShaderManager.h"
 #include "TextureManager.h"
@@ -87,7 +88,7 @@ private:
     QMatrix4x4 m_ViewMatrix;
     QMatrix4x4 m_ProjectionMatrix;
 
-    GLuint m_SceneColorTexture = 0;
+    OpenGLTextureResource m_SceneColorTexture;
     int m_SceneColorTextureWidth = 0;
     int m_SceneColorTextureHeight = 0;
 

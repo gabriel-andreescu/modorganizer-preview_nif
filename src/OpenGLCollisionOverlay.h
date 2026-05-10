@@ -1,11 +1,10 @@
 #pragma once
 
 #include "CollisionGeometry.h"
+#include "OpenGLResources.h"
 
 #include <QMatrix4x4>
-#include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
-#include <QOpenGLVertexArrayObject>
 
 #include <cstddef>
 #include <vector>
@@ -33,8 +32,8 @@ public:
     }
 
 private:
-    QOpenGLVertexArrayObject* m_VertexArray = nullptr;
-    QOpenGLBuffer* m_VertexBuffer = nullptr;
+    OpenGLVertexArrayResource m_VertexArray;
+    OpenGLBufferResource m_VertexBuffer;
     std::vector<CollisionLineRange> m_LineRanges;
     std::size_t m_VertexCount = 0;
     nifly::BoundingSphere m_Bounds;

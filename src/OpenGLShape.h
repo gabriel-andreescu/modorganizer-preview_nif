@@ -1,5 +1,6 @@
 #pragma once
 
+#include "OpenGLResources.h"
 #include "ShaderManager.h"
 #include "TextureManager.h"
 #include "TextureSlots.h"
@@ -7,9 +8,8 @@
 #include <Geometry.hpp>
 #include <NifFile.hpp>
 
-#include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
-#include <QOpenGLVertexArrayObject>
+#include <array>
 #include <cstdint>
 
 class QOpenGLFunctions_2_1;
@@ -17,6 +17,11 @@ class QOpenGLFunctions_2_1;
 struct OpenGLShape {
 public:
     OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape, TextureManager* textureManager);
+    ~OpenGLShape() = default;
+    OpenGLShape(const OpenGLShape&) = delete;
+    OpenGLShape(OpenGLShape&&) noexcept = default;
+    OpenGLShape& operator=(const OpenGLShape&) = delete;
+    OpenGLShape& operator=(OpenGLShape&&) noexcept = default;
 
     void destroy();
     void setupShaders(QOpenGLShaderProgram* program) const;
@@ -30,11 +35,11 @@ public:
 
     ShaderManager::ShaderType shaderType = ShaderManager::SKDefault;
 
-    QOpenGLVertexArrayObject* vertexArray = nullptr;
+    OpenGLVertexArrayResource vertexArray;
 
-    QOpenGLBuffer* vertexBuffers[ATTRIB_COUNT] {nullptr};
+    std::array<OpenGLBufferResource, ATTRIB_COUNT> vertexBuffers;
 
-    QOpenGLBuffer* indexBuffer = nullptr;
+    OpenGLBufferResource indexBuffer;
     GLsizei elements = 0;
 
     std::array<PreviewTexture*, TextureSlotCount> textures {nullptr};

@@ -213,7 +213,7 @@ void NifWidget::paintGL() {
     const auto drawShape = [&](const OpenGLShape& shape) {
         if (auto* const program = m_ShaderManager->getProgram(shape.shaderType);
             program && program->isLinked() && program->bind()) {
-            auto binder = QOpenGLVertexArrayObject::Binder(shape.vertexArray);
+            auto binder = QOpenGLVertexArrayObject::Binder(shape.vertexArray.get());
 
             const auto& modelMatrix = shape.modelMatrix;
             auto modelViewMatrix = m_ViewMatrix * modelMatrix;
@@ -310,7 +310,7 @@ void NifWidget::copySceneColorTexture(QOpenGLFunctions_2_1* f) {
     }
 
     f->glActiveTexture(GL_TEXTURE0 + SceneTextureUnit);
-    f->glBindTexture(GL_TEXTURE_2D, m_SceneColorTexture);
+    m_SceneColorTexture.bind(f);
     f->glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, m_SceneColorTextureWidth, m_SceneColorTextureHeight);
 }
 
@@ -327,17 +327,19 @@ void NifWidget::ensureSceneColorTexture(QOpenGLFunctions_2_1* f) {
 
     releaseSceneColorTexture(f);
 
-    f->glGenTextures(1, &m_SceneColorTexture);
-    if (!m_SceneColorTexture) {
+    GLuint textureId = 0;
+    f->glGenTextures(1, &textureId);
+    if (textureId == 0) {
         qWarning("Failed to create scene color texture for refraction preview");
         return;
     }
+    m_SceneColorTexture.set(textureId, GL_TEXTURE_2D);
 
     m_SceneColorTextureWidth = textureWidth;
     m_SceneColorTextureHeight = textureHeight;
 
     f->glActiveTexture(GL_TEXTURE0 + SceneTextureUnit);
-    f->glBindTexture(GL_TEXTURE_2D, m_SceneColorTexture);
+    m_SceneColorTexture.bind(f);
     f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -361,11 +363,7 @@ void NifWidget::ensureCollisionOverlay() {
 }
 
 void NifWidget::releaseSceneColorTexture(QOpenGLFunctions_2_1* f) {
-    if (f && m_SceneColorTexture) {
-        f->glDeleteTextures(1, &m_SceneColorTexture);
-    }
-
-    m_SceneColorTexture = 0;
+    m_SceneColorTexture.destroyWithCurrentContext(f);
     m_SceneColorTextureWidth = 0;
     m_SceneColorTextureHeight = 0;
 }
@@ -457,7 +455,7 @@ void NifWidget::renderRefractionProxyPass(QOpenGLFunctions_2_1* f) {
             continue;
         }
 
-        auto binder = QOpenGLVertexArrayObject::Binder(shape.vertexArray);
+        auto binder = QOpenGLVertexArrayObject::Binder(shape.vertexArray.get());
 
         const auto& modelMatrix = shape.modelMatrix;
         auto modelViewMatrix = m_ViewMatrix * modelMatrix;
@@ -476,7 +474,7 @@ void NifWidget::renderRefractionProxyPass(QOpenGLFunctions_2_1* f) {
         f->glDisable(GL_BLEND);
         f->glDepthMask(GL_FALSE);
         f->glActiveTexture(GL_TEXTURE0 + SceneTextureUnit);
-        f->glBindTexture(GL_TEXTURE_2D, m_SceneColorTexture);
+        m_SceneColorTexture.bind(f);
 
         program->setUniformValue("SceneMap", SceneTextureUnit);
         program->setUniformValue(

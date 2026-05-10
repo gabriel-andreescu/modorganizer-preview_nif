@@ -608,7 +608,7 @@ GLenum uploadTextureData(
     return f->glGetError();
 }
 
-GLuint makeRawTexture(
+OpenGLTextureResource makeRawTexture(
     const gli::texture& texture,
     QOpenGLFunctions_2_1* f,
     const GLenum target,
@@ -626,7 +626,8 @@ GLuint makeRawTexture(
             continue;
         }
 
-        f->glBindTexture(target, textureId);
+        OpenGLTextureResource textureResource(textureId, target);
+        f->glBindTexture(target, textureResource.id());
         setTextureParameters(f, target, format, texture.levels());
         clearGlErrors(f);
         f->glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -637,7 +638,7 @@ GLuint makeRawTexture(
         f->glBindTexture(target, 0);
 
         if (error == GL_NO_ERROR) {
-            return textureId;
+            return textureResource;
         }
 
         qWarning(
@@ -645,10 +646,10 @@ GLuint makeRawTexture(
             useStorage ? "immutable" : "mutable",
             error
         );
-        f->glDeleteTextures(1, &textureId);
+        textureResource.destroyWithCurrentContext(f);
     }
 
-    return 0;
+    return {};
 }
 
 } // namespace
@@ -657,47 +658,22 @@ PreviewTexture::PreviewTexture(QOpenGLTexture* texture)
     : m_QtTexture(texture) {}
 
 PreviewTexture::PreviewTexture(const GLuint textureId, const GLenum target)
-    : m_TextureId(textureId)
-    , m_Target(target) {}
+    : m_RawTexture(textureId, target) {}
 
-PreviewTexture::~PreviewTexture() {
-    delete m_QtTexture;
-    m_QtTexture = nullptr;
-
-    if (m_TextureId == 0) {
-        return;
-    }
-
-    auto* context = QOpenGLContext::currentContext();
-    if (!context) {
-        qWarning("Leaking raw DDS OpenGL texture %u: no current context", m_TextureId);
-        return;
-    }
-
-    if (auto* f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(context)) {
-        f->glDeleteTextures(1, &m_TextureId);
-    } else {
-        qWarning("Leaking raw DDS OpenGL texture %u: OpenGL 2.1 functions unavailable", m_TextureId);
-        return;
-    }
-
-    m_TextureId = 0;
-}
+PreviewTexture::~PreviewTexture() = default;
 
 void PreviewTexture::bind(const int textureUnit) const {
-    if (m_QtTexture) {
-        m_QtTexture->bind(textureUnit);
+    if (auto* const texture = m_QtTexture.get()) {
+        texture->bind(textureUnit);
         return;
     }
 
-    if (m_TextureId == 0) {
-        return;
-    }
+    m_RawTexture.bind(textureUnit);
+}
 
-    if (auto* f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(QOpenGLContext::currentContext())) {
-        f->glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(textureUnit));
-        f->glBindTexture(m_Target, m_TextureId);
-    }
+void PreviewTexture::destroyWithCurrentContext() {
+    m_QtTexture.destroyWithCurrentContext();
+    m_RawTexture.destroyWithCurrentContext();
 }
 
 TextureManager::TextureManager(MOBase::IOrganizer* organizer, TextureSourceProvider textureSource)
@@ -706,13 +682,17 @@ TextureManager::TextureManager(MOBase::IOrganizer* organizer, TextureSourceProvi
 
 void TextureManager::cleanup() {
     for (auto it = m_Textures.cbegin(); it != m_Textures.cend();) {
-        const auto* texture = it->second;
+        auto* const texture = it->second;
         m_Textures.erase(it++);
+        if (texture) {
+            texture->destroyWithCurrentContext();
+        }
         delete texture;
     }
 
     auto cleanupTexture = [&](PreviewTexture*& texPtr) {
         if (texPtr) {
+            texPtr->destroyWithCurrentContext();
             delete texPtr;
             texPtr = nullptr;
         }
@@ -972,13 +952,13 @@ PreviewTexture* TextureManager::makeTexture(const gli::texture& texture) {
         return nullptr;
     }
 
-    const auto textureId = makeRawTexture(texture, f, target, format, resolveTexStorage2D(context));
-    if (textureId == 0) {
+    auto textureResource = makeRawTexture(texture, f, target, format, resolveTexStorage2D(context));
+    if (!textureResource) {
         qWarning("Skipping DDS texture after failed OpenGL upload");
         return nullptr;
     }
 
-    return new PreviewTexture(textureId, target);
+    return new PreviewTexture(textureResource.release(), target);
 }
 
 PreviewTexture* TextureManager::makeSolidColor(const QVector4D color) {

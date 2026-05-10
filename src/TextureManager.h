@@ -1,8 +1,8 @@
 #pragma once
 
+#include "OpenGLResources.h"
 #include "TextureSource.h"
 
-#include <QOpenGLTexture>
 #include <gli/gli.hpp>
 #include <map>
 #include <uibase/imoinfo.h>
@@ -18,11 +18,11 @@ public:
     PreviewTexture& operator=(PreviewTexture&&) = delete;
 
     void bind(int textureUnit) const;
+    void destroyWithCurrentContext();
 
 private:
-    QOpenGLTexture* m_QtTexture = nullptr;
-    GLuint m_TextureId = 0;
-    GLenum m_Target = 0;
+    QtOpenGLTextureResource m_QtTexture;
+    OpenGLTextureResource m_RawTexture;
 };
 
 class TextureManager {

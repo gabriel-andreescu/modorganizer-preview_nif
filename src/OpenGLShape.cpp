@@ -568,24 +568,24 @@ RenderGeometry prepareRenderGeometry(nifly::NifFile* nifFile, nifly::NiShape* sh
 } // namespace
 
 template <typename T>
-static QOpenGLBuffer* makeVertexBuffer(const std::vector<T>* data, const GLuint attrib) {
-    QOpenGLBuffer* buffer = nullptr;
+static OpenGLBufferResource makeVertexBuffer(const std::vector<T>* data, const GLuint attrib) {
+    OpenGLBufferResource buffer;
 
     if (data && !data->empty()) {
         const auto byteSize = data->size() * sizeof(T);
         if (byteSize > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
             qWarning("Skipping oversized vertex buffer for attribute %u", attrib);
-            return nullptr;
+            return buffer;
         }
 
-        buffer = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-        if (buffer->create() && buffer->bind()) {
-            buffer->allocate(data->data(), static_cast<int>(byteSize));
+        auto* const glBuffer = buffer.create(QOpenGLBuffer::VertexBuffer);
+        if (glBuffer->create() && glBuffer->bind()) {
+            glBuffer->allocate(data->data(), static_cast<int>(byteSize));
 
             auto* const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(QOpenGLContext::currentContext());
             if (!f) {
                 qWarning("Skipping vertex attribute setup: OpenGL 2.1 functions unavailable");
-                buffer->release();
+                glBuffer->release();
                 return buffer;
             }
 
@@ -593,7 +593,7 @@ static QOpenGLBuffer* makeVertexBuffer(const std::vector<T>* data, const GLuint 
 
             f->glVertexAttribPointer(attrib, sizeof(T) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(T), nullptr);
 
-            buffer->release();
+            glBuffer->release();
         }
     }
 
@@ -687,12 +687,12 @@ void OpenGLShape::initializeGeometryBuffers(nifly::NifFile* nifFile, nifly::NiSh
 
     initializeColorBuffer(nifFile, niShape, shader);
 
-    indexBuffer = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-    if (indexBuffer->create() && indexBuffer->bind()) {
+    auto* const glIndexBuffer = indexBuffer.create(QOpenGLBuffer::IndexBuffer);
+    if (glIndexBuffer->create() && glIndexBuffer->bind()) {
         if (!geometry.triangles.empty()) {
             const auto byteSize = geometry.triangles.size() * sizeof(nifly::Triangle);
             if (byteSize <= static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-                indexBuffer->allocate(geometry.triangles.data(), static_cast<int>(byteSize));
+                glIndexBuffer->allocate(geometry.triangles.data(), static_cast<int>(byteSize));
             } else {
                 qWarning("Skipping oversized index buffer");
             }
@@ -704,7 +704,7 @@ void OpenGLShape::initializeGeometryBuffers(nifly::NifFile* nifFile, nifly::NiSh
         elements = static_cast<GLsizei>(
             std::min(iElements, static_cast<uint32_t>(std::numeric_limits<GLsizei>::max()))
         );
-        indexBuffer->release();
+        glIndexBuffer->release();
     }
 }
 
@@ -959,9 +959,9 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape, Textu
     isRefractionProxy = IsRefractionDistortionProxy(nifFile, niShape);
     configureShaderType(nifFile, shader);
 
-    vertexArray = new QOpenGLVertexArrayObject();
-    vertexArray->create();
-    auto binder = QOpenGLVertexArrayObject::Binder(vertexArray);
+    auto* const glVertexArray = vertexArray.create();
+    glVertexArray->create();
+    auto binder = QOpenGLVertexArrayObject::Binder(glVertexArray);
 
     setDefaultVertexAttributes(f);
     initializeGeometryBuffers(nifFile, niShape, shader);
@@ -977,23 +977,12 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape, Textu
 
 void OpenGLShape::destroy() {
     for (auto& vertexBuffer : vertexBuffers) {
-        if (vertexBuffer) {
-            vertexBuffer->destroy();
-            delete vertexBuffer;
-            vertexBuffer = nullptr;
-        }
+        vertexBuffer.destroyWithCurrentContext();
     }
 
-    if (indexBuffer) {
-        indexBuffer->destroy();
-        delete indexBuffer;
-        indexBuffer = nullptr;
-    }
+    indexBuffer.destroyWithCurrentContext();
 
-    if (vertexArray) {
-        vertexArray->destroy();
-        vertexArray->deleteLater();
-    }
+    vertexArray.destroyWithCurrentContext();
 }
 
 void OpenGLShape::bindTextures() const {
