@@ -51,9 +51,9 @@ private:
   [[nodiscard]] PreviewTexture* loadTexture(const QString& texturePath) const;
   PreviewTexture* loadTextureAuto(const QString& texturePath) const;
   PreviewTexture* tryLoadTextureFromSource(const QString& texturePath) const;
-  PreviewTexture* loadLooseTexture(const QString& path) const;
-  PreviewTexture* tryLoadTextureFromArchives(const QStringList& archivePaths,
-                                             const QString& texturePath) const;
+  static PreviewTexture* loadLooseTexture(const QString& path);
+  static PreviewTexture* tryLoadTextureFromArchives(const QStringList& archivePaths,
+                                                    const QString& texturePath);
   PreviewTexture* tryLoadTextureFromMods(const QString& texturePath) const;
   PreviewTexture* tryLoadTextureFromGame(const QString& texturePath) const;
   static PreviewTexture* loadTextureFromBSA(const QString& bsaPath,

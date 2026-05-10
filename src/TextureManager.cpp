@@ -251,7 +251,7 @@ gli::texture loadDdsIfValid(const char* data, const std::size_t size)
 
   std::size_t offset = sizeof(FOURCC_DDS);
 
-  dds_header header{};
+  dds_header header;
   std::memcpy(&header, data + offset, sizeof(header));
   offset += sizeof(dds_header);
 
@@ -670,7 +670,7 @@ PreviewTexture* TextureManager::getFlatNormalTexture()
 
 PreviewTexture* TextureManager::loadTexture(const QString& texturePath) const
 {
-  if (const auto texture = tryLoadTextureFromSource(texturePath)) {
+  if (auto *const texture = tryLoadTextureFromSource(texturePath)) {
     return texture;
   }
 
@@ -688,7 +688,7 @@ PreviewTexture* TextureManager::loadTextureAuto(const QString& texturePath) cons
     return nullptr;
   }
 
-  const auto game = m_MOInfo->managedGame();
+  const auto *const game = m_MOInfo->managedGame();
   if (!game) {
     qCritical("Failed to interface with managed game plugin");
     return nullptr;
@@ -714,11 +714,11 @@ PreviewTexture* TextureManager::loadTextureAuto(const QString& texturePath) cons
     }
   }
 
-  if (const auto texture = tryLoadTextureFromMods(texturePath)) {
+  if (auto *const texture = tryLoadTextureFromMods(texturePath)) {
     return texture;
   }
 
-  if (const auto texture = tryLoadTextureFromGame(texturePath)) {
+  if (auto *const texture = tryLoadTextureFromGame(texturePath)) {
     return texture;
   }
 
@@ -741,7 +741,7 @@ TextureManager::tryLoadTextureFromSource(const QString& texturePath) const
           QDir(m_TextureSource.sourcePath)
               .absoluteFilePath(QDir::cleanPath(normalizeTextureDataPath(texturePath)));
       if (QFileInfo::exists(realPath) && QFileInfo(realPath).isFile()) {
-        if (const auto texture = loadLooseTexture(realPath)) {
+        if (auto *const texture = loadLooseTexture(realPath)) {
           return texture;
         }
       }
@@ -756,7 +756,7 @@ TextureManager::tryLoadTextureFromSource(const QString& texturePath) const
   return nullptr;
 }
 
-PreviewTexture* TextureManager::loadLooseTexture(const QString& path) const
+PreviewTexture* TextureManager::loadLooseTexture(const QString& path)
 {
   try {
     auto texture = loadDdsFileIfValid(path);
@@ -774,10 +774,10 @@ PreviewTexture* TextureManager::loadLooseTexture(const QString& path) const
 
 PreviewTexture*
 TextureManager::tryLoadTextureFromArchives(const QStringList& archivePaths,
-                                           const QString& texturePath) const
+                                           const QString& texturePath)
 {
   for (const auto& archivePath : archivePaths) {
-    if (const auto texture = loadTextureFromBSA(archivePath, texturePath)) {
+    if (auto *const texture = loadTextureFromBSA(archivePath, texturePath)) {
       return texture;
     }
   }
@@ -797,7 +797,7 @@ PreviewTexture* TextureManager::tryLoadTextureFromMods(const QString& texturePat
   }
 
   const auto& modName = fileOrigins.constFirst();
-  if (const auto mod = m_MOInfo->modList()->getMod(modName)) {
+  if (auto *const mod = m_MOInfo->modList()->getMod(modName)) {
     if (const auto fileTree = mod->fileTree()) {
       for (auto it = fileTree->begin(); it != fileTree->end(); ++it) {
         const auto fileInfo = *it;
@@ -812,7 +812,7 @@ PreviewTexture* TextureManager::tryLoadTextureFromMods(const QString& texturePat
         if (bsaPath.isEmpty()) {
           continue;
         }
-        if (const auto texture = loadTextureFromBSA(bsaPath, texturePath)) {
+        if (auto *const texture = loadTextureFromBSA(bsaPath, texturePath)) {
           return texture;
         }
       }
@@ -827,7 +827,7 @@ PreviewTexture* TextureManager::tryLoadTextureFromGame(const QString& texturePat
     return nullptr;
   }
 
-  const auto features = m_MOInfo->gameFeatures();
+  auto *const features = m_MOInfo->gameFeatures();
   if (!features) {
     return nullptr;
   }
@@ -843,7 +843,7 @@ PreviewTexture* TextureManager::tryLoadTextureFromGame(const QString& texturePat
     if (bsaPath.isEmpty()) {
       continue;
     }
-    if (const auto texture = loadTextureFromBSA(bsaPath, texturePath)) {
+    if (auto *const texture = loadTextureFromBSA(bsaPath, texturePath)) {
       return texture;
     }
   }
@@ -862,14 +862,14 @@ PreviewTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath,
 
   static_assert(sizeof(wchar_t) == 2, "Expected wchar_t to be 2 bytes");
 
-  const auto bsaPathUtf16  = reinterpret_cast<const wchar_t*>(bsaPath.utf16());
+  const auto *const bsaPathUtf16  = reinterpret_cast<const wchar_t*>(bsaPath.utf16());
   const auto [code, _text] = bsa_load_from_file(bsaHandle.get(), bsaPathUtf16);
   if (code == BSA_RESULT_EXCEPTION) {
     return nullptr;
   }
 
   const auto archiveTexturePath = QDir::toNativeSeparators(texturePath);
-  const auto texturePathUtf16 =
+  const auto *const texturePathUtf16 =
       reinterpret_cast<const wchar_t*>(archiveTexturePath.utf16());
   auto [rBuffer, msg] =
       bsa_extract_file_data_by_filename(bsaHandle.get(), texturePathUtf16);
@@ -883,7 +883,7 @@ PreviewTexture* TextureManager::loadTextureFromBSA(const QString& bsaPath,
 
   const UniqueBufferPtr buffer(&rBuffer, BsaBufferDeleter(bsaHandle.get()));
 
-  const auto data = static_cast<const char*>(buffer->data);
+  const auto *const data = static_cast<const char*>(buffer->data);
   try {
     auto texture = loadDdsIfValid(data, static_cast<std::size_t>(buffer->size));
     if (texture.empty()) {

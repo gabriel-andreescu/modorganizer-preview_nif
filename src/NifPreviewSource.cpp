@@ -96,7 +96,7 @@ QString virtualPathFor(MOBase::IOrganizer* organizer, const QString& fileName)
   }
 
   if (organizer) {
-    if (const auto game = organizer->managedGame()) {
+    if (const auto *const game = organizer->managedGame()) {
       if (const auto relativePath =
               relativeToBase(game->dataDirectory().absolutePath(), normalized);
           !relativePath.isEmpty()) {
@@ -104,9 +104,9 @@ QString virtualPathFor(MOBase::IOrganizer* organizer, const QString& fileName)
       }
     }
 
-    if (const auto modList = organizer->modList()) {
+    if (auto *const modList = organizer->modList()) {
       for (const auto& modName : modList->allModsByProfilePriority()) {
-        const auto mod = modList->getMod(modName);
+        auto *const mod = modList->getMod(modName);
         if (!mod) {
           continue;
         }
@@ -201,7 +201,7 @@ QByteArray extractArchiveFile(const QString& archivePath, const QString& virtual
 
 QString providerDisplayName(const QString& sourceName, const QString& archivePath)
 {
-  const auto archiveName = QFileInfo(archivePath).fileName();
+  auto archiveName = QFileInfo(archivePath).fileName();
   if (sourceName.isEmpty()) {
     return archiveName;
   }
@@ -219,13 +219,13 @@ void addLooseProvider(QVector<NifPreviewProvider>& providers,
   }
 
   providers.push_back(
-      {displayName,
-       virtualPath,
-       NifPreviewProviderKind::LooseFile,
-       QDir::fromNativeSeparators(QFileInfo(absolutePath).absoluteFilePath()),
-       {},
-       {},
-       {}});
+      {.displayName=displayName,
+       .virtualPath=virtualPath,
+       .kind=NifPreviewProviderKind::LooseFile,
+       .absolutePath=QDir::fromNativeSeparators(QFileInfo(absolutePath).absoluteFilePath()),
+       .archivePath={},
+       .archiveName={},
+       .data={}});
 }
 
 void addArchiveProvider(QVector<NifPreviewProvider>& providers,
@@ -248,13 +248,13 @@ void addArchiveProvider(QVector<NifPreviewProvider>& providers,
     return;
   }
 
-  providers.push_back({providerDisplayName(sourceName, absoluteArchivePath),
-                       virtualPath,
-                       NifPreviewProviderKind::Archive,
-                       {},
-                       absoluteArchivePath,
-                       archiveInfo.fileName(),
-                       std::move(archiveData)});
+  providers.push_back({.displayName=providerDisplayName(sourceName, absoluteArchivePath),
+                       .virtualPath=virtualPath,
+                       .kind=NifPreviewProviderKind::Archive,
+                       .absolutePath={},
+                       .archivePath=absoluteArchivePath,
+                       .archiveName=archiveInfo.fileName(),
+                       .data=std::move(archiveData)});
 }
 
 bool isArchiveName(const QString& name)
@@ -296,7 +296,7 @@ QString resolveDataPath(MOBase::IOrganizer* organizer, const QString& path)
     return QDir::fromNativeSeparators(QFileInfo(resolved).absoluteFilePath());
   }
 
-  const auto game = organizer->managedGame();
+  const auto *const game = organizer->managedGame();
   if (!game) {
     return {};
   }
@@ -314,7 +314,7 @@ void addGameArchiveProviders(QVector<NifPreviewProvider>& providers,
     return;
   }
 
-  const auto features = organizer->gameFeatures();
+  auto *const features = organizer->gameFeatures();
   if (!features) {
     return;
   }
@@ -324,7 +324,7 @@ void addGameArchiveProviders(QVector<NifPreviewProvider>& providers,
     return;
   }
 
-  const auto game       = organizer->managedGame();
+  const auto *const game       = organizer->managedGame();
   const auto sourceName = game ? game->displayGameName() : QObject::tr("Game Data");
 
   for (auto archives = gameArchives->archives(currentProfile(organizer));
@@ -380,13 +380,13 @@ void addInMemoryProvider(QVector<NifPreviewProvider>& providers,
                          const QString& displayName, const QString& virtualPath,
                          const QString& fileName, const QByteArray& fileData)
 {
-  providers.insert(providers.begin(), {displayName,
-                                       virtualPath,
-                                       NifPreviewProviderKind::InMemory,
-                                       fileName,
-                                       {},
-                                       {},
-                                       fileData});
+  providers.insert(providers.begin(), {.displayName=displayName,
+                                       .virtualPath=virtualPath,
+                                       .kind=NifPreviewProviderKind::InMemory,
+                                       .absolutePath=fileName,
+                                       .archivePath={},
+                                       .archiveName={},
+                                       .data=fileData});
 }
 }  // namespace
 
@@ -399,10 +399,10 @@ NifPreviewSourceSet NifPreviewSourceResolver::resolve(MOBase::IOrganizer* organi
 
   const auto normalizedFileName = QDir::fromNativeSeparators(fileName);
   if (organizer && !sourceSet.virtualPath.isEmpty()) {
-    if (const auto modList = organizer->modList()) {
+    if (auto *const modList = organizer->modList()) {
       const auto origins = organizer->getFileOrigins(sourceSet.virtualPath);
       for (const auto& modName : origins) {
-        const auto mod = modList->getMod(modName);
+        auto *const mod = modList->getMod(modName);
         if (!mod) {
           continue;
         }

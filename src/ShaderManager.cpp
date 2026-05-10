@@ -67,7 +67,7 @@ QOpenGLShaderProgram* ShaderManager::loadProgram(const ShaderType type)
   const auto vertexShader   = QString("%1/shaders/%2").arg(dataPath, vert);
   const auto fragmentShader = QString("%1/shaders/%2").arg(dataPath, frag);
 
-  const auto program = new QOpenGLShaderProgram(QOpenGLContext::currentContext());
+  auto *const program = new QOpenGLShaderProgram(QOpenGLContext::currentContext());
   program->addShaderFromSourceFile(QOpenGLShader::Vertex, vertexShader);
   program->addShaderFromSourceFile(QOpenGLShader::Fragment, fragmentShader);
 

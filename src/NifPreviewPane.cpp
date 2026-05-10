@@ -74,26 +74,26 @@ NifPreviewPane::NifPreviewPane(MOBase::IOrganizer* organizer, QWidget* parent)
   m_StatsLabel->setWordWrap(true);
   m_StatsLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
-  const auto headerLayout = new QHBoxLayout();
+  auto *const headerLayout = new QHBoxLayout();
   headerLayout->setContentsMargins(0, 0, 0, 0);
   headerLayout->addWidget(m_TitleLabel, 1);
   headerLayout->addWidget(m_PrevButton);
   headerLayout->addWidget(m_SourceCombo);
   headerLayout->addWidget(m_NextButton);
 
-  const auto textureLayout = new QHBoxLayout();
+  auto *const textureLayout = new QHBoxLayout();
   textureLayout->setContentsMargins(0, 0, 0, 0);
   textureLayout->addWidget(m_TextureLabel, 1);
   textureLayout->addWidget(m_PrevTextureButton);
   textureLayout->addWidget(m_TextureSourceCombo);
   textureLayout->addWidget(m_NextTextureButton);
 
-  const auto viewFrame = new QFrame(this);
+  auto *const viewFrame = new QFrame(this);
   viewFrame->setFrameShape(QFrame::NoFrame);
   m_ViewLayout = new QVBoxLayout(viewFrame);
   m_ViewLayout->setContentsMargins(0, 0, 0, 0);
 
-  const auto rootLayout = new QVBoxLayout(this);
+  auto *const rootLayout = new QVBoxLayout(this);
   rootLayout->setContentsMargins(0, 0, 0, 0);
   rootLayout->addLayout(headerLayout);
   rootLayout->addLayout(textureLayout);
@@ -396,7 +396,7 @@ void NifPreviewPane::reloadCurrentNifWidget()
     return;
   }
 
-  const auto nifWidget = new NifWidget(m_CurrentNifFile, m_Organizer, m_Camera,
+  auto *const nifWidget = new NifWidget(m_CurrentNifFile, m_Organizer, m_Camera,
                                        currentTextureSourceProvider(), false, this);
   nifWidget->setShowCollision(m_ShowCollision);
   nifWidget->setMinimumSize(240, 240);
@@ -414,7 +414,7 @@ void NifPreviewPane::setViewWidget(QWidget* widget)
   m_ViewWidget = widget;
   m_NifWidget  = qobject_cast<NifWidget*>(widget);
 
-  if (const auto label = qobject_cast<QLabel*>(widget)) {
+  if (auto *const label = qobject_cast<QLabel*>(widget)) {
     label->setAlignment(Qt::AlignCenter);
   }
 

@@ -10,29 +10,30 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <numbers>
 #include <unordered_set>
 #include <vector>
 
 namespace
 {
-constexpr float Pi             = 3.14159265358979323846f;
+constexpr float Pi             = std::numbers::pi_v<float>;
 constexpr float Epsilon        = 0.00001f;
 constexpr int CircleSegments   = 32;
 constexpr float BodyScale      = 7.0f;
 constexpr float SkyrimBhkScale = 10.0f;
 
 constexpr std::array<CollisionColor, 8> LayerColors{{
-    {0.0f, 1.0f, 0.0f, 1.0f},
-    {1.0f, 0.0f, 0.0f, 1.0f},
-    {1.0f, 0.0f, 1.0f, 1.0f},
-    {1.0f, 1.0f, 1.0f, 1.0f},
-    {0.5f, 0.5f, 1.0f, 1.0f},
-    {1.0f, 0.8f, 0.0f, 1.0f},
-    {1.0f, 0.8f, 0.4f, 1.0f},
-    {0.0f, 1.0f, 1.0f, 1.0f},
+    {.r=0.0f, .g=1.0f, .b=0.0f, .a=1.0f},
+    {.r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f},
+    {.r=1.0f, .g=0.0f, .b=1.0f, .a=1.0f},
+    {.r=1.0f, .g=1.0f, .b=1.0f, .a=1.0f},
+    {.r=0.5f, .g=0.5f, .b=1.0f, .a=1.0f},
+    {.r=1.0f, .g=0.8f, .b=0.0f, .a=1.0f},
+    {.r=1.0f, .g=0.8f, .b=0.4f, .a=1.0f},
+    {.r=0.0f, .g=1.0f, .b=1.0f, .a=1.0f},
 }};
-constexpr CollisionColor BoundColor{1.0f, 0.0f, 0.0f, 1.0f};
-constexpr CollisionColor MultiBoundColor{1.0f, 1.0f, 1.0f, 0.8f};
+constexpr CollisionColor BoundColor{.r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f};
+constexpr CollisionColor MultiBoundColor{.r=1.0f, .g=1.0f, .b=1.0f, .a=0.8f};
 
 nifly::Vector3 toVector3(const nifly::Vector4& vector)
 {
@@ -163,8 +164,8 @@ private:
     addMultiBound(object, world);
 
     if (auto* node = dynamic_cast<nifly::NiNode*>(object)) {
-      for (auto it = node->childRefs.cbegin(); it != node->childRefs.cend(); ++it) {
-        visitObject(m_Header.GetBlock<nifly::NiAVObject>(it->index), world);
+      for (auto childRef : node->childRefs) {
+        visitObject(m_Header.GetBlock<nifly::NiAVObject>(childRef.index), world);
       }
     }
   }
@@ -208,9 +209,8 @@ private:
 
   void addBounds(nifly::NiAVObject* object, const nifly::MatTransform& transform)
   {
-    for (auto it = object->extraDataRefs.cbegin(); it != object->extraDataRefs.cend();
-         ++it) {
-      if (auto* bound = m_Header.GetBlock<nifly::BSBound>(it->index)) {
+    for (auto extraDataRef : object->extraDataRefs) {
+      if (auto* bound = m_Header.GetBlock<nifly::BSBound>(extraDataRef.index)) {
         addBox(transform, bound->center - bound->halfExtents,
                bound->center + bound->halfExtents, BoundColor);
       }
@@ -259,14 +259,12 @@ private:
     }
 
     if (auto* list = dynamic_cast<nifly::bhkListShape*>(shape)) {
-      for (auto it = list->subShapeRefs.cbegin(); it != list->subShapeRefs.cend();
-           ++it) {
-        addBhkShape(m_Header.GetBlock<nifly::bhkShape>(it->index), transform, color);
+      for (auto subShapeRef : list->subShapeRefs) {
+        addBhkShape(m_Header.GetBlock<nifly::bhkShape>(subShapeRef.index), transform, color);
       }
     } else if (auto* convexList = dynamic_cast<nifly::bhkConvexListShape*>(shape)) {
-      for (auto it = convexList->shapeRefs.cbegin(); it != convexList->shapeRefs.cend();
-           ++it) {
-        addBhkShape(m_Header.GetBlock<nifly::bhkShape>(it->index), transform, color);
+      for (auto shapeRef : convexList->shapeRefs) {
+        addBhkShape(m_Header.GetBlock<nifly::bhkShape>(shapeRef.index), transform, color);
       }
     } else if (auto* transformed = dynamic_cast<nifly::bhkTransformShape*>(shape)) {
       const auto localTransform = transformFromMatrix(transformed->xform, m_HavokScale);
@@ -311,8 +309,8 @@ private:
                            const nifly::MatTransform& transform,
                            const CollisionColor& color)
   {
-    for (auto it = shape->partRefs.cbegin(); it != shape->partRefs.cend(); ++it) {
-      auto* data = m_Header.GetBlock<nifly::NiTriStripsData>(it->index);
+    for (auto partRef : shape->partRefs) {
+      auto* data = m_Header.GetBlock<nifly::NiTriStripsData>(partRef.index);
       if (!data) {
         continue;
       }
@@ -689,7 +687,7 @@ private:
   void addVertex(const nifly::Vector3& point, const CollisionColor& color)
   {
     m_Geometry.vertices.push_back(
-        {point.x, point.y, point.z, color.r, color.g, color.b, color.a});
+        {.x=point.x, .y=point.y, .z=point.z, .r=color.r, .g=color.g, .b=color.b, .a=color.a});
     m_Bounds.push_back(point);
   }
 
@@ -705,7 +703,7 @@ private:
       }
     }
 
-    m_Geometry.lineRanges.push_back({firstVertex, vertexCount, color});
+    m_Geometry.lineRanges.push_back({.firstVertex=firstVertex, .vertexCount=vertexCount, .color=color});
   }
 
   const nifly::NifFile* m_NifFile = nullptr;

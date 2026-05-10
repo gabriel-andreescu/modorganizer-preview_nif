@@ -80,7 +80,7 @@ QString resolveDataPath(MOBase::IOrganizer* organizer, const QString& path)
     return QDir::fromNativeSeparators(QFileInfo(resolved).absoluteFilePath());
   }
 
-  const auto game = organizer->managedGame();
+  const auto *const game = organizer->managedGame();
   if (!game) {
     return {};
   }
@@ -133,7 +133,7 @@ QStringList archivePathsFromGame(MOBase::IOrganizer* organizer)
     return archivePaths;
   }
 
-  const auto features = organizer->gameFeatures();
+  auto *const features = organizer->gameFeatures();
   if (!features) {
     return archivePaths;
   }
@@ -175,7 +175,9 @@ bool archiveContainsTexture(libbsarch::bs_archive& archive, const QString& textu
       if (archive.find_file_record(path.toStdWString())) {
         return true;
       }
-    } catch (const std::exception&) {
+    } catch (const std::exception& exception) {
+      qWarning("Failed to inspect BSA archive texture path '%s': %s",
+               qUtf8Printable(path), exception.what());
     }
   }
 
@@ -214,7 +216,7 @@ bool gameDataContainsTexture(MOBase::IOrganizer* organizer, const QString& textu
     return false;
   }
 
-  const auto game = organizer->managedGame();
+  const auto *const game = organizer->managedGame();
   if (!game) {
     return false;
   }
@@ -263,7 +265,7 @@ QString textureSlotName(const nifly::NiShader* shader, const std::size_t slot,
     if (dynamic_cast<const nifly::BSEffectShaderProperty*>(shader)) {
       return QObject::tr("Greyscale");
     }
-    if (const auto bslsp =
+    if (const auto *const bslsp =
             dynamic_cast<const nifly::BSLightingShaderProperty*>(shader)) {
       const auto shaderType = bslsp->GetShaderType();
       if (shaderType == nifly::BSLSP_PARALLAX ||
@@ -278,7 +280,7 @@ QString textureSlotName(const nifly::NiShader* shader, const std::size_t slot,
   case TextureSlot::EnvironmentMask:
     return QObject::tr("Env Mask");
   case TextureSlot::TintMask:
-    if (const auto bslsp = dynamic_cast<const nifly::BSLightingShaderProperty*>(shader);
+    if (const auto *const bslsp = dynamic_cast<const nifly::BSLightingShaderProperty*>(shader);
         bslsp && bslsp->GetShaderType() == nifly::BSLSP_MULTILAYERPARALLAX) {
       return QObject::tr("Inner");
     }
@@ -319,7 +321,7 @@ void appendTextureReference(QVector<TextureReference>& references,
   }
 
   seenPaths.insert(key);
-  references.push_back({slot, slotName, path, key});
+  references.push_back({.slot=slot, .slotName=slotName, .path=path, .key=key});
 }
 
 QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile)
@@ -335,14 +337,14 @@ QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile)
       continue;
     }
 
-    const auto shader = nifFile->GetShader(shape);
+    auto *const shader = nifFile->GetShader(shape);
     if (!shader) {
       continue;
     }
 
     const auto isRefractionProxy = IsRefractionDistortionProxy(nifFile, shape);
 
-    if (const auto effectShader =
+    if (auto *const effectShader =
             dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
       appendTextureReference(references, seenPaths, shader, TextureSlot::BaseMap,
                              QString::fromStdString(effectShader->sourceTexture.get()));
@@ -355,7 +357,7 @@ QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile)
       continue;
     }
 
-    const auto textureSet = nifFile->GetHeader().GetBlock(shader->TextureSetRef());
+    auto *const textureSet = nifFile->GetHeader().GetBlock(shader->TextureSetRef());
     if (!textureSet) {
       continue;
     }
@@ -374,7 +376,8 @@ QVector<TextureReference> textureReferencesFor(const nifly::NifFile* nifFile)
   return references;
 }
 
-QString coverageDisplayName(const QString& name, const int covered, const int total)
+QString coverageDisplayName(const QString& name, const qsizetype covered,
+                            const qsizetype total)
 {
   return QObject::tr("%1 (%2/%3)").arg(name).arg(covered).arg(total);
 }
@@ -391,7 +394,7 @@ QVector<TextureSlotSummary> textureSlotSummaries(const TextureSourceSet& sourceS
       continue;
     }
 
-    summaries.push_back({reference.slotName, 1});
+    summaries.push_back({.name=reference.slotName, .count=1});
   }
 
   return summaries;
@@ -417,8 +420,8 @@ QString textureSlotSummaryList(const QVector<TextureSlotSummary>& summaries)
 }
 
 TextureSourceProvider makeProvider(TextureSourceProviderKind kind,
-                                   const TextureProviderBuilder& builder,
-                                   const int totalTextureCount)
+                                    const TextureProviderBuilder& builder,
+                                    const qsizetype totalTextureCount)
 {
   TextureSourceProvider provider;
   provider.kind                = kind;
@@ -472,14 +475,14 @@ TextureSourceSet TextureSourceResolver::resolve(MOBase::IOrganizer* organizer,
     return sourceSet;
   }
 
-  const auto modList = organizer->modList();
+  auto *const modList = organizer->modList();
   QMap<QString, TextureProviderBuilder> modBuilders;
   QStringList modOrder;
   if (modList) {
     for (const auto& reference : sourceSet.references) {
       const auto origins = organizer->getFileOrigins(reference.path);
       for (const auto& modName : origins) {
-        const auto mod = modList->getMod(modName);
+        auto *const mod = modList->getMod(modName);
         if (!mod) {
           continue;
         }

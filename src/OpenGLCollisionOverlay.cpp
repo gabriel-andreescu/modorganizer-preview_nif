@@ -16,10 +16,10 @@ OpenGLCollisionOverlay::OpenGLCollisionOverlay(const CollisionGeometry& geometry
     return;
   }
   if (m_LineRanges.empty()) {
-    m_LineRanges.push_back({0, geometry.vertices.size(), {}});
+    m_LineRanges.push_back({.firstVertex=0, .vertexCount=geometry.vertices.size(), .color={}});
   }
 
-  const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+  auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
   if (!f) {
     qWarning("Skipping NIF collision overlay: OpenGL 2.1 functions unavailable");
@@ -53,6 +53,7 @@ OpenGLCollisionOverlay::OpenGLCollisionOverlay(const CollisionGeometry& geometry
                            sizeof(CollisionVertex), nullptr);
   f->glEnableVertexAttribArray(AttribColor);
   f->glVertexAttribPointer(AttribColor, 4, GL_FLOAT, GL_FALSE, sizeof(CollisionVertex),
+                           // NOLINTNEXTLINE(performance-no-int-to-ptr)
                            reinterpret_cast<const void*>(offsetof(CollisionVertex, r)));
 
   for (std::size_t i = 0; i < ATTRIB_COUNT; i++) {
@@ -89,7 +90,7 @@ void OpenGLCollisionOverlay::render(QOpenGLShaderProgram* program,
     return;
   }
 
-  const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+  auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
   if (!f) {
     program->release();

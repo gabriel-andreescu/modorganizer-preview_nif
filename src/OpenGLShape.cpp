@@ -26,14 +26,14 @@ bool usesEffectShader(const ShaderManager::ShaderType shaderType)
 
 QVector3D colorRgb(const QColor& color)
 {
-  return {static_cast<float>(color.redF()), static_cast<float>(color.greenF()),
-          static_cast<float>(color.blueF())};
+  return {color.redF(), color.greenF(),
+          color.blueF()};
 }
 
 QVector4D colorRgba(const QColor& color)
 {
-  return {static_cast<float>(color.redF()), static_cast<float>(color.greenF()),
-          static_cast<float>(color.blueF()), static_cast<float>(color.alphaF())};
+  return {color.redF(), color.greenF(),
+          color.blueF(), color.alphaF()};
 }
 
 struct BoneTransform
@@ -186,7 +186,7 @@ bool applySkinWeight(const RenderGeometry& geometry, const std::size_t vertex,
 bool getNodeTransformToGlobal(const nifly::NifFile* nifFile, const std::uint32_t nodeId,
                               nifly::MatTransform& transform)
 {
-  const auto node = nifFile->GetHeader().GetBlock<nifly::NiNode>(nodeId);
+  auto *const node = nifFile->GetHeader().GetBlock<nifly::NiNode>(nodeId);
   if (!node) {
     return false;
   }
@@ -248,7 +248,7 @@ std::vector<BoneTransform> getBoneTransforms(nifly::NifFile* nifFile,
                                              const bool legacySkinDataMode)
 {
   const auto& header = nifFile->GetHeader();
-  const auto skinContainer =
+  auto *const skinContainer =
       header.GetBlock<nifly::NiBoneContainer>(shape->SkinInstanceRef());
   if (!skinContainer) {
     return {};
@@ -259,7 +259,7 @@ std::vector<BoneTransform> getBoneTransforms(nifly::NifFile* nifFile,
   const auto hasGlobalToSkin =
       nifFile->GetShapeTransformGlobalToSkin(shape, globalToSkin);
 
-  const auto skinInstance = dynamic_cast<nifly::NiSkinInstance*>(skinContainer);
+  auto *const skinInstance = dynamic_cast<nifly::NiSkinInstance*>(skinContainer);
   const auto skeletonRootId =
       skinInstance ? blockRefIndex(skinInstance->targetRef) : nifly::NIF_NPOS;
 
@@ -276,7 +276,7 @@ std::vector<BoneTransform> getBoneTransforms(nifly::NifFile* nifFile,
       continue;
     }
 
-    const auto bone = header.GetBlock<nifly::NiNode>(boneId);
+    auto *const bone = header.GetBlock<nifly::NiNode>(boneId);
     if (!bone) {
       continue;
     }
@@ -413,7 +413,7 @@ bool tryBuildSkinnedGeometry(nifly::NifFile* nifFile, nifly::NiShape* shape,
   }
 
   const auto& header = nifFile->GetHeader();
-  const auto skinContainer =
+  auto *const skinContainer =
       header.GetBlock<nifly::NiBoneContainer>(shape->SkinInstanceRef());
   if (!skinContainer) {
     qWarning("Skipping skinning for NIF shape '%s': missing skin instance",
@@ -421,8 +421,8 @@ bool tryBuildSkinnedGeometry(nifly::NifFile* nifFile, nifly::NiShape* shape,
     return false;
   }
 
-  const auto skinInstance = dynamic_cast<nifly::NiSkinInstance*>(skinContainer);
-  auto skinPartition =
+  auto *const skinInstance = dynamic_cast<nifly::NiSkinInstance*>(skinContainer);
+  auto *skinPartition =
       skinInstance ? header.GetBlock(skinInstance->skinPartitionRef) : nullptr;
 
   const bool useLegacyPartition =
@@ -618,7 +618,7 @@ static QOpenGLBuffer* makeVertexBuffer(const std::vector<T>* data, const GLuint 
     if (buffer->create() && buffer->bind()) {
       buffer->allocate(data->data(), static_cast<int>(byteSize));
 
-      const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+      auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
           QOpenGLContext::currentContext());
       if (!f) {
         qWarning("Skipping vertex attribute setup: OpenGL 2.1 functions unavailable");
@@ -640,7 +640,7 @@ static QOpenGLBuffer* makeVertexBuffer(const std::vector<T>* data, const GLuint 
 
 void validateShapeGeometry(nifly::NiShape* shape)
 {
-  if (const auto geomData = shape->GetGeomData()) {
+  if (auto *const geomData = shape->GetGeomData()) {
     if (!shape->HasUVs()) {
       shape->SetUVs(true);
     }
@@ -661,14 +661,14 @@ void validateShapeGeometry(nifly::NiShape* shape)
 OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
                          TextureManager* textureManager)
 {
-  const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+  auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
   if (!f) {
     qWarning("Skipping NIF shape: OpenGL 2.1 functions unavailable");
     return;
   }
 
-  const auto shader = nifFile->GetShader(niShape);
+  auto *const shader = nifFile->GetShader(niShape);
   isRefractionProxy = IsRefractionDistortionProxy(nifFile, niShape);
 
   if (const auto& version = nifFile->GetHeader().GetVersion();
@@ -679,7 +679,7 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
   } else if (shader) {
     if (shader->HasType<nifly::BSEffectShaderProperty>()) {
       shaderType = ShaderManager::SKEffectShader;
-    } else if (const auto bslsp =
+    } else if (auto *const bslsp =
                    dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
       isPBR = IsPBRLightingShader(bslsp);
       if (isPBR) {
@@ -713,28 +713,28 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
   modelMatrix         = convertTransform(geometry.modelTransform);
   bounds              = geometry.bounds;
 
-  if (const auto verts = geometry.positions()) {
+  if (const auto *const verts = geometry.positions()) {
     vertexBuffers[AttribPosition] = makeVertexBuffer(verts, AttribPosition);
   }
 
-  if (const auto normals = geometry.normals()) {
+  if (const auto *const normals = geometry.normals()) {
     vertexBuffers[AttribNormal] = makeVertexBuffer(normals, AttribNormal);
   }
 
-  if (const auto tangents = geometry.tangents()) {
+  if (const auto *const tangents = geometry.tangents()) {
     vertexBuffers[AttribTangent] = makeVertexBuffer(tangents, AttribTangent);
   }
 
-  if (const auto bitangents = geometry.bitangents()) {
+  if (const auto *const bitangents = geometry.bitangents()) {
     vertexBuffers[AttribBitangent] = makeVertexBuffer(bitangents, AttribBitangent);
   }
 
-  if (const auto uvs = nifFile->GetUvsForShape(niShape)) {
+  if (const auto *const uvs = nifFile->GetUvsForShape(niShape)) {
     vertexBuffers[AttribTexCoord] = makeVertexBuffer(uvs, AttribTexCoord);
   }
 
   if (std::vector<nifly::Color4> colors; nifFile->GetColorsForShape(niShape, colors)) {
-    if (const auto bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
+    if (auto *const bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
       if (!(bslsp->shaderFlags1 & SLSF1::VertexAlpha) ||
           bslsp->shaderFlags2 & SLSF2::TreeAnim) {
         for (auto& color : colors) {
@@ -768,7 +768,7 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
   if (shader) {
     std::array<bool, TextureSlotCount> loadedTextureSlots{};
 
-    if (const auto effectShader =
+    if (auto *const effectShader =
             dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
       const auto sourceTexture    = effectShader->sourceTexture.get();
       const auto greyscaleTexture = effectShader->greyscaleTexture.get();
@@ -779,8 +779,8 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
       textures[BaseMap]      = loadEffectTexture(textureManager, sourceTexture);
       textures[GreyscaleMap] = loadEffectTexture(textureManager, greyscaleTexture);
     } else if (shader->HasTextureSet()) {
-      const auto textureSetRef = shader->TextureSetRef();
-      const auto textureSet    = nifFile->GetHeader().GetBlock(textureSetRef);
+      auto *const textureSetRef = shader->TextureSetRef();
+      auto *const textureSet    = nifFile->GetHeader().GetBlock(textureSetRef);
 
       if (!textureSet) {
         qWarning("Skipping missing shader texture set");
@@ -878,7 +878,7 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
     doubleSided       = shader->IsDoubleSided();
     envReflection     = shader->GetEnvironmentMapScale();
 
-    if (const auto alphaProperty = nifFile->GetAlphaProperty(niShape)) {
+    if (auto *const alphaProperty = nifFile->GetAlphaProperty(niShape)) {
 
       const NiAlphaPropertyFlags flags = alphaProperty->flags;
 
@@ -891,12 +891,12 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
       alphaThreshold = static_cast<float>(alphaProperty->threshold) / 255.0f;
     }
 
-    if (const auto bsShader = dynamic_cast<nifly::BSShaderProperty*>(shader)) {
+    if (auto *const bsShader = dynamic_cast<nifly::BSShaderProperty*>(shader)) {
       zBufferTest  = bsShader->shaderFlags1 & SLSF1::ZBufferTest;
       zBufferWrite = bsShader->shaderFlags2 & SLSF2::ZBufferWrite;
     }
 
-    if (const auto bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
+    if (auto *const bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
       hasRefraction = bslsp->shaderFlags1 & (SLSF1::Refraction | SLSF1::FireRefraction);
       refractionStrength   = bslsp->refractionStrength;
       const auto bslspType = bslsp->GetShaderType();
@@ -925,7 +925,7 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
       }
     }
 
-    if (const auto effectShader =
+    if (auto *const effectShader =
             dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
       hasWeaponBlood = effectShader->shaderFlags2 & SLSF2::WeaponBlood;
       greyscaleAlpha = effectShader->shaderFlags1 & SLSF1::GreyscaleToPaletteAlpha;
@@ -1070,7 +1070,7 @@ void OpenGLShape::setupShaders(QOpenGLShaderProgram* program) const
     program->setUniformValue("outerReflection", outerReflection);
   }
 
-  const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+  auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
 
   for (std::size_t i = 0; i < ATTRIB_COUNT; i++) {

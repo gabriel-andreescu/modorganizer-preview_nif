@@ -60,7 +60,7 @@ NifPreviewWidget::NifPreviewWidget(NifPreviewSourceSet sourceSet,
   m_CameraSyncButton->setToolTip(tr("Synchronize cameras between preview panes"));
   m_CameraSyncButton->setChecked(true);
 
-  const auto toolbarLayout = new QHBoxLayout(m_GlobalControlsWidget);
+  auto *const toolbarLayout = new QHBoxLayout(m_GlobalControlsWidget);
   toolbarLayout->setContentsMargins(8, 4, 8, 4);
   toolbarLayout->setSpacing(12);
   toolbarLayout->addWidget(m_ResetCameraButton);
@@ -82,7 +82,7 @@ NifPreviewWidget::NifPreviewWidget(NifPreviewSourceSet sourceSet,
   m_Splitter->addWidget(m_RightPane);
   m_Splitter->setChildrenCollapsible(false);
 
-  const auto rootLayout = new QVBoxLayout(this);
+  auto *const rootLayout = new QVBoxLayout(this);
   rootLayout->setContentsMargins(0, 0, 0, 0);
   rootLayout->setSpacing(4);
   rootLayout->addWidget(m_GlobalControlsWidget);
@@ -225,13 +225,13 @@ void NifPreviewWidget::captureHostChrome()
     return;
   }
 
-  const auto hostWindow = window();
+  auto *const hostWindow = window();
   if (!hostWindow || hostWindow == this ||
       hostWindow->objectName() != "PreviewDialog") {
     return;
   }
 
-  const auto variantsStack = hostWindow->findChild<QStackedWidget*>("variantsStack");
+  auto *const variantsStack = hostWindow->findChild<QStackedWidget*>("variantsStack");
   if (!variantsStack || !variantsStack->isAncestorOf(this)) {
     return;
   }
@@ -239,8 +239,8 @@ void NifPreviewWidget::captureHostChrome()
   const QStringList objectNames = {"nameLabel", "modLabel", "previousButton",
                                    "nextButton"};
   for (const auto& objectName : objectNames) {
-    if (const auto widget = hostWindow->findChild<QWidget*>(objectName)) {
-      m_HostChrome.push_back({widget, widget->isVisible()});
+    if (auto *const widget = hostWindow->findChild<QWidget*>(objectName)) {
+      m_HostChrome.push_back({.widget=widget, .wasVisible=widget->isVisible()});
     }
   }
 
@@ -306,7 +306,7 @@ void NifPreviewWidget::syncCameraDelta(NifPreviewPane* sourcePane,
                                        const CameraState& oldState,
                                        const CameraState& newState)
 {
-  const auto targetPane = sourcePane == m_LeftPane ? m_RightPane : m_LeftPane;
+  auto *const targetPane = sourcePane == m_LeftPane ? m_RightPane : m_LeftPane;
   if (!targetPane || !targetPane->camera() || !targetPane->camera()->hasState()) {
     return;
   }

@@ -151,7 +151,7 @@ void NifWidget::resetCamera()
   }
 
   if (largestRadius > 0.0f) {
-    m_Camera->setState({lookAt, 0.0f, 0.0f, largestRadius * 2.4f});
+    m_Camera->setState({.lookAt=lookAt, .pitch=0.0f, .yaw=0.0f, .distance=largestRadius * 2.4f});
   }
 }
 
@@ -195,7 +195,7 @@ void NifWidget::initializeGL()
   frameCameraIfNeeded();
   updateCamera();
 
-  const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+  auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
   if (!f) {
     qWarning("NIF preview could not initialize OpenGL 2.1 functions");
@@ -209,7 +209,7 @@ void NifWidget::initializeGL()
 
 void NifWidget::paintGL()
 {
-  const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+  auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
   if (!f) {
     return;
@@ -218,11 +218,11 @@ void NifWidget::paintGL()
   f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   const auto drawShape = [&](const OpenGLShape& shape) {
-    if (const auto program = m_ShaderManager->getProgram(shape.shaderType);
+    if (auto *const program = m_ShaderManager->getProgram(shape.shaderType);
         program && program->isLinked() && program->bind()) {
       auto binder = QOpenGLVertexArrayObject::Binder(shape.vertexArray);
 
-      auto& modelMatrix    = shape.modelMatrix;
+      const auto& modelMatrix    = shape.modelMatrix;
       auto modelViewMatrix = m_ViewMatrix * modelMatrix;
       auto mvpMatrix       = m_ProjectionMatrix * modelViewMatrix;
 
@@ -306,7 +306,7 @@ void NifWidget::cleanup()
   }
   m_CollisionOverlayBuildAttempted = false;
 
-  const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+  auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
   releaseSceneColorTexture(f);
 

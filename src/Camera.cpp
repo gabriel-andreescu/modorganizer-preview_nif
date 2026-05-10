@@ -4,7 +4,7 @@
 
 CameraState Camera::state() const
 {
-  return {m_LookAt, m_Pitch, m_Yaw, m_Distance};
+  return {.lookAt=m_LookAt, .pitch=m_Pitch, .yaw=m_Yaw, .distance=m_Distance};
 }
 
 void Camera::setState(const CameraState& state)

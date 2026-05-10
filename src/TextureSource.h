@@ -37,8 +37,8 @@ struct TextureSourceProvider
   QString sourcePath;
   QStringList archivePaths;
   QStringList coveredTextureKeys;
-  int coveredTextureCount = 0;
-  int totalTextureCount   = 0;
+  qsizetype coveredTextureCount = 0;
+  qsizetype totalTextureCount   = 0;
 };
 
 struct TextureSourceSet
