@@ -30,6 +30,7 @@ public:
 
   void setProviders(QVector<NifPreviewProvider> providers, int currentIndex);
   void setCamera(QSharedPointer<Camera> camera);
+  void setShowCollision(bool showCollision);
   void resetCamera();
   [[nodiscard]] QSharedPointer<Camera> camera() const { return m_Camera; }
   [[nodiscard]] int currentProviderIndex() const { return m_CurrentProviderIndex; }
@@ -63,6 +64,7 @@ private:
   TextureSourceSet m_TextureSourceSet;
   int m_CurrentTextureSourceIndex = 0;
   bool m_UpdatingTextureControls  = false;
+  bool m_ShowCollision            = false;
 
   QSharedPointer<Camera> m_Camera;
   QMetaObject::Connection m_CameraConnection;

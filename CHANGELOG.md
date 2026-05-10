@@ -13,6 +13,8 @@
   refractive surface textures.
 - Adds Community Shaders True PBR material preview support, including RMAOS,
   displacement, emissive, and feature textures.
+- Adds a Show Collision preview overlay for bhk collision shapes, BSBound, and
+  BSMultiBound volumes.
 
 ### Fixed
 

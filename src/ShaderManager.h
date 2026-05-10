@@ -27,6 +27,7 @@ public:
     SKEffectShader,
     SKPBR,
     SKRefractionProxy,
+    CollisionWire,
     FO4Default,
     FO4EffectShader,
 

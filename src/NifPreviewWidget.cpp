@@ -50,6 +50,9 @@ NifPreviewWidget::NifPreviewWidget(NifPreviewSourceSet sourceSet,
   m_ResetCameraButton = new QPushButton(tr("Reset Camera"), m_GlobalControlsWidget);
   m_ResetCameraButton->setToolTip(tr("Reset the preview camera"));
 
+  m_ShowCollisionButton = new QCheckBox(tr("Show Collision"), m_GlobalControlsWidget);
+  m_ShowCollisionButton->setToolTip(tr("Show collision preview overlay"));
+
   m_SplitButton = new QCheckBox(tr("Split Preview"), m_GlobalControlsWidget);
   m_SplitButton->setToolTip(tr("Compare two previewable versions of this NIF"));
 
@@ -61,6 +64,7 @@ NifPreviewWidget::NifPreviewWidget(NifPreviewSourceSet sourceSet,
   toolbarLayout->setContentsMargins(8, 4, 8, 4);
   toolbarLayout->setSpacing(12);
   toolbarLayout->addWidget(m_ResetCameraButton);
+  toolbarLayout->addWidget(m_ShowCollisionButton);
   toolbarLayout->addWidget(m_SplitButton);
   toolbarLayout->addWidget(m_CameraSyncButton);
   toolbarLayout->addStretch(1);
@@ -86,6 +90,8 @@ NifPreviewWidget::NifPreviewWidget(NifPreviewSourceSet sourceSet,
 
   connect(m_SplitButton, &QCheckBox::toggled, this,
           &NifPreviewWidget::setSplitViewEnabled);
+  connect(m_ShowCollisionButton, &QCheckBox::toggled, this,
+          &NifPreviewWidget::setShowCollisionEnabled);
   connect(m_CameraSyncButton, &QCheckBox::toggled, this,
           &NifPreviewWidget::setCameraSyncEnabled);
   connect(m_ResetCameraButton, &QPushButton::clicked, this,
@@ -133,6 +139,12 @@ void NifPreviewWidget::setSplitViewEnabled(const bool enabled)
 
   updateGlobalControls();
   updateHostChrome();
+}
+
+void NifPreviewWidget::setShowCollisionEnabled(const bool enabled)
+{
+  m_LeftPane->setShowCollision(enabled);
+  m_RightPane->setShowCollision(enabled);
 }
 
 void NifPreviewWidget::setCameraSyncEnabled(const bool enabled)
@@ -266,6 +278,7 @@ void NifPreviewWidget::initializeRightPaneForSplit()
   }
 
   m_RightPane->setProviders(m_SourceSet.providers, secondaryProviderIndex());
+  m_RightPane->setShowCollision(m_ShowCollisionButton->isChecked());
   m_RightPaneInitialized = true;
   updateCameraSnapshot(m_RightPane);
 }

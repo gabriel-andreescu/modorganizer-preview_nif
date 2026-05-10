@@ -47,6 +47,10 @@ QOpenGLShaderProgram* ShaderManager::loadProgram(const ShaderType type)
     vert = "default.vert";
     frag = "sk_refraction_proxy.frag";
     break;
+  case CollisionWire:
+    vert = "collision_wire.vert";
+    frag = "collision_wire.frag";
+    break;
   case FO4Default:
     vert = "default.vert";
     frag = "fo4_default.frag";

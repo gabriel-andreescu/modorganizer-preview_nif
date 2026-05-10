@@ -17,6 +17,8 @@
 
 #include <memory>
 
+class OpenGLCollisionOverlay;
+
 class NifWidget final : public QOpenGLWidget
 {
   Q_OBJECT
@@ -35,6 +37,7 @@ public:
 
   [[nodiscard]] QSharedPointer<Camera> camera() const { return m_Camera; }
   void setCamera(QSharedPointer<Camera> camera);
+  void setShowCollision(bool showCollision);
   void resetCamera();
 
 protected:
@@ -49,9 +52,11 @@ protected:
 private:
   void cleanup();
   void copySceneColorTexture(QOpenGLFunctions_2_1* f);
+  void ensureCollisionOverlay();
   void ensureSceneColorTexture(QOpenGLFunctions_2_1* f);
   void frameCameraIfNeeded();
   void releaseSceneColorTexture(QOpenGLFunctions_2_1* f);
+  void renderCollisionOverlay();
   void renderRefractionProxyPass(QOpenGLFunctions_2_1* f);
   void setProjectionMatrix();
   void updateCamera();
@@ -66,6 +71,9 @@ private:
   QOpenGLContext* m_Context    = nullptr;
 
   std::vector<OpenGLShape> m_GLShapes;
+  std::unique_ptr<OpenGLCollisionOverlay> m_CollisionOverlay;
+  bool m_CollisionOverlayBuildAttempted = false;
+  bool m_ShowCollision                  = false;
 
   QSharedPointer<Camera> m_Camera;
   QMetaObject::Connection m_CameraConnection;

@@ -38,6 +38,7 @@ private:
   };
 
   void setSplitViewEnabled(bool enabled);
+  void setShowCollisionEnabled(bool enabled);
   void setCameraSyncEnabled(bool enabled);
   void resetCameras();
   void updateGlobalControls();
@@ -56,6 +57,7 @@ private:
 
   QFrame* m_GlobalControlsWidget   = nullptr;
   QPushButton* m_ResetCameraButton = nullptr;
+  QCheckBox* m_ShowCollisionButton = nullptr;
   QCheckBox* m_SplitButton         = nullptr;
   QCheckBox* m_CameraSyncButton    = nullptr;
   QSplitter* m_Splitter            = nullptr;

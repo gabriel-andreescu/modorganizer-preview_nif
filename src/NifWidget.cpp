@@ -1,5 +1,7 @@
 #include "NifWidget.h"
+#include "CollisionGeometry.h"
 #include "NifExtensions.h"
+#include "OpenGLCollisionOverlay.h"
 
 #include <QDebug>
 #include <QOpenGLContext>
@@ -116,6 +118,16 @@ void NifWidget::setCamera(QSharedPointer<Camera> camera)
 
   updateCamera();
   setProjectionMatrix();
+  update();
+}
+
+void NifWidget::setShowCollision(const bool showCollision)
+{
+  if (m_ShowCollision == showCollision) {
+    return;
+  }
+
+  m_ShowCollision = showCollision;
   update();
 }
 
@@ -262,6 +274,8 @@ void NifWidget::paintGL()
     renderRefractionProxyPass(f);
   }
 
+  renderCollisionOverlay();
+
   f->glDepthMask(GL_TRUE);
 }
 
@@ -285,6 +299,12 @@ void NifWidget::cleanup()
     shape.destroy();
   }
   m_GLShapes.clear();
+
+  if (m_CollisionOverlay) {
+    m_CollisionOverlay->destroy();
+    m_CollisionOverlay.reset();
+  }
+  m_CollisionOverlayBuildAttempted = false;
 
   const auto f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
       QOpenGLContext::currentContext());
@@ -340,6 +360,23 @@ void NifWidget::ensureSceneColorTexture(QOpenGLFunctions_2_1* f)
                   GL_UNSIGNED_BYTE, nullptr);
 }
 
+void NifWidget::ensureCollisionOverlay()
+{
+  if (m_CollisionOverlay || m_CollisionOverlayBuildAttempted) {
+    return;
+  }
+
+  m_CollisionOverlayBuildAttempted = true;
+  try {
+    m_CollisionOverlay = std::make_unique<OpenGLCollisionOverlay>(
+        CollisionGeometryBuilder::build(m_NifFile.get()));
+  } catch (const std::exception& e) {
+    qWarning("Failed to prepare NIF collision overlay: %s", e.what());
+  } catch (...) {
+    qWarning("Failed to prepare NIF collision overlay: unknown exception");
+  }
+}
+
 void NifWidget::releaseSceneColorTexture(QOpenGLFunctions_2_1* f)
 {
   if (f && m_SceneColorTexture) {
@@ -392,6 +429,21 @@ void NifWidget::updateCamera()
   m_ViewMatrix = m;
 
   setProjectionMatrix();
+}
+
+void NifWidget::renderCollisionOverlay()
+{
+  if (!m_ShowCollision) {
+    return;
+  }
+
+  ensureCollisionOverlay();
+  if (!m_CollisionOverlay || m_CollisionOverlay->empty()) {
+    return;
+  }
+
+  m_CollisionOverlay->render(m_ShaderManager->getProgram(ShaderManager::CollisionWire),
+                             m_ViewMatrix, m_ProjectionMatrix);
 }
 
 void NifWidget::renderRefractionProxyPass(QOpenGLFunctions_2_1* f)

@@ -175,6 +175,18 @@ void NifPreviewPane::setCamera(QSharedPointer<Camera> camera)
   }
 }
 
+void NifPreviewPane::setShowCollision(const bool showCollision)
+{
+  if (m_ShowCollision == showCollision) {
+    return;
+  }
+
+  m_ShowCollision = showCollision;
+  if (m_NifWidget) {
+    m_NifWidget->setShowCollision(m_ShowCollision);
+  }
+}
+
 void NifPreviewPane::resetCamera()
 {
   if (m_NifWidget) {
@@ -386,6 +398,7 @@ void NifPreviewPane::reloadCurrentNifWidget()
 
   const auto nifWidget = new NifWidget(m_CurrentNifFile, m_Organizer, m_Camera,
                                        currentTextureSourceProvider(), false, this);
+  nifWidget->setShowCollision(m_ShowCollision);
   nifWidget->setMinimumSize(240, 240);
   m_NifWidget = nifWidget;
   setViewWidget(nifWidget);
