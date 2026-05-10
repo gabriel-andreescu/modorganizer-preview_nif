@@ -1,0 +1,23 @@
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -modernize-pass-by-value,
+  -performance-enum-size,
+  -readability-magic-numbers,
+  -readability-identifier-naming,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-uppercase-literal-suffix,
+  -readability-math-missing-parentheses
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(src)/'
+FormatStyle: none
+
+CheckOptions:
+  - { key: bugprone-easily-swappable-parameters.MinimumLength, value: 3 }
