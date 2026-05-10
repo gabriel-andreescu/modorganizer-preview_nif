@@ -118,6 +118,37 @@ public:
   float alphaThreshold  = 0.0f;
 
 private:
+  void configureShaderType(nifly::NifFile* nifFile, nifly::NiShader* shader);
+  static void setDefaultVertexAttributes(QOpenGLFunctions_2_1* f);
+  void initializeGeometryBuffers(nifly::NifFile* nifFile, nifly::NiShape* niShape,
+                                 nifly::NiShader* shader);
+  void initializeColorBuffer(nifly::NifFile* nifFile, nifly::NiShape* niShape,
+                             nifly::NiShader* shader);
+  void loadShaderTextures(nifly::NifFile* nifFile, nifly::NiShader* shader,
+                          TextureManager* textureManager,
+                          std::array<bool, TextureSlotCount>& loadedTextureSlots);
+  void loadEffectShaderTextures(nifly::BSEffectShaderProperty* shader,
+                                TextureManager* textureManager);
+  void loadTextureSetTextures(nifly::NifFile* nifFile, nifly::NiShader* shader,
+                              TextureManager* textureManager,
+                              std::array<bool, TextureSlotCount>& loadedTextureSlots);
+  void assignMissingTexture(TextureManager* textureManager, nifly::NiShader* shader,
+                            std::size_t textureSlot);
+  void assignMissingPBRTexture(TextureManager* textureManager, std::size_t textureSlot);
+  void assignMissingStandardTexture(TextureManager* textureManager,
+                                    nifly::NiShader* shader,
+                                    std::size_t textureSlot);
+  void applyShaderMaterial(nifly::NifFile* nifFile, nifly::NiShape* niShape,
+                           nifly::NiShader* shader,
+                           const std::array<bool, TextureSlotCount>& loadedTextureSlots);
+  void applyCommonShaderMaterial(nifly::NiShader* shader);
+  void applyAlphaProperty(nifly::NifFile* nifFile, nifly::NiShape* niShape);
+  void applyShaderBufferFlags(nifly::NiShader* shader);
+  void applyLightingShaderMaterial(
+      nifly::BSLightingShaderProperty* shader,
+      const std::array<bool, TextureSlotCount>& loadedTextureSlots);
+  void applyEffectShaderMaterial(nifly::BSEffectShaderProperty* shader);
+  void useDefaultTextures(TextureManager* textureManager);
   void bindTextures() const;
   void setupGlowUniforms(QOpenGLShaderProgram* program) const;
   void setupPBRUniforms(QOpenGLShaderProgram* program) const;

@@ -658,55 +658,52 @@ void validateShapeGeometry(nifly::NiShape* shape)
   }
 }
 
-OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
-                         TextureManager* textureManager)
+void OpenGLShape::configureShaderType(nifly::NifFile* nifFile, nifly::NiShader* shader)
 {
-  auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
-      QOpenGLContext::currentContext());
-  if (!f) {
-    qWarning("Skipping NIF shape: OpenGL 2.1 functions unavailable");
+  if (!shader) {
+    shaderType = ShaderManager::None;
     return;
   }
 
-  auto *const shader = nifFile->GetShader(niShape);
-  isRefractionProxy = IsRefractionDistortionProxy(nifFile, niShape);
-
-  if (const auto& version = nifFile->GetHeader().GetVersion();
-      shader && version.IsFO4()) {
+  if (nifFile->GetHeader().GetVersion().IsFO4()) {
     shaderType = shader->HasType<nifly::BSEffectShaderProperty>()
                      ? ShaderManager::FO4EffectShader
                      : ShaderManager::FO4Default;
-  } else if (shader) {
-    if (shader->HasType<nifly::BSEffectShaderProperty>()) {
-      shaderType = ShaderManager::SKEffectShader;
-    } else if (auto *const bslsp =
-                   dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
-      isPBR = IsPBRLightingShader(bslsp);
-      if (isPBR) {
-        shaderType = ShaderManager::SKPBR;
-      } else if (shader->IsModelSpace()) {
-        shaderType = ShaderManager::SKMSN;
-      } else if (shader->GetShaderType() == nifly::BSLSP_MULTILAYERPARALLAX) {
-        shaderType = ShaderManager::SKMultilayer;
-      } else {
-        shaderType = ShaderManager::SKDefault;
-      }
+    return;
+  }
+
+  if (shader->HasType<nifly::BSEffectShaderProperty>()) {
+    shaderType = ShaderManager::SKEffectShader;
+    return;
+  }
+
+  if (auto *const bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
+    isPBR = IsPBRLightingShader(bslsp);
+    if (isPBR) {
+      shaderType = ShaderManager::SKPBR;
     } else if (shader->IsModelSpace()) {
       shaderType = ShaderManager::SKMSN;
+    } else if (shader->GetShaderType() == nifly::BSLSP_MULTILAYERPARALLAX) {
+      shaderType = ShaderManager::SKMultilayer;
     } else {
       shaderType = ShaderManager::SKDefault;
     }
-  } else {
-    shaderType = ShaderManager::None;
+    return;
   }
 
-  vertexArray = new QOpenGLVertexArrayObject();
-  vertexArray->create();
-  auto binder = QOpenGLVertexArrayObject::Binder(vertexArray);
+  shaderType = shader->IsModelSpace() ? ShaderManager::SKMSN : ShaderManager::SKDefault;
+}
 
+void OpenGLShape::setDefaultVertexAttributes(QOpenGLFunctions_2_1* f)
+{
   f->glVertexAttrib2f(AttribTexCoord, 0.0f, 0.0f);
   f->glVertexAttrib4f(AttribColor, 1.0f, 1.0f, 1.0f, 1.0f);
+}
 
+void OpenGLShape::initializeGeometryBuffers(nifly::NifFile* nifFile,
+                                            nifly::NiShape* niShape,
+                                            nifly::NiShader* shader)
+{
   validateShapeGeometry(niShape);
 
   const auto geometry = prepareRenderGeometry(nifFile, niShape);
@@ -733,22 +730,10 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
     vertexBuffers[AttribTexCoord] = makeVertexBuffer(uvs, AttribTexCoord);
   }
 
-  if (std::vector<nifly::Color4> colors; nifFile->GetColorsForShape(niShape, colors)) {
-    if (auto *const bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
-      if (!(bslsp->shaderFlags1 & SLSF1::VertexAlpha) ||
-          bslsp->shaderFlags2 & SLSF2::TreeAnim) {
-        for (auto& color : colors) {
-          color.a = 1.0f;
-        }
-      }
-    }
-
-    vertexBuffers[AttribColor] = makeVertexBuffer(&colors, AttribColor);
-  }
+  initializeColorBuffer(nifFile, niShape, shader);
 
   indexBuffer = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
   if (indexBuffer->create() && indexBuffer->bind()) {
-
     if (!geometry.triangles.empty()) {
       const auto byteSize = geometry.triangles.size() * sizeof(nifly::Triangle);
       if (byteSize <= static_cast<std::size_t>(std::numeric_limits<int>::max())) {
@@ -764,181 +749,298 @@ OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
         iElements, static_cast<uint32_t>(std::numeric_limits<GLsizei>::max())));
     indexBuffer->release();
   }
+}
+
+void OpenGLShape::initializeColorBuffer(nifly::NifFile* nifFile,
+                                        nifly::NiShape* niShape,
+                                        nifly::NiShader* shader)
+{
+  std::vector<nifly::Color4> colors;
+  if (!nifFile->GetColorsForShape(niShape, colors)) {
+    return;
+  }
+
+  if (auto *const bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
+    if (!(bslsp->shaderFlags1 & SLSF1::VertexAlpha) ||
+        bslsp->shaderFlags2 & SLSF2::TreeAnim) {
+      for (auto& color : colors) {
+        color.a = 1.0f;
+      }
+    }
+  }
+
+  vertexBuffers[AttribColor] = makeVertexBuffer(&colors, AttribColor);
+}
+
+void OpenGLShape::loadShaderTextures(
+    nifly::NifFile* nifFile, nifly::NiShader* shader, TextureManager* textureManager,
+    std::array<bool, TextureSlotCount>& loadedTextureSlots)
+{
+  if (auto *const effectShader =
+          dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
+    loadEffectShaderTextures(effectShader, textureManager);
+  } else if (shader->HasTextureSet()) {
+    loadTextureSetTextures(nifFile, shader, textureManager, loadedTextureSlots);
+  }
+
+  if (isPBR) {
+    ensurePBRTextureDefaults(*this, textureManager);
+  }
+}
+
+void OpenGLShape::loadEffectShaderTextures(nifly::BSEffectShaderProperty* shader,
+                                           TextureManager* textureManager)
+{
+  const auto sourceTexture    = shader->sourceTexture.get();
+  const auto greyscaleTexture = shader->greyscaleTexture.get();
+
+  hasSourceTexture = !sourceTexture.empty();
+  hasGreyscaleMap  = !greyscaleTexture.empty();
+
+  textures[BaseMap]      = loadEffectTexture(textureManager, sourceTexture);
+  textures[GreyscaleMap] = loadEffectTexture(textureManager, greyscaleTexture);
+}
+
+void OpenGLShape::loadTextureSetTextures(
+    nifly::NifFile* nifFile, nifly::NiShader* shader, TextureManager* textureManager,
+    std::array<bool, TextureSlotCount>& loadedTextureSlots)
+{
+  auto *const textureSetRef = shader->TextureSetRef();
+  auto *const textureSet    = nifFile->GetHeader().GetBlock(textureSetRef);
+
+  if (!textureSet) {
+    qWarning("Skipping missing shader texture set");
+  }
+
+  const auto nifTextureCount =
+      textureSet ? static_cast<std::size_t>(textureSet->textures.size()) : 0;
+  const auto textureCount = std::min(nifTextureCount, textures.size());
+  if (textureSet && nifTextureCount > textures.size()) {
+    qWarning("Skipping %zu unsupported texture slots", nifTextureCount - textures.size());
+  }
+
+  for (std::size_t i = 0; i < textureCount; i++) {
+    const auto textureIndex = static_cast<std::uint32_t>(i);
+    if (auto texturePath = textureSet->textures[textureIndex].get();
+        !texturePath.empty()) {
+      textures[i]           = textureManager->getTexture(texturePath);
+      loadedTextureSlots[i] = textures[i] != nullptr;
+    }
+
+    if (textures[i] == nullptr) {
+      assignMissingTexture(textureManager, shader, i);
+    }
+  }
+}
+
+void OpenGLShape::assignMissingTexture(TextureManager* textureManager,
+                                       nifly::NiShader* shader,
+                                       const std::size_t textureSlot)
+{
+  if (isPBR) {
+    assignMissingPBRTexture(textureManager, textureSlot);
+  } else {
+    assignMissingStandardTexture(textureManager, shader, textureSlot);
+  }
+}
+
+void OpenGLShape::assignMissingPBRTexture(TextureManager* textureManager,
+                                          const std::size_t textureSlot)
+{
+  switch (textureSlot) {
+  case TextureSlot::BaseMap:
+    textures[textureSlot] = textureManager->getErrorTexture();
+    break;
+  case TextureSlot::NormalMap:
+    textures[textureSlot] = textureManager->getFlatNormalTexture();
+    break;
+  case TextureSlot::PBREmissiveMap:
+  case TextureSlot::PBRDisplacement:
+    textures[textureSlot] = textureManager->getBlackTexture();
+    break;
+  case TextureSlot::PBRRMAOSMap:
+  case TextureSlot::PBRFeatures0:
+  case TextureSlot::PBRFeatures1:
+    textures[textureSlot] = textureManager->getWhiteTexture();
+    break;
+  default:
+    textures[textureSlot] = nullptr;
+    break;
+  }
+}
+
+void OpenGLShape::assignMissingStandardTexture(TextureManager* textureManager,
+                                               nifly::NiShader* shader,
+                                               const std::size_t textureSlot)
+{
+  switch (textureSlot) {
+  case TextureSlot::BaseMap:
+    textures[textureSlot] = textureManager->getErrorTexture();
+    break;
+  case TextureSlot::NormalMap:
+    textures[textureSlot] = textureManager->getFlatNormalTexture();
+    break;
+  case TextureSlot::GlowMap:
+    textures[textureSlot] = shader->HasGlowmap() ? textureManager->getBlackTexture()
+                                                 : textureManager->getWhiteTexture();
+    break;
+  default:
+    textures[textureSlot] = nullptr;
+    break;
+  }
+}
+
+void OpenGLShape::applyShaderMaterial(
+    nifly::NifFile* nifFile, nifly::NiShape* niShape, nifly::NiShader* shader,
+    const std::array<bool, TextureSlotCount>& loadedTextureSlots)
+{
+  applyCommonShaderMaterial(shader);
+  applyAlphaProperty(nifFile, niShape);
+  applyShaderBufferFlags(shader);
+
+  if (auto *const bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
+    applyLightingShaderMaterial(bslsp, loadedTextureSlots);
+  }
+
+  if (auto *const effectShader =
+          dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
+    applyEffectShaderMaterial(effectShader);
+  }
+}
+
+void OpenGLShape::applyCommonShaderMaterial(nifly::NiShader* shader)
+{
+  specColor      = convertVector3(shader->GetSpecularColor());
+  specStrength   = shader->GetSpecularStrength();
+  specGlossiness = qBound(0.0f, shader->GetGlossiness(), 128.0f);
+  fresnelPower   = shader->GetFresnelPower();
+  paletteScale   = shader->GetGrayscaleToPaletteScale();
+
+  hasGlowMap = shader->HasGlowmap();
+  glowColor  = convertColor(shader->GetEmissiveColor());
+  glowMult   = shader->GetEmissiveMultiple();
+
+  alpha    = shader->GetAlpha();
+  uvScale  = convertVector2(shader->GetUVScale());
+  uvOffset = convertVector2(shader->GetUVOffset());
+
+  hasEmit      = shader->IsEmissive();
+  hasSoftlight = shader->HasSoftlight();
+  hasBacklight = shader->HasBacklight();
+  hasRimlight  = shader->HasRimlight();
+
+  softlight         = shader->GetSoftlight();
+  backlightPower    = shader->GetBacklightPower();
+  rimPower          = shader->GetRimlightPower();
+  subsurfaceRolloff = shader->GetSubsurfaceRolloff();
+  doubleSided       = shader->IsDoubleSided();
+  envReflection     = shader->GetEnvironmentMapScale();
+}
+
+void OpenGLShape::applyAlphaProperty(nifly::NifFile* nifFile,
+                                     nifly::NiShape* niShape)
+{
+  auto *const alphaProperty = nifFile->GetAlphaProperty(niShape);
+  if (!alphaProperty) {
+    return;
+  }
+
+  const NiAlphaPropertyFlags flags = alphaProperty->flags;
+
+  alphaBlendEnable = flags.isAlphaBlendEnabled();
+  srcBlendMode     = flags.sourceBlendingFactor();
+  dstBlendMode     = flags.destinationBlendingFactor();
+  alphaTestEnable  = flags.isAlphaTestEnabled();
+  alphaTestMode    = flags.alphaTestMode();
+
+  alphaThreshold = static_cast<float>(alphaProperty->threshold) / 255.0f;
+}
+
+void OpenGLShape::applyShaderBufferFlags(nifly::NiShader* shader)
+{
+  if (auto *const bsShader = dynamic_cast<nifly::BSShaderProperty*>(shader)) {
+    zBufferTest  = bsShader->shaderFlags1 & SLSF1::ZBufferTest;
+    zBufferWrite = bsShader->shaderFlags2 & SLSF2::ZBufferWrite;
+  }
+}
+
+void OpenGLShape::applyLightingShaderMaterial(
+    nifly::BSLightingShaderProperty* shader,
+    const std::array<bool, TextureSlotCount>& loadedTextureSlots)
+{
+  hasRefraction       = shader->shaderFlags1 & (SLSF1::Refraction | SLSF1::FireRefraction);
+  refractionStrength  = shader->refractionStrength;
+  const auto bslspType = shader->GetShaderType();
+  if (bslspType == nifly::BSLSP_SKINTINT || bslspType == nifly::BSLSP_FACE) {
+    tintColor    = convertVector3(shader->skinTintColor);
+    hasTintColor = true;
+  } else if (bslspType == nifly::BSLSP_HAIRTINT) {
+    tintColor    = convertVector3(shader->hairTintColor);
+    hasTintColor = true;
+  }
+
+  if (bslspType == nifly::BSLSP_MULTILAYERPARALLAX) {
+    innerScale      = convertVector2(shader->parallaxInnerLayerTextureScale);
+    innerThickness  = shader->parallaxInnerLayerThickness;
+    outerRefraction = shader->parallaxRefractionScale;
+    outerReflection = shader->parallaxEnvmapStrength;
+  }
+
+  hasHeightMap = (bslspType == nifly::BSLSP_PARALLAX ||
+                  bslspType == nifly::BSLSP_PARALLAXOCC) &&
+                 (shader->shaderFlags1 & SLSF1::Parallax) &&
+                 textures[HeightMap] != nullptr;
+
+  if (isPBR) {
+    configurePBRMaterial(*this, shader, loadedTextureSlots);
+  }
+}
+
+void OpenGLShape::applyEffectShaderMaterial(nifly::BSEffectShaderProperty* shader)
+{
+  hasWeaponBlood = shader->shaderFlags2 & SLSF2::WeaponBlood;
+  greyscaleAlpha = shader->shaderFlags1 & SLSF1::GreyscaleToPaletteAlpha;
+  greyscaleColor = shader->shaderFlags1 & SLSF1::GreyscaleToPaletteColor;
+  useFalloff     = shader->shaderFlags1 & SLSF1::UseFalloff;
+  falloffParams  = QVector4D(shader->falloffStartAngle, shader->falloffStopAngle,
+                             shader->falloffStartOpacity,
+                             shader->falloffStopOpacity);
+  falloffDepth   = shader->softFalloffDepth;
+}
+
+void OpenGLShape::useDefaultTextures(TextureManager* textureManager)
+{
+  textures[BaseMap]   = textureManager->getWhiteTexture();
+  textures[NormalMap] = textureManager->getFlatNormalTexture();
+}
+
+OpenGLShape::OpenGLShape(nifly::NifFile* nifFile, nifly::NiShape* niShape,
+                         TextureManager* textureManager)
+{
+  auto *const f = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
+      QOpenGLContext::currentContext());
+  if (!f) {
+    qWarning("Skipping NIF shape: OpenGL 2.1 functions unavailable");
+    return;
+  }
+
+  auto *const shader = nifFile->GetShader(niShape);
+  isRefractionProxy  = IsRefractionDistortionProxy(nifFile, niShape);
+  configureShaderType(nifFile, shader);
+
+  vertexArray = new QOpenGLVertexArrayObject();
+  vertexArray->create();
+  auto binder = QOpenGLVertexArrayObject::Binder(vertexArray);
+
+  setDefaultVertexAttributes(f);
+  initializeGeometryBuffers(nifFile, niShape, shader);
 
   if (shader) {
     std::array<bool, TextureSlotCount> loadedTextureSlots{};
-
-    if (auto *const effectShader =
-            dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
-      const auto sourceTexture    = effectShader->sourceTexture.get();
-      const auto greyscaleTexture = effectShader->greyscaleTexture.get();
-
-      hasSourceTexture = !sourceTexture.empty();
-      hasGreyscaleMap  = !greyscaleTexture.empty();
-
-      textures[BaseMap]      = loadEffectTexture(textureManager, sourceTexture);
-      textures[GreyscaleMap] = loadEffectTexture(textureManager, greyscaleTexture);
-    } else if (shader->HasTextureSet()) {
-      auto *const textureSetRef = shader->TextureSetRef();
-      auto *const textureSet    = nifFile->GetHeader().GetBlock(textureSetRef);
-
-      if (!textureSet) {
-        qWarning("Skipping missing shader texture set");
-      }
-
-      const auto nifTextureCount =
-          textureSet ? static_cast<std::size_t>(textureSet->textures.size()) : 0;
-      const auto textureCount = std::min(nifTextureCount, textures.size());
-      if (textureSet && nifTextureCount > textures.size()) {
-        qWarning("Skipping %zu unsupported texture slots",
-                 nifTextureCount - textures.size());
-      }
-
-      for (std::size_t i = 0; i < textureCount; i++) {
-        const auto textureIndex = static_cast<std::uint32_t>(i);
-        if (auto texturePath = textureSet->textures[textureIndex].get();
-            !texturePath.empty()) {
-          textures[i]           = textureManager->getTexture(texturePath);
-          loadedTextureSlots[i] = textures[i] != nullptr;
-        }
-
-        if (textures[i] == nullptr) {
-          if (isPBR) {
-            switch (i) {
-            case TextureSlot::BaseMap:
-              textures[i] = textureManager->getErrorTexture();
-              break;
-            case TextureSlot::NormalMap:
-              textures[i] = textureManager->getFlatNormalTexture();
-              break;
-            case TextureSlot::PBREmissiveMap:
-            case TextureSlot::PBRDisplacement:
-              textures[i] = textureManager->getBlackTexture();
-              break;
-            case TextureSlot::PBRRMAOSMap:
-            case TextureSlot::PBRFeatures0:
-            case TextureSlot::PBRFeatures1:
-              textures[i] = textureManager->getWhiteTexture();
-              break;
-            default:
-              textures[i] = nullptr;
-              break;
-            }
-          } else {
-            switch (i) {
-            case TextureSlot::BaseMap:
-              textures[i] = textureManager->getErrorTexture();
-              break;
-            case TextureSlot::NormalMap:
-              textures[i] = textureManager->getFlatNormalTexture();
-              break;
-            case TextureSlot::GlowMap:
-              if (shader->HasGlowmap()) {
-                textures[i] = textureManager->getBlackTexture();
-              } else {
-                textures[i] = textureManager->getWhiteTexture();
-              }
-              break;
-            default:
-              textures[i] = nullptr;
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (isPBR) {
-      ensurePBRTextureDefaults(*this, textureManager);
-    }
-
-    specColor      = convertVector3(shader->GetSpecularColor());
-    specStrength   = shader->GetSpecularStrength();
-    specGlossiness = qBound(0.0f, shader->GetGlossiness(), 128.0f);
-    fresnelPower   = shader->GetFresnelPower();
-    paletteScale   = shader->GetGrayscaleToPaletteScale();
-
-    hasGlowMap = shader->HasGlowmap();
-    glowColor  = convertColor(shader->GetEmissiveColor());
-    glowMult   = shader->GetEmissiveMultiple();
-
-    alpha    = shader->GetAlpha();
-    uvScale  = convertVector2(shader->GetUVScale());
-    uvOffset = convertVector2(shader->GetUVOffset());
-
-    hasEmit      = shader->IsEmissive();
-    hasSoftlight = shader->HasSoftlight();
-    hasBacklight = shader->HasBacklight();
-    hasRimlight  = shader->HasRimlight();
-
-    softlight         = shader->GetSoftlight();
-    backlightPower    = shader->GetBacklightPower();
-    rimPower          = shader->GetRimlightPower();
-    subsurfaceRolloff = shader->GetSubsurfaceRolloff();
-    doubleSided       = shader->IsDoubleSided();
-    envReflection     = shader->GetEnvironmentMapScale();
-
-    if (auto *const alphaProperty = nifFile->GetAlphaProperty(niShape)) {
-
-      const NiAlphaPropertyFlags flags = alphaProperty->flags;
-
-      alphaBlendEnable = flags.isAlphaBlendEnabled();
-      srcBlendMode     = flags.sourceBlendingFactor();
-      dstBlendMode     = flags.destinationBlendingFactor();
-      alphaTestEnable  = flags.isAlphaTestEnabled();
-      alphaTestMode    = flags.alphaTestMode();
-
-      alphaThreshold = static_cast<float>(alphaProperty->threshold) / 255.0f;
-    }
-
-    if (auto *const bsShader = dynamic_cast<nifly::BSShaderProperty*>(shader)) {
-      zBufferTest  = bsShader->shaderFlags1 & SLSF1::ZBufferTest;
-      zBufferWrite = bsShader->shaderFlags2 & SLSF2::ZBufferWrite;
-    }
-
-    if (auto *const bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(shader)) {
-      hasRefraction = bslsp->shaderFlags1 & (SLSF1::Refraction | SLSF1::FireRefraction);
-      refractionStrength   = bslsp->refractionStrength;
-      const auto bslspType = bslsp->GetShaderType();
-      if (bslspType == nifly::BSLSP_SKINTINT || bslspType == nifly::BSLSP_FACE) {
-        tintColor    = convertVector3(bslsp->skinTintColor);
-        hasTintColor = true;
-      } else if (bslspType == nifly::BSLSP_HAIRTINT) {
-        tintColor    = convertVector3(bslsp->hairTintColor);
-        hasTintColor = true;
-      }
-
-      if (bslspType == nifly::BSLSP_MULTILAYERPARALLAX) {
-        innerScale      = convertVector2(bslsp->parallaxInnerLayerTextureScale);
-        innerThickness  = bslsp->parallaxInnerLayerThickness;
-        outerRefraction = bslsp->parallaxRefractionScale;
-        outerReflection = bslsp->parallaxEnvmapStrength;
-      }
-
-      hasHeightMap = (bslspType == nifly::BSLSP_PARALLAX ||
-                      bslspType == nifly::BSLSP_PARALLAXOCC) &&
-                     (bslsp->shaderFlags1 & SLSF1::Parallax) &&
-                     textures[HeightMap] != nullptr;
-
-      if (isPBR) {
-        configurePBRMaterial(*this, bslsp, loadedTextureSlots);
-      }
-    }
-
-    if (auto *const effectShader =
-            dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
-      hasWeaponBlood = effectShader->shaderFlags2 & SLSF2::WeaponBlood;
-      greyscaleAlpha = effectShader->shaderFlags1 & SLSF1::GreyscaleToPaletteAlpha;
-      greyscaleColor = effectShader->shaderFlags1 & SLSF1::GreyscaleToPaletteColor;
-      useFalloff     = effectShader->shaderFlags1 & SLSF1::UseFalloff;
-      falloffParams  = QVector4D(
-          effectShader->falloffStartAngle, effectShader->falloffStopAngle,
-          effectShader->falloffStartOpacity, effectShader->falloffStopOpacity);
-      falloffDepth = effectShader->softFalloffDepth;
-    }
+    loadShaderTextures(nifFile, shader, textureManager, loadedTextureSlots);
+    applyShaderMaterial(nifFile, niShape, shader, loadedTextureSlots);
   } else {
-    textures[BaseMap]   = textureManager->getWhiteTexture();
-    textures[NormalMap] = textureManager->getFlatNormalTexture();
+    useDefaultTextures(textureManager);
   }
 }
 
