@@ -356,16 +356,14 @@ private:
       vertices.push_back(toVector3(vertex) * m_HavokScale);
     }
 
-    std::unordered_set<std::uint64_t> hullEdges;
-    const auto addHullEdge = [&](const std::size_t first, const std::size_t second) {
-      const auto minIndex = static_cast<std::uint64_t>(std::min(first, second));
-      const auto maxIndex = static_cast<std::uint64_t>(std::max(first, second));
-      const auto edgeKey  = (minIndex << 32U) | maxIndex;
-      if (hullEdges.insert(edgeKey).second) {
-        addLine(transform, vertices[first], vertices[second], color);
-      }
-    };
+    addConvexHullEdges(vertices, transform, color);
+  }
 
+  void addConvexHullEdges(const std::vector<nifly::Vector3>& vertices,
+                          const nifly::MatTransform& transform,
+                          const CollisionColor& color)
+  {
+    std::unordered_set<std::uint64_t> hullEdges;
     for (std::size_t i = 0; i + 2 < vertices.size(); i++) {
       for (std::size_t j = i + 1; j + 1 < vertices.size(); j++) {
         for (std::size_t k = j + 1; k < vertices.size(); k++) {
@@ -377,33 +375,60 @@ private:
             continue;
           }
 
-          int side    = 0;
-          bool isHull = true;
-          for (const auto& vertex : vertices) {
-            if (vertex == a || vertex == b || vertex == c) {
-              continue;
-            }
-
-            const auto distance = (vertex - a).dot(normal);
-            if (std::fabs(distance) <= Epsilon) {
-              continue;
-            }
-
-            const auto vertexSide = distance > 0.0f ? 1 : -1;
-            if (side != 0 && side != vertexSide) {
-              isHull = false;
-              break;
-            }
-            side = vertexSide;
-          }
-
-          if (isHull) {
-            addHullEdge(i, j);
-            addHullEdge(j, k);
-            addHullEdge(k, i);
+          if (isHullFace(vertices, a, b, c, normal)) {
+            addHullTriangleEdges(hullEdges, vertices, transform, color, i, j, k);
           }
         }
       }
+    }
+  }
+
+  static bool isHullFace(const std::vector<nifly::Vector3>& vertices,
+                         const nifly::Vector3& a, const nifly::Vector3& b,
+                         const nifly::Vector3& c, const nifly::Vector3& normal)
+  {
+    int side = 0;
+    for (const auto& vertex : vertices) {
+      if (vertex == a || vertex == b || vertex == c) {
+        continue;
+      }
+
+      const auto distance = (vertex - a).dot(normal);
+      if (std::fabs(distance) <= Epsilon) {
+        continue;
+      }
+
+      const auto vertexSide = distance > 0.0f ? 1 : -1;
+      if (side != 0 && side != vertexSide) {
+        return false;
+      }
+      side = vertexSide;
+    }
+
+    return true;
+  }
+
+  void addHullTriangleEdges(std::unordered_set<std::uint64_t>& hullEdges,
+                            const std::vector<nifly::Vector3>& vertices,
+                            const nifly::MatTransform& transform,
+                            const CollisionColor& color, const std::size_t first,
+                            const std::size_t second, const std::size_t third)
+  {
+    addHullEdge(hullEdges, vertices, transform, color, first, second);
+    addHullEdge(hullEdges, vertices, transform, color, second, third);
+    addHullEdge(hullEdges, vertices, transform, color, third, first);
+  }
+
+  void addHullEdge(std::unordered_set<std::uint64_t>& hullEdges,
+                   const std::vector<nifly::Vector3>& vertices,
+                   const nifly::MatTransform& transform, const CollisionColor& color,
+                   const std::size_t edgeStart, const std::size_t edgeEnd)
+  {
+    const auto minIndex = static_cast<std::uint64_t>(std::min(edgeStart, edgeEnd));
+    const auto maxIndex = static_cast<std::uint64_t>(std::max(edgeStart, edgeEnd));
+    const auto edgeKey  = (minIndex << 32U) | maxIndex;
+    if (hullEdges.insert(edgeKey).second) {
+      addLine(transform, vertices[edgeStart], vertices[edgeEnd], color);
     }
   }
 
