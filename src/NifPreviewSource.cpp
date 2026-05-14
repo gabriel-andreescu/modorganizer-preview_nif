@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QObject>
+#include <QStringList>
 
 #include <algorithm>
 #include <filesystem>
@@ -237,6 +238,14 @@ void addGameArchiveProviders(
     }
 }
 
+void orderOriginsForPreview(QStringList& origins) {
+    // MO2 returns the primary winner first, then alternatives in losing-to-winning order.
+    // Keep the winner first and present the alternatives from strongest to weakest.
+    if (origins.size() > 1) {
+        std::reverse(origins.begin() + 1, origins.end());
+    }
+}
+
 int providerIndexForPath(const QVector<NifPreviewProvider>& providers, const QString& path) {
     if (path.isEmpty()) {
         return -1;
@@ -304,7 +313,8 @@ NifPreviewSourceSet NifPreviewSourceResolver::resolve(
     const auto normalizedFileName = QDir::fromNativeSeparators(fileName);
     if (organizer && !sourceSet.virtualPath.isEmpty()) {
         if (auto* const modList = organizer->modList()) {
-            const auto origins = organizer->getFileOrigins(sourceSet.virtualPath);
+            auto origins = organizer->getFileOrigins(sourceSet.virtualPath);
+            orderOriginsForPreview(origins);
             for (const auto& modName : origins) {
                 auto* const mod = modList->getMod(modName);
                 if (!mod) {

@@ -97,10 +97,10 @@ NifPreviewPane::NifPreviewPane(MOBase::IOrganizer* organizer, QWidget* parent)
     rootLayout->addWidget(m_StatsLabel);
 
     connect(m_PrevButton, &QToolButton::clicked, this, [this]() {
-        selectRelativeProvider(-1);
+        selectRelativeProvider(1);
     });
     connect(m_NextButton, &QToolButton::clicked, this, [this]() {
-        selectRelativeProvider(1);
+        selectRelativeProvider(-1);
     });
     connect(m_SourceCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](const int index) {
         if (!m_UpdatingControls) {

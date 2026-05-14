@@ -106,23 +106,23 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="NifPreviewSource.cpp" line="153"/>
+        <location filename="NifPreviewSource.cpp" line="154"/>
         <source>%1 - %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewSource.cpp" line="233"/>
+        <location filename="NifPreviewSource.cpp" line="234"/>
         <location filename="TextureSource.cpp" line="566"/>
         <source>Game Data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewSource.cpp" line="329"/>
+        <location filename="NifPreviewSource.cpp" line="339"/>
         <source>Current Archive Preview</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewSource.cpp" line="399"/>
+        <location filename="NifPreviewSource.cpp" line="409"/>
         <source>Verts: %1 | Faces: %2 | Shapes: %3</source>
         <translation type="unfinished"></translation>
     </message>
