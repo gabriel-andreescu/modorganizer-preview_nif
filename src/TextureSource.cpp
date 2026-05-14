@@ -459,6 +459,16 @@ TextureSourceProvider makeProvider(
     );
     return provider;
 }
+
+void orderModsByProfilePriority(QStringList& modOrder, MOBase::IModList* modList) {
+    if (!modList || modOrder.size() < 2) {
+        return;
+    }
+
+    std::stable_sort(modOrder.begin(), modOrder.end(), [&](const QString& lhs, const QString& rhs) {
+        return modList->priority(lhs) > modList->priority(rhs);
+    });
+}
 } // namespace
 
 QString normalizeTextureDataPath(QString path) {
@@ -553,6 +563,7 @@ TextureSourceSet TextureSourceResolver::resolve(MOBase::IOrganizer* organizer, c
         }
     }
 
+    orderModsByProfilePriority(modOrder, modList);
     for (const auto& modName : modOrder) {
         const auto& builder = modBuilders[modName];
         if (!builder.coveredTextureKeys.isEmpty()) {

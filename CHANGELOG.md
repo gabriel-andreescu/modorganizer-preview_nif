@@ -4,8 +4,9 @@
 
 ### Fixed
 
-- Fixes NIF source navigation so the source dropdown and arrow buttons follow
-  MO2 conflict priority from winning mod to losing mod, with game archives last.
+- Fixes NIF and texture source navigation so the dropdowns and arrow buttons
+  follow MO2 conflict priority from winning mod to losing mod, with game
+  archives last.
 
 ## 0.5.0 - 2026-05-11
 

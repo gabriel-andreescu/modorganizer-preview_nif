@@ -108,10 +108,10 @@ NifPreviewPane::NifPreviewPane(MOBase::IOrganizer* organizer, QWidget* parent)
         }
     });
     connect(m_PrevTextureButton, &QToolButton::clicked, this, [this]() {
-        selectRelativeTextureSource(-1);
+        selectRelativeTextureSource(1);
     });
     connect(m_NextTextureButton, &QToolButton::clicked, this, [this]() {
-        selectRelativeTextureSource(1);
+        selectRelativeTextureSource(-1);
     });
     connect(m_TextureSourceCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](const int index) {
         if (!m_UpdatingTextureControls) {
