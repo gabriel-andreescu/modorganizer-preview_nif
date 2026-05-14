@@ -34,10 +34,13 @@ protected:
     void showEvent(QShowEvent* event) override;
 
 private:
-    void setSplitViewEnabled(bool enabled);
+    void setSplitViewEnabled(bool enabled, bool persistPreference);
     void setShowCollisionEnabled(bool enabled);
     void setCameraSyncEnabled(bool enabled);
     void resetCameras();
+    void restoreSplitViewPreference();
+    void saveSplitViewPreference(bool enabled) const;
+    [[nodiscard]] bool isSplitViewEnabled() const;
     void updateGlobalControls();
     void updateHostChrome();
     void initializeRightPaneForSplit();
@@ -48,6 +51,7 @@ private:
     [[nodiscard]] PreviewPaneSide sideForPane(NifPreviewPane* pane) const;
     [[nodiscard]] int secondaryProviderIndex() const;
 
+    MOBase::IOrganizer* m_Organizer = nullptr;
     NifPreviewSourceSet m_SourceSet;
 
     QFrame* m_GlobalControlsWidget = nullptr;

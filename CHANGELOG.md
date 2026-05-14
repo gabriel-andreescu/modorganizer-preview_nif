@@ -2,6 +2,10 @@
 
 ## 0.5.1 - Unreleased
 
+### Added
+
+- Persists the split preview toggle per MO2 profile.
+
 ### Fixed
 
 - Fixes NIF and texture source navigation so the dropdowns and arrow buttons
