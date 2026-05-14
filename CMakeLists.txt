@@ -8,7 +8,7 @@ endif ()
 set(VCPKG_TARGET_TRIPLET "x64-windows-static-md" CACHE STRING "vcpkg target triplet")
 set(VCPKG_MANIFEST_NO_DEFAULT_FEATURES ON CACHE BOOL "Use only default vcpkg manifest dependencies")
 
-set(PREVIEW_NIF_RELEASE_VERSION "0.5.0" CACHE STRING "NIF Preview release version")
+set(PREVIEW_NIF_RELEASE_VERSION "0.5.1" CACHE STRING "NIF Preview release version")
 
 project(preview_nif VERSION ${PREVIEW_NIF_RELEASE_VERSION})
 

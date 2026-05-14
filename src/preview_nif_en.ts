@@ -37,60 +37,60 @@
 <context>
     <name>NifPreviewWidget</name>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="36"/>
-        <location filename="NifPreviewWidget.cpp" line="168"/>
+        <location filename="NifPreviewWidget.cpp" line="64"/>
+        <location filename="NifPreviewWidget.cpp" line="231"/>
         <source>Reset Camera</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="37"/>
-        <location filename="NifPreviewWidget.cpp" line="169"/>
+        <location filename="NifPreviewWidget.cpp" line="65"/>
+        <location filename="NifPreviewWidget.cpp" line="232"/>
         <source>Reset the preview camera</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="39"/>
+        <location filename="NifPreviewWidget.cpp" line="67"/>
         <source>Show Collision</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="40"/>
+        <location filename="NifPreviewWidget.cpp" line="68"/>
         <source>Show collision preview overlay</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="42"/>
+        <location filename="NifPreviewWidget.cpp" line="70"/>
         <source>Split Preview</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="43"/>
-        <location filename="NifPreviewWidget.cpp" line="159"/>
+        <location filename="NifPreviewWidget.cpp" line="71"/>
+        <location filename="NifPreviewWidget.cpp" line="222"/>
         <source>Compare two previewable versions of this NIF</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="45"/>
+        <location filename="NifPreviewWidget.cpp" line="73"/>
         <source>Sync Cameras</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="46"/>
+        <location filename="NifPreviewWidget.cpp" line="74"/>
         <source>Synchronize cameras between preview panes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="160"/>
+        <location filename="NifPreviewWidget.cpp" line="223"/>
         <source>Split view requires at least two previewable versions of this NIF</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="168"/>
+        <location filename="NifPreviewWidget.cpp" line="231"/>
         <source>Reset Cameras</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewWidget.cpp" line="169"/>
+        <location filename="NifPreviewWidget.cpp" line="232"/>
         <source>Reset both preview cameras</source>
         <translation type="unfinished"></translation>
     </message>
@@ -106,23 +106,23 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="NifPreviewSource.cpp" line="153"/>
+        <location filename="NifPreviewSource.cpp" line="154"/>
         <source>%1 - %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewSource.cpp" line="233"/>
-        <location filename="TextureSource.cpp" line="566"/>
+        <location filename="NifPreviewSource.cpp" line="234"/>
+        <location filename="TextureSource.cpp" line="577"/>
         <source>Game Data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewSource.cpp" line="329"/>
+        <location filename="NifPreviewSource.cpp" line="339"/>
         <source>Current Archive Preview</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="NifPreviewSource.cpp" line="399"/>
+        <location filename="NifPreviewSource.cpp" line="409"/>
         <source>Verts: %1 | Faces: %2 | Shapes: %3</source>
         <translation type="unfinished"></translation>
     </message>
@@ -243,47 +243,47 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="522"/>
+        <location filename="TextureSource.cpp" line="532"/>
         <source>Auto: MO2 winners</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="589"/>
+        <location filename="TextureSource.cpp" line="600"/>
         <source>Textures: none</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="596"/>
+        <location filename="TextureSource.cpp" line="607"/>
         <source>%1 +%2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="599"/>
+        <location filename="TextureSource.cpp" line="610"/>
         <source>Textures: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="604"/>
+        <location filename="TextureSource.cpp" line="615"/>
         <source>No referenced textures</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="610"/>
+        <location filename="TextureSource.cpp" line="621"/>
         <source>Texture source: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="612"/>
+        <location filename="TextureSource.cpp" line="623"/>
         <source>Texture slots: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="613"/>
+        <location filename="TextureSource.cpp" line="624"/>
         <source>Referenced textures:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="TextureSource.cpp" line="615"/>
+        <location filename="TextureSource.cpp" line="626"/>
         <source>%1: %2</source>
         <translation type="unfinished"></translation>
     </message>

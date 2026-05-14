@@ -3,20 +3,47 @@
 #include "NifPreviewPane.h"
 
 #include <QCheckBox>
+#include <QDir>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QSettings>
 #include <QSharedPointer>
 #include <QShowEvent>
+#include <QSignalBlocker>
 #include <QSplitter>
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include <uibase/imoinfo.h>
 #include <utility>
 
 namespace {
+constexpr auto ProfileSettingsFileName = "preview_nif.ini";
+constexpr auto ProfileSettingsGroup = "Preview";
+constexpr auto SplitPreviewSettingKey = "splitPreview";
+
 QSharedPointer<Camera> makePreviewCamera() {
     return {new Camera(), &Camera::deleteLater};
+}
+
+QString profileSettingsPath(MOBase::IOrganizer* organizer) {
+    if (!organizer || organizer->profilePath().isEmpty()) {
+        return {};
+    }
+
+    return QDir(organizer->profilePath()).filePath(ProfileSettingsFileName);
+}
+
+bool splitViewPreference(MOBase::IOrganizer* organizer) {
+    const auto settingsPath = profileSettingsPath(organizer);
+    if (settingsPath.isEmpty()) {
+        return false;
+    }
+
+    QSettings settings(settingsPath, QSettings::IniFormat);
+    settings.beginGroup(ProfileSettingsGroup);
+    return settings.value(SplitPreviewSettingKey, false).toBool();
 }
 } // namespace
 
@@ -27,6 +54,7 @@ NifPreviewWidget::NifPreviewWidget(
     QWidget* parent
 )
     : QWidget(parent)
+    , m_Organizer(organizer)
     , m_SourceSet(std::move(sourceSet)) {
     m_GlobalControlsWidget = new QFrame(this);
     m_GlobalControlsWidget->setObjectName("nifPreviewGlobalToolbar");
@@ -74,7 +102,9 @@ NifPreviewWidget::NifPreviewWidget(
     rootLayout->addWidget(m_GlobalControlsWidget);
     rootLayout->addWidget(m_Splitter, 1);
 
-    connect(m_SplitButton, &QCheckBox::toggled, this, &NifPreviewWidget::setSplitViewEnabled);
+    connect(m_SplitButton, &QCheckBox::toggled, this, [this](const bool enabled) {
+        setSplitViewEnabled(enabled, true);
+    });
     connect(m_ShowCollisionButton, &QCheckBox::toggled, this, &NifPreviewWidget::setShowCollisionEnabled);
     connect(m_CameraSyncButton, &QCheckBox::toggled, this, &NifPreviewWidget::setCameraSyncEnabled);
     connect(m_ResetCameraButton, &QPushButton::clicked, this, &NifPreviewWidget::resetCameras);
@@ -85,6 +115,7 @@ NifPreviewWidget::NifPreviewWidget(
         handleCameraMoved(m_RightPane);
     });
 
+    restoreSplitViewPreference();
     updateGlobalControls();
 }
 
@@ -97,8 +128,13 @@ void NifPreviewWidget::showEvent(QShowEvent* event) {
     QTimer::singleShot(0, this, &NifPreviewWidget::updateHostChrome);
 }
 
-void NifPreviewWidget::setSplitViewEnabled(const bool enabled) {
+void NifPreviewWidget::setSplitViewEnabled(const bool enabled, const bool persistPreference) {
+    if (persistPreference) {
+        saveSplitViewPreference(enabled);
+    }
+
     if (enabled && m_SourceSet.providers.size() < 2) {
+        const QSignalBlocker blocker(m_SplitButton);
         m_SplitButton->setChecked(false);
         return;
     }
@@ -120,13 +156,40 @@ void NifPreviewWidget::setSplitViewEnabled(const bool enabled) {
     updateHostChrome();
 }
 
+void NifPreviewWidget::restoreSplitViewPreference() {
+    if (!splitViewPreference(m_Organizer)) {
+        return;
+    }
+
+    const QSignalBlocker blocker(m_SplitButton);
+    m_SplitButton->setChecked(true);
+    setSplitViewEnabled(true, false);
+    m_SplitButton->setChecked(isSplitViewEnabled());
+}
+
+void NifPreviewWidget::saveSplitViewPreference(const bool enabled) const {
+    const auto settingsPath = profileSettingsPath(m_Organizer);
+    if (settingsPath.isEmpty()) {
+        return;
+    }
+
+    QSettings settings(settingsPath, QSettings::IniFormat);
+    settings.beginGroup(ProfileSettingsGroup);
+    settings.setValue(SplitPreviewSettingKey, enabled);
+    settings.sync();
+}
+
+bool NifPreviewWidget::isSplitViewEnabled() const {
+    return m_RightPane && !m_RightPane->isHidden();
+}
+
 void NifPreviewWidget::setShowCollisionEnabled(const bool enabled) {
     m_LeftPane->setShowCollision(enabled);
     m_RightPane->setShowCollision(enabled);
 }
 
 void NifPreviewWidget::setCameraSyncEnabled(const bool enabled) {
-    if (!m_RightPane->isVisible() && enabled) {
+    if (!isSplitViewEnabled() && enabled) {
         return;
     }
 
@@ -139,7 +202,7 @@ void NifPreviewWidget::setCameraSyncEnabled(const bool enabled) {
 
 void NifPreviewWidget::resetCameras() {
     m_ApplyingCameraSync = true;
-    if (!m_RightPane->isVisible()) {
+    if (!isSplitViewEnabled()) {
         m_LeftPane->resetCamera();
         m_ApplyingCameraSync = false;
         updateCameraSnapshot(m_LeftPane);
@@ -161,7 +224,7 @@ void NifPreviewWidget::updateGlobalControls() {
                       "versions of this NIF")
     );
 
-    const auto splitActive = m_RightPane->isVisible();
+    const auto splitActive = isSplitViewEnabled();
     m_CameraSyncButton->setVisible(splitActive);
     m_CameraSyncButton->setEnabled(splitActive);
 
@@ -210,7 +273,7 @@ void NifPreviewWidget::handleCameraMoved(NifPreviewPane* pane) {
 
     const auto newState = pane->camera()->state();
 
-    if (!m_ApplyingCameraSync && m_CameraSyncButton->isChecked() && m_RightPane->isVisible()) {
+    if (!m_ApplyingCameraSync && m_CameraSyncButton->isChecked() && isSplitViewEnabled()) {
         syncCameraDelta(pane, newState);
     }
 
