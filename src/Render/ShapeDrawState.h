@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Nif/Fo4Material.h"
+
 #include <QOpenGLFunctions_2_1>
 
 class QOpenGLShaderProgram;
@@ -12,7 +14,12 @@ class NiShape;
 
 class OpenGLShapeDrawState {
 public:
-    void Apply(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, nifly::NiShader* a_shader);
+    void Apply(
+        nifly::NifFile* a_nifFile,
+        nifly::NiShape* a_niShape,
+        nifly::NiShader* a_shader,
+        const Fo4Material::Material& a_material
+    );
     void SetupUniforms(QOpenGLShaderProgram* a_program) const;
     void SetupOpenGLState(QOpenGLFunctions_2_1* a_f, bool a_usesBlendedPass) const;
 
@@ -28,6 +35,7 @@ public:
 
 private:
     void ApplyAlphaProperty(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape);
+    void ApplyMaterialAlpha(const Fo4Material::Alpha& a_alpha);
     void ApplyShaderBufferFlags(nifly::NiShader* a_shader);
     void SetupDepthState(QOpenGLFunctions_2_1* a_f) const;
     void SetupCullingState(QOpenGLFunctions_2_1* a_f) const;

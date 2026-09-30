@@ -21,6 +21,8 @@ uniform vec3 glowColor;
 uniform float glowMult;
 
 uniform float alpha;
+uniform float alphaThreshold;
+uniform int alphaTestMode;
 
 uniform vec3 tintColor;
 
@@ -208,6 +210,33 @@ vec4 colorLookup( float x, float y ) {
     return texture2D( GreyscaleMap, vec2( clamp(x, 0.0, 1.0), clamp(y, 0.0, 1.0) ) );
 }
 
+bool passesAlphaTest(float value)
+{
+    if (alphaTestMode == 512) {
+        return false;
+    }
+    if (alphaTestMode == 513) {
+        return value < alphaThreshold;
+    }
+    if (alphaTestMode == 514) {
+        return value == alphaThreshold;
+    }
+    if (alphaTestMode == 515) {
+        return value <= alphaThreshold;
+    }
+    if (alphaTestMode == 516) {
+        return value > alphaThreshold;
+    }
+    if (alphaTestMode == 517) {
+        return value != alphaThreshold;
+    }
+    if (alphaTestMode == 518) {
+        return value >= alphaThreshold;
+    }
+
+    return true;
+}
+
 void main( void )
 {
     vec2 offset = TexCoord * uvScale + uvOffset;
@@ -335,6 +364,10 @@ void main( void )
 
     color.rgb = tonemap( color.rgb ) / tonemap( vec3(1.0) );
     color.a = C.a * baseMap.a;
+
+    if (!passesAlphaTest(color.a)) {
+        discard;
+    }
 
     gl_FragColor = color;
     gl_FragColor.a *= alpha;

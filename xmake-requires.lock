@@ -11,6 +11,9 @@
             },
             version = "3.3.0"
         },
+        ["bodyslide-material-file 2026.09.29#f56260b5"] = {
+            version = "2026.09.29"
+        },
         ["devbench-api 0.1.0#f56260b5"] = {
             repo = {
                 commit = "64b85b8c64a78ce2402495d12e6af22eb11af103",

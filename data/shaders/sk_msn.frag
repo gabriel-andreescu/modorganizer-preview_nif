@@ -16,6 +16,8 @@ uniform vec3 glowColor;
 uniform float glowMult;
 
 uniform float alpha;
+uniform float alphaThreshold;
+uniform int alphaTestMode;
 
 uniform vec3 tintColor;
 
@@ -78,6 +80,33 @@ float overlay( float base, float blend )
 vec3 overlay( vec3 ba, vec3 bl )
 {
     return vec3( overlay(ba.r, bl.r), overlay(ba.g, bl.g), overlay( ba.b, bl.b ) );
+}
+
+bool passesAlphaTest(float value)
+{
+    if (alphaTestMode == 512) {
+        return false;
+    }
+    if (alphaTestMode == 513) {
+        return value < alphaThreshold;
+    }
+    if (alphaTestMode == 514) {
+        return value == alphaThreshold;
+    }
+    if (alphaTestMode == 515) {
+        return value <= alphaThreshold;
+    }
+    if (alphaTestMode == 516) {
+        return value > alphaThreshold;
+    }
+    if (alphaTestMode == 517) {
+        return value != alphaThreshold;
+    }
+    if (alphaTestMode == 518) {
+        return value >= alphaThreshold;
+    }
+
+    return true;
 }
 
 void main( void )
@@ -188,6 +217,10 @@ void main( void )
     color.rgb = albedo * (diffuse + emissive) + spec;
     color.rgb = tonemap( color.rgb ) / tonemap( vec3(1.0) );
     color.a = C.a * baseMap.a;
+
+    if (!passesAlphaTest(color.a)) {
+        discard;
+    }
 
     gl_FragColor = color;
     gl_FragColor.a *= alpha;

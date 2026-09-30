@@ -17,10 +17,8 @@
 #include <QSet>
 
 #include <algorithm>
-#include <array>
 #include <cstdint>
 #include <ranges>
-#include <span>
 #include <uibase/imodinterface.h>
 #include <uibase/imodlist.h>
 #include <uibase/imoinfo.h>
@@ -129,32 +127,6 @@ struct ShaderTextureReferences {
     ShaderManager::ShaderType shaderType;
 };
 
-struct MaterialTextureSlot {
-    int slot;
-    int materialIndex;
-};
-
-constexpr std::array<MaterialTextureSlot, 5> kEffectMaterialTextureSlots {
-    {
-        {.slot = TextureSlot::kBaseMap, .materialIndex = 0},
-        {.slot = TextureSlot::kGreyscaleMap, .materialIndex = 1},
-        {.slot = TextureSlot::kEnvironmentMap, .materialIndex = 2},
-        {.slot = TextureSlot::kNormalMap, .materialIndex = 3},
-        {.slot = TextureSlot::kEnvironmentMask, .materialIndex = 4},
-    },
-};
-
-constexpr std::array<MaterialTextureSlot, 6> kShaderMaterialTextureSlots {
-    {
-        {.slot = TextureSlot::kBaseMap, .materialIndex = Fo4Material::kDiffuse},
-        {.slot = TextureSlot::kNormalMap, .materialIndex = Fo4Material::kNormal},
-        {.slot = TextureSlot::kSpecularMap, .materialIndex = Fo4Material::kSpecular},
-        {.slot = TextureSlot::kGreyscaleMap, .materialIndex = Fo4Material::kGreyscale},
-        {.slot = TextureSlot::kEnvironmentMap, .materialIndex = Fo4Material::kEnvironment},
-        {.slot = TextureSlot::kEnvironmentMask, .materialIndex = Fo4Material::kGlowOrEnvironmentMask},
-    },
-};
-
 void AppendTextureReference(
     const ShaderTextureReferences& a_target,
     const int a_slot,
@@ -242,13 +214,14 @@ void AppendFo4MaterialTextureReferences(const ShaderTextureReferences& a_target,
         return;
     }
 
-    const auto textureSlots = isEffectShader ? std::span<const MaterialTextureSlot>(kEffectMaterialTextureSlots)
-                                             : std::span<const MaterialTextureSlot>(kShaderMaterialTextureSlots);
-    for (const auto& [slot, materialIndex] : textureSlots) {
-        if (materialIndex < material.textures.size()) {
-            AppendTextureReference(a_target, slot, material.textures[materialIndex]);
-        }
-    }
+    const auto& textures = material.textures;
+    AppendTextureReference(a_target, TextureSlot::kBaseMap, textures.base);
+    AppendTextureReference(a_target, TextureSlot::kNormalMap, textures.normal);
+    AppendTextureReference(a_target, TextureSlot::kSpecularMap, textures.specular);
+    AppendTextureReference(a_target, TextureSlot::kGreyscaleMap, textures.greyscale);
+    AppendTextureReference(a_target, TextureSlot::kEnvironmentMap, textures.environment);
+    AppendTextureReference(a_target, TextureSlot::kEnvironmentMask, textures.environmentMask);
+    AppendTextureReference(a_target, TextureSlot::kGlowMap, textures.glow);
 }
 
 QVector<TextureReference> TextureReferencesFor(MOBase::IOrganizer* a_organizer, const nifly::NifFile* a_nifFile) {

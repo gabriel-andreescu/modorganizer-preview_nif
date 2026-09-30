@@ -1,12 +1,10 @@
 #include "Render/ShapeTextures.h"
 #include "Nif/Fo4Material.h"
-#include "Nif/ShaderUtils.h"
 #include "Textures/Manager.h"
 #include "Textures/PreviewTexture.h"
 
 #include <QDebug>
 #include <QOpenGLShaderProgram>
-#include <QStringList>
 
 #include <nifly/NifFile.hpp>
 
@@ -70,22 +68,22 @@ void OpenGLShapeTextures::Load(
     nifly::NiShader* a_shader,
     const ShaderManager::ShaderType a_shaderType,
     const bool a_isPBR,
+    const Fo4Material::Material& a_material,
     TextureManager* a_textureManager
 ) {
     if (!a_shader) {
         return;
     }
 
-    const auto loadedFo4Material = a_shaderType == ShaderManager::kFO4Default
-                                   && LoadFo4MaterialTextures(a_shader, a_textureManager);
-    if (loadedFo4Material) {
+    if (a_shaderType == ShaderManager::kFO4Default && a_material.valid) {
+        LoadFo4MaterialTextures(a_material.textures, a_textureManager);
         return;
     }
 
     if (auto* const effectShader = dynamic_cast<nifly::BSEffectShaderProperty*>(a_shader)) {
         LoadEffectShaderTextures(effectShader, a_shaderType, a_textureManager);
-        if (a_shaderType == ShaderManager::kFO4EffectShader && !GetShaderMaterialPath(a_shader, ".bgem").isEmpty()) {
-            LoadFo4EffectMaterialTextures(a_shader, a_textureManager);
+        if (a_shaderType == ShaderManager::kFO4EffectShader && a_material.valid) {
+            LoadFo4EffectMaterialTextures(a_material.textures, a_textureManager);
         }
     } else if (a_shader->HasTextureSet()) {
         LoadTextureSetTextures(a_nifFile, a_shader, a_textureManager);
@@ -193,64 +191,56 @@ void OpenGLShapeTextures::LoadEffectShaderTextures(
     assignEffectTexture(kEnvironmentMask, a_shader->envMaskTexture.get());
 }
 
-bool OpenGLShapeTextures::LoadFo4MaterialTextures(nifly::NiShader* a_shader, TextureManager* a_textureManager) {
-    _materialPath = GetShaderMaterialPath(a_shader, ".bgsm");
-    const auto textures = a_textureManager->GetFo4MaterialTextures(_materialPath);
-    if (textures.isEmpty()) {
-        return false;
-    }
-
-    const auto assignMaterialTexture = [&](const std::size_t a_slot, const Fo4Material::TextureIndex a_index) {
+void OpenGLShapeTextures::LoadFo4MaterialTextures(
+    const Fo4Material::Textures& a_textures,
+    TextureManager* a_textureManager
+) {
+    const auto assignMaterialTexture = [&](const std::size_t a_slot, const QString& a_path) {
         const auto fallback = _slotDescriptors[a_slot].textureSetFallback;
-        if (a_index >= textures.size() || textures[a_index].isEmpty()) {
+        if (a_path.isEmpty()) {
             AssignFallback(a_textureManager, a_slot, fallback);
             return;
         }
 
-        _requestedPaths[a_slot] = textures[a_index];
-        _textures[a_slot] = a_textureManager->GetTexture(textures[a_index]);
+        _requestedPaths[a_slot] = a_path;
+        _textures[a_slot] = a_textureManager->GetTexture(a_path);
         _loadedTextures[a_slot] = _textures[a_slot] != nullptr;
         if (!_textures[a_slot]) {
             AssignFallback(a_textureManager, a_slot, fallback);
         }
     };
 
-    assignMaterialTexture(TextureSlot::kBaseMap, Fo4Material::kDiffuse);
-    assignMaterialTexture(TextureSlot::kNormalMap, Fo4Material::kNormal);
-    assignMaterialTexture(TextureSlot::kSpecularMap, Fo4Material::kSpecular);
-    assignMaterialTexture(TextureSlot::kGreyscaleMap, Fo4Material::kGreyscale);
-    assignMaterialTexture(TextureSlot::kEnvironmentMap, Fo4Material::kEnvironment);
-    assignMaterialTexture(TextureSlot::kEnvironmentMask, Fo4Material::kGlowOrEnvironmentMask);
-    assignMaterialTexture(TextureSlot::kGlowMap, Fo4Material::kGlowOrEnvironmentMask);
-    return true;
+    assignMaterialTexture(TextureSlot::kBaseMap, a_textures.base);
+    assignMaterialTexture(TextureSlot::kNormalMap, a_textures.normal);
+    assignMaterialTexture(TextureSlot::kSpecularMap, a_textures.specular);
+    assignMaterialTexture(TextureSlot::kGreyscaleMap, a_textures.greyscale);
+    assignMaterialTexture(TextureSlot::kEnvironmentMap, a_textures.environment);
+    assignMaterialTexture(TextureSlot::kEnvironmentMask, a_textures.environmentMask);
+    assignMaterialTexture(TextureSlot::kGlowMap, a_textures.glow);
 }
 
-bool OpenGLShapeTextures::LoadFo4EffectMaterialTextures(nifly::NiShader* a_shader, TextureManager* a_textureManager) {
-    _materialPath = GetShaderMaterialPath(a_shader, ".bgem");
-    const auto textures = a_textureManager->GetFo4MaterialTextures(_materialPath);
-    if (textures.isEmpty()) {
-        return false;
-    }
-
-    const auto assignMaterialTexture = [&](const std::size_t a_slot, const int a_index) {
-        if (a_index >= textures.size() || textures[a_index].isEmpty()) {
+void OpenGLShapeTextures::LoadFo4EffectMaterialTextures(
+    const Fo4Material::Textures& a_textures,
+    TextureManager* a_textureManager
+) {
+    const auto assignMaterialTexture = [&](const std::size_t a_slot, const QString& a_path) {
+        if (a_path.isEmpty()) {
             return;
         }
 
-        if (auto* const texture = a_textureManager->GetTexture(textures[a_index])) {
-            _requestedPaths[a_slot] = textures[a_index];
+        if (auto* const texture = a_textureManager->GetTexture(a_path)) {
+            _requestedPaths[a_slot] = a_path;
             _textures[a_slot] = texture;
             _loadedTextures[a_slot] = true;
             _appliedFallbacks[a_slot] = TextureFallback::kNone;
         }
     };
 
-    assignMaterialTexture(TextureSlot::kBaseMap, 0);
-    assignMaterialTexture(TextureSlot::kGreyscaleMap, 1);
-    assignMaterialTexture(TextureSlot::kEnvironmentMap, 2);
-    assignMaterialTexture(TextureSlot::kNormalMap, 3);
-    assignMaterialTexture(TextureSlot::kEnvironmentMask, 4);
-    return true;
+    assignMaterialTexture(TextureSlot::kBaseMap, a_textures.base);
+    assignMaterialTexture(TextureSlot::kGreyscaleMap, a_textures.greyscale);
+    assignMaterialTexture(TextureSlot::kEnvironmentMap, a_textures.environment);
+    assignMaterialTexture(TextureSlot::kNormalMap, a_textures.normal);
+    assignMaterialTexture(TextureSlot::kEnvironmentMask, a_textures.environmentMask);
 }
 
 void OpenGLShapeTextures::LoadTextureSetTextures(

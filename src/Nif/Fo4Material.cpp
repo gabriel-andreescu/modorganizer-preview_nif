@@ -1,54 +1,56 @@
 #include "Nif/Fo4Material.h"
 
-#include <QByteArrayView>
-#include <QDir>
-#include <QtEndian>
+#include <bodyslide/MaterialFile.h>
 
-#include <algorithm>
-#include <array>
+#include <QDir>
+
+#include <cstddef>
 #include <cstdint>
-#include <utility>
+#include <span>
+#include <spanstream>
+#include <string>
 
 namespace {
-constexpr std::array<char, 4> kBGSM = {'B', 'G', 'S', 'M'};
-constexpr std::array<char, 4> kBGEM = {'B', 'G', 'E', 'M'};
-constexpr qsizetype kTextureListOffset = 63;
-constexpr qsizetype kShaderMaterialTextureCount = 9;
-constexpr qsizetype kEffectMaterialTextureCount = 5;
-
-[[nodiscard]] bool StartsWithMagic(const QByteArray& a_data, const std::array<char, 4>& a_magic) {
-    return a_data.size() >= static_cast<qsizetype>(a_magic.size())
-           && std::equal(a_magic.begin(), a_magic.end(), a_data.constData());
+// Material strings keep their null terminator.
+[[nodiscard]] QString TexturePath(const std::string& a_path) {
+    return QDir::fromNativeSeparators(QString::fromUtf8(a_path.c_str())).trimmed();
 }
 
-[[nodiscard]] std::uint32_t ReadUint32LE(const QByteArray& a_data, const qsizetype a_offset) {
-    return qFromLittleEndian<std::uint32_t>(QByteArrayView(a_data).sliced(a_offset, 4).data());
+[[nodiscard]] Fo4Material::Textures ShaderMaterialTextures(const MaterialFile& a_file) {
+    // Fallout 4 uses the glow texture as the environment mask when the material disables glow.
+    return {
+        .base = TexturePath(a_file.diffuseTexture),
+        .normal = TexturePath(a_file.normalTexture),
+        .specular = TexturePath(a_file.smoothSpecTexture),
+        .greyscale = TexturePath(a_file.greyscaleTexture),
+        .environment = TexturePath(a_file.envmapTexture),
+        .environmentMask = TexturePath(a_file.glowTexture),
+        .glow = TexturePath(a_file.glowTexture),
+    };
 }
 
-[[nodiscard]] bool ReadBethesdaString(const QByteArray& a_data, qsizetype& a_offset, QString& a_value) {
-    if (a_offset < 0 || a_offset + 4 > a_data.size()) {
-        return false;
-    }
+[[nodiscard]] Fo4Material::Textures EffectMaterialTextures(const MaterialFile& a_file) {
+    return {
+        .base = TexturePath(a_file.baseTexture),
+        .normal = TexturePath(a_file.fxNormalTexture),
+        .greyscale = TexturePath(a_file.grayscaleTexture),
+        .environment = TexturePath(a_file.fxEnvmapTexture),
+        .environmentMask = TexturePath(a_file.envmapMaskTexture),
+    };
+}
 
-    const auto length = ReadUint32LE(a_data, a_offset);
-    a_offset += 4;
-    if (length == 0) {
-        a_value.clear();
-        return true;
-    }
-
-    if (std::cmp_greater(length, a_data.size() - a_offset)) {
-        return false;
-    }
-
-    auto bytes = a_data.sliced(a_offset, static_cast<qsizetype>(length));
-    a_offset += static_cast<qsizetype>(length);
-    if (bytes.endsWith('\0')) {
-        bytes.chop(1);
-    }
-
-    a_value = QDir::fromNativeSeparators(QString::fromUtf8(bytes)).trimmed();
-    return true;
+[[nodiscard]] Fo4Material::Alpha MaterialAlpha(MaterialFile& a_file) {
+    std::uint8_t blend = 0;
+    std::uint32_t sourceBlend = 0;
+    std::uint32_t destinationBlend = 0;
+    a_file.ConvertAlphaBlendMode(a_file.alphaBlendMode, blend, sourceBlend, destinationBlend);
+    return {
+        .blend = blend != 0,
+        .sourceBlend = sourceBlend,
+        .destinationBlend = destinationBlend,
+        .test = a_file.alphaTest,
+        .testReference = static_cast<std::uint8_t>(a_file.alphaTestRef),
+    };
 }
 } // namespace
 
@@ -72,32 +74,15 @@ QString NormalizeMaterialDataPath(QString a_path) {
 }
 
 Material Read(const QByteArray& a_data) {
-    const qsizetype textureCount = [&] {
-        if (StartsWithMagic(a_data, kBGSM)) {
-            return kShaderMaterialTextureCount;
-        }
-        if (StartsWithMagic(a_data, kBGEM)) {
-            return kEffectMaterialTextureCount;
-        }
-        return qsizetype {0};
-    }();
-
-    if (textureCount == 0 || a_data.size() < kTextureListOffset) {
+    std::ispanstream stream(std::span(a_data.constData(), static_cast<std::size_t>(a_data.size())));
+    MaterialFile file(stream);
+    if (file.Failed()) {
         return {};
     }
 
-    Material material;
-    qsizetype offset = kTextureListOffset;
-    for (qsizetype i = 0; i < textureCount; ++i) {
-        QString texturePath;
-        if (!ReadBethesdaString(a_data, offset, texturePath)) {
-            return {};
-        }
-        material.textures.push_back(texturePath);
-    }
-
-    material.valid = true;
-    return material;
+    const auto textures = file.signature == MaterialFile::BGEM ? EffectMaterialTextures(file)
+                                                               : ShaderMaterialTextures(file);
+    return {.textures = textures, .alpha = MaterialAlpha(file), .valid = true};
 }
 
 }

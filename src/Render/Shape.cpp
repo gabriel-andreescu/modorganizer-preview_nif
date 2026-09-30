@@ -15,6 +15,16 @@
 
 #include <nifly/NifFile.hpp>
 
+namespace {
+QString Fo4MaterialPath(const nifly::NiShader* a_shader, const ShaderManager::ShaderType a_shaderType) {
+    switch (a_shaderType) {
+        case ShaderManager::kFO4Default:      return GetShaderMaterialPath(a_shader, ".bgsm");
+        case ShaderManager::kFO4EffectShader: return GetShaderMaterialPath(a_shader, ".bgem");
+        default:                              return {};
+    }
+}
+}
+
 OpenGLShape::OpenGLShape(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, TextureManager* a_textureManager)
     : _name {QString::fromStdString(a_niShape->name.get())}
     , _geometry {std::make_unique<OpenGLShapeGeometry>()}
@@ -38,9 +48,12 @@ OpenGLShape::OpenGLShape(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, T
     _geometry->Initialize(a_nifFile, a_niShape, shader);
 
     if (shader) {
-        _textures->Load(a_nifFile, shader, _shaderType, isPBR, a_textureManager);
+        _materialPath = Fo4MaterialPath(shader, _shaderType);
+        const auto material = _materialPath.isEmpty() ? Fo4Material::Material {}
+                                                      : a_textureManager->GetFo4Material(_materialPath);
+        _textures->Load(a_nifFile, shader, _shaderType, isPBR, material, a_textureManager);
         _material->Apply(shader, isPBR);
-        _drawState->Apply(a_nifFile, a_niShape, shader);
+        _drawState->Apply(a_nifFile, a_niShape, shader, material);
     } else {
         _textures->UseDefaultTextures(a_textureManager);
     }
@@ -81,6 +94,10 @@ const QString& OpenGLShape::Name() const noexcept {
 
 const OpenGLShapeTextures& OpenGLShape::Textures() const noexcept {
     return *_textures;
+}
+
+const QString& OpenGLShape::MaterialPath() const noexcept {
+    return _materialPath;
 }
 
 ShaderManager::ShaderType OpenGLShape::ShaderType() const noexcept {

@@ -2,21 +2,33 @@
 
 #include <QByteArray>
 #include <QString>
-#include <QStringList>
+
+#include <cstdint>
 
 namespace Fo4Material {
 
-enum TextureIndex {
-    kDiffuse = 0,
-    kNormal = 1,
-    kSpecular = 2,
-    kGreyscale = 3,
-    kEnvironment = 4,
-    kGlowOrEnvironmentMask = 5,
+struct Textures {
+    QString base;
+    QString normal;
+    QString specular;
+    QString greyscale;
+    QString environment;
+    QString environmentMask;
+    QString glow;
+};
+
+// Blend factors use NiAlphaProperty's numbering.
+struct Alpha {
+    bool blend = false;
+    std::uint32_t sourceBlend = 6;
+    std::uint32_t destinationBlend = 7;
+    bool test = false;
+    std::uint8_t testReference = 0;
 };
 
 struct Material {
-    QStringList textures;
+    Textures textures;
+    Alpha alpha;
     bool valid = false;
 };
 

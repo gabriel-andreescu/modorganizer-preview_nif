@@ -1,0 +1,13 @@
+diff --git a/src/files/MaterialFile.h b/src/files/MaterialFile.h
+index eeb0466b..cbd1fbea 100644
+--- a/src/files/MaterialFile.h
++++ b/src/files/MaterialFile.h
+@@ -5,7 +5,7 @@ See the included LICENSE file
+ 
+ #pragma once
+ 
+-#include "Object3d.hpp"
++#include <nifly/Object3d.hpp>
+ 
+ #include <cstdint>
+ #include <fstream>

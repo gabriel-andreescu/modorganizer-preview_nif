@@ -25,6 +25,9 @@ uniform vec2 uvOffset;
 uniform vec4 falloffParams;
 uniform float falloffDepth;
 
+uniform float alphaThreshold;
+uniform int alphaTestMode;
+
 varying vec2 TexCoord;
 varying vec3 LightDir;
 varying vec3 ViewDir;
@@ -37,6 +40,33 @@ varying vec3 v;
 vec4 colorLookup( float x, float y ) {
 
     return texture2D( GreyscaleMap, vec2( clamp(x, 0.0, 1.0), clamp(y, 0.0, 1.0)) );
+}
+
+bool passesAlphaTest(float value)
+{
+    if (alphaTestMode == 512) {
+        return false;
+    }
+    if (alphaTestMode == 513) {
+        return value < alphaThreshold;
+    }
+    if (alphaTestMode == 514) {
+        return value == alphaThreshold;
+    }
+    if (alphaTestMode == 515) {
+        return value <= alphaThreshold;
+    }
+    if (alphaTestMode == 516) {
+        return value > alphaThreshold;
+    }
+    if (alphaTestMode == 517) {
+        return value != alphaThreshold;
+    }
+    if (alphaTestMode == 518) {
+        return value >= alphaThreshold;
+    }
+
+    return true;
 }
 
 void main( void )
@@ -97,6 +127,10 @@ void main( void )
         vec4 luA = colorLookup( baseMap.a, C.a * falloff * alphaMult );
 
         color.a = luA.a;
+    }
+
+    if (!passesAlphaTest(color.a)) {
+        discard;
     }
 
     gl_FragColor.rgb = color.rgb * glowMult;

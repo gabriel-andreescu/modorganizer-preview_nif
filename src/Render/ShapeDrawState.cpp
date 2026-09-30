@@ -5,8 +5,17 @@
 
 #include <nifly/NifFile.hpp>
 
-void OpenGLShapeDrawState::Apply(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, nifly::NiShader* a_shader) {
+void OpenGLShapeDrawState::Apply(
+    nifly::NifFile* a_nifFile,
+    nifly::NiShape* a_niShape,
+    nifly::NiShader* a_shader,
+    const Fo4Material::Material& a_material
+) {
     ApplyAlphaProperty(a_nifFile, a_niShape);
+    // FO4 takes blending and alpha testing from the material, which can disagree with the NIF's alpha property.
+    if (a_material.valid) {
+        ApplyMaterialAlpha(a_material.alpha);
+    }
     ApplyShaderBufferFlags(a_shader);
 
     if (a_shader) {
@@ -45,6 +54,15 @@ void OpenGLShapeDrawState::ApplyAlphaProperty(nifly::NifFile* a_nifFile, nifly::
     _alphaTestMode = flags.AlphaTestMode();
 
     _alphaThreshold = static_cast<float>(alphaProperty->threshold) / 255.0F;
+}
+
+void OpenGLShapeDrawState::ApplyMaterialAlpha(const Fo4Material::Alpha& a_alpha) {
+    _alphaBlendEnable = a_alpha.blend;
+    _srcBlendMode = BlendFactor(a_alpha.sourceBlend);
+    _dstBlendMode = BlendFactor(a_alpha.destinationBlend);
+    _alphaTestEnable = a_alpha.test;
+    _alphaTestMode = GL_GREATER;
+    _alphaThreshold = static_cast<float>(a_alpha.testReference) / 255.0F;
 }
 
 void OpenGLShapeDrawState::ApplyShaderBufferFlags(nifly::NiShader* a_shader) {

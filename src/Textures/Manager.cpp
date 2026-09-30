@@ -1,5 +1,4 @@
 #include "Textures/Manager.h"
-#include "Nif/Fo4Material.h"
 #include "Textures/Cache.h"
 #include "Textures/Loader.h"
 
@@ -45,7 +44,7 @@ PreviewTexture* TextureManager::GetTexture(const QString& a_texturePath) {
     return _cache->StoreTexture(normalizedPath, std::move(loaded.texture));
 }
 
-QStringList TextureManager::GetFo4MaterialTextures(const QString& a_materialPath) {
+Fo4Material::Material TextureManager::GetFo4Material(const QString& a_materialPath) {
     const auto normalizedPath = Fo4Material::NormalizeMaterialDataPath(a_materialPath);
     if (normalizedPath.isEmpty()) {
         return {};
@@ -53,8 +52,7 @@ QStringList TextureManager::GetFo4MaterialTextures(const QString& a_materialPath
 
     auto loaded = _loader->LoadDataFile(normalizedPath);
     _origins[OriginKey(normalizedPath)] = std::move(loaded.origin);
-    const auto material = Fo4Material::Read(loaded.data);
-    return material.valid ? material.textures : QStringList {};
+    return Fo4Material::Read(loaded.data);
 }
 
 DataOrigin TextureManager::TextureOrigin(const QString& a_texturePath) const {

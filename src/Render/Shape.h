@@ -36,6 +36,7 @@ public:
 
     [[nodiscard]] const QString& Name() const noexcept;
     [[nodiscard]] const OpenGLShapeTextures& Textures() const noexcept;
+    [[nodiscard]] const QString& MaterialPath() const noexcept;
     [[nodiscard]] ShaderManager::ShaderType ShaderType() const noexcept;
     [[nodiscard]] const QMatrix4x4& ModelMatrix() const noexcept;
     [[nodiscard]] const nifly::BoundingSphere& Bounds() const noexcept;
@@ -46,6 +47,7 @@ public:
 
 private:
     QString _name;
+    QString _materialPath;
     std::unique_ptr<OpenGLShapeGeometry> _geometry;
     std::unique_ptr<OpenGLShapeMaterial> _material;
     std::unique_ptr<OpenGLShapeTextures> _textures;

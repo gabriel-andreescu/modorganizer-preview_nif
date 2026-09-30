@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   hollow until zoomed out.
 - Fits the whole mesh in view when opening a preview or resetting the camera.
   Large and multi-part meshes were cropped or off-center.
+- Cuts out the transparent parts of alpha-tested meshes, such as Fallout 4
+  grass, using the Fallout 4 material's alpha settings.
 
 ## [0.5.1] - 2026-05-14
 

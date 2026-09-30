@@ -1,10 +1,10 @@
 #pragma once
 
+#include "Nif/Fo4Material.h"
 #include "Textures/Origin.h"
 #include "Textures/Source.h"
 
 #include <QString>
-#include <QStringList>
 
 #include <map>
 #include <memory>
@@ -27,7 +27,7 @@ public:
 
     PreviewTexture* GetTexture(const std::string& a_texturePath);
     PreviewTexture* GetTexture(const QString& a_texturePath);
-    [[nodiscard]] QStringList GetFo4MaterialTextures(const QString& a_materialPath);
+    [[nodiscard]] Fo4Material::Material GetFo4Material(const QString& a_materialPath);
 
     [[nodiscard]] DataOrigin TextureOrigin(const QString& a_texturePath) const;
     [[nodiscard]] DataOrigin MaterialOrigin(const QString& a_materialPath) const;

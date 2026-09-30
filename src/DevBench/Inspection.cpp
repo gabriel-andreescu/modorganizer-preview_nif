@@ -164,7 +164,7 @@ QJsonObject ShapeDetails(const OpenGLShape& a_shape, const NifWidget& a_view) {
         {"textures", textures},
     };
 
-    if (const auto& materialPath = a_shape.Textures().MaterialPath(); !materialPath.isEmpty()) {
+    if (const auto& materialPath = a_shape.MaterialPath(); !materialPath.isEmpty()) {
         details.insert(
             "material",
             QJsonObject {

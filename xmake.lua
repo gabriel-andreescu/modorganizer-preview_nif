@@ -8,9 +8,16 @@ add_repositories("mopk https://github.com/gabriel-andreescu/ModOrganizerPluginKi
 add_repositories("xmake-luals https://github.com/gabriel-andreescu/xmake-luals.git")
 add_addons("mopk 0.1.0", "xmake-luals 0.1.0")
 includes("@addon/mopk/project", "@addon/mopk/native", "@addon/xmake-luals/luals")
-includes("xmake/gli", "xmake/nifly")
+includes("xmake/bodyslide-material-file", "xmake/gli", "xmake/nifly")
 
-add_requires("devbench-api 0.1.0", "mo2-libbsarch 0.1.2", "gli 2026.04.05", "nifly 2026.09.14", { system = false })
+add_requires(
+    "devbench-api 0.1.0",
+    "mo2-libbsarch 0.1.2",
+    "bodyslide-material-file 2026.09.29",
+    "gli 2026.04.05",
+    "nifly 2026.09.14",
+    { system = false }
+)
 
 -- Build targets
 
@@ -23,7 +30,7 @@ target("Plugin", function()
     add_files("$(projectdir)/src/**.cpp", "$(projectdir)/src/**.h|PCH.h")
     add_includedirs("$(projectdir)/src")
     set_pcxxheader("$(projectdir)/src/PCH.h")
-    add_packages("qt6base", "mo2-uibase", "devbench-api", "mo2-libbsarch", "gli", "nifly")
+    add_packages("qt6base", "mo2-uibase", "devbench-api", "mo2-libbsarch", "bodyslide-material-file", "gli", "nifly")
     add_rules("@devbench-api/integration")
 end)
 

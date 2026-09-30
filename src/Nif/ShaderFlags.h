@@ -129,6 +129,23 @@ inline bool HasFlag(const std::uint32_t a_flags, const std::uint32_t a_flag) {
     return (a_flags & a_flag) != 0;
 }
 
+// Maps NiAlphaProperty's blend factor numbering, which FO4 materials share.
+inline GLenum BlendFactor(const std::uint32_t a_factor) {
+    switch (a_factor) {
+        case 0:  return GL_ONE;
+        case 1:  return GL_ZERO;
+        case 2:  return GL_SRC_COLOR;
+        case 3:  return GL_ONE_MINUS_SRC_COLOR;
+        case 4:  return GL_DST_COLOR;
+        case 5:  return GL_ONE_MINUS_DST_COLOR;
+        case 6:  return GL_SRC_ALPHA;
+        case 7:  return GL_ONE_MINUS_SRC_ALPHA;
+        case 8:  return GL_DST_ALPHA;
+        case 9:  return GL_ONE_MINUS_DST_ALPHA;
+        default: return GL_ONE;
+    }
+}
+
 struct NiAlphaPropertyFlags {
 public:
     NiAlphaPropertyFlags(const std::uint16_t flags = 0) // NOLINT
@@ -141,11 +158,11 @@ public:
     }
 
     [[nodiscard]] GLenum SourceBlendingFactor() const {
-        return GetBlendMode(_srcBlendMode);
+        return BlendFactor(_srcBlendMode);
     }
 
     [[nodiscard]] GLenum DestinationBlendingFactor() const {
-        return GetBlendMode(_dstBlendMode);
+        return BlendFactor(_dstBlendMode);
     }
 
     [[nodiscard]] bool IsAlphaTestEnabled() const {
@@ -161,22 +178,6 @@ public:
     }
 
 private:
-    static std::uint32_t GetBlendMode(const std::uint16_t a_flags) {
-        switch (a_flags) {
-            case 0:  return GL_ONE;
-            case 1:  return GL_ZERO;
-            case 2:  return GL_SRC_COLOR;
-            case 3:  return GL_ONE_MINUS_SRC_COLOR;
-            case 4:  return GL_DST_COLOR;
-            case 5:  return GL_ONE_MINUS_DST_COLOR;
-            case 6:  return GL_SRC_ALPHA;
-            case 7:  return GL_ONE_MINUS_SRC_ALPHA;
-            case 8:  return GL_DST_ALPHA;
-            case 9:  return GL_ONE_MINUS_DST_ALPHA;
-            default: return GL_ONE;
-        };
-    }
-
     static std::uint32_t GetTestMode(const std::uint16_t a_flags) {
         switch (a_flags) {
             case 0:  return GL_ALWAYS;
