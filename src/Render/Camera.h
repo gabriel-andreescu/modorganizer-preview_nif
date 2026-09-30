@@ -29,18 +29,18 @@ public:
     [[nodiscard]] float Distance() const {
         return _distance;
     }
-    [[nodiscard]] float NearPlane() const {
-        return _nearPlane;
-    }
-    [[nodiscard]] float FarPlane() const {
-        return _farPlane;
-    }
     [[nodiscard]] bool HasState() const {
         return _hasState;
+    }
+    // Framed cameras keep fitting the mesh as the viewport changes, until panned or zoomed.
+    [[nodiscard]] bool IsFramed() const {
+        return _framed;
     }
     [[nodiscard]] CameraState State() const;
 
     void SetState(const CameraState& a_state);
+    void Frame(const CameraState& a_state);
+    void Refit(float a_distance);
     void SetDistance(float a_distance);
     void SetLookAt(QVector3D a_lookAt);
 
@@ -51,15 +51,13 @@ public:
 
 private:
     static float Repeat(float a_value, float a_min, float a_max);
-    void UpdateClipPlanes();
 
     QVector3D _lookAt;
     float _pitch = 0.0F;
     float _yaw = 0.0F;
     float _distance = 500.0F;
-    float _nearPlane = 10.0F;
-    float _farPlane = 1000.0F;
     bool _hasState = false;
+    bool _framed = false;
 
 signals:
     void CameraMoved();

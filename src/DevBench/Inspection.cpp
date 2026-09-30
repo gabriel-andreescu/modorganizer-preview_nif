@@ -70,6 +70,13 @@ QJsonArray Vector(const QVector3D& a_vector) {
     return {a_vector.x(), a_vector.y(), a_vector.z()};
 }
 
+QJsonObject BoundsDetails(const nifly::BoundingSphere& a_bounds) {
+    return {
+        {"center", QJsonArray {a_bounds.center.x, a_bounds.center.y, a_bounds.center.z}},
+        {"radius", a_bounds.radius},
+    };
+}
+
 QJsonObject OriginDetails(const DataOrigin& a_origin) {
     QJsonObject details;
     InsertIfNotEmpty(details, "file", a_origin.filePath);
@@ -150,6 +157,7 @@ QJsonObject ShapeDetails(const OpenGLShape& a_shape, const NifWidget& a_view) {
         {"name", a_shape.Name()},
         {"shader", ShaderTypeName(a_shape.ShaderType())},
         {"program", ProgramDetails(a_view.Shaders().LoadedProgram(a_shape.ShaderType()))},
+        {"bounds", BoundsDetails(a_shape.Bounds())},
         {"refractionProxy", a_shape.IsRefractionProxy()},
         {"alphaPass", a_shape.UsesAlphaPass()},
         {"blendedPass", a_shape.UsesBlendedPass()},
@@ -219,6 +227,7 @@ QJsonObject PaneDetails(const PreviewPaneSide a_side, const NifPreviewPane& a_pa
             shapes.append(ShapeDetails(shape, *view));
         }
         details.insert("shapes", shapes);
+        details.insert("bounds", BoundsDetails(view->SceneBounds()));
     }
     return details;
 }
@@ -250,7 +259,7 @@ QJsonObject PreviewDetails(const int a_id, const NifPreviewWidget& a_preview) {
 
 QJsonObject CameraDetails(const Camera& a_camera) {
     return {
-        {"framed", a_camera.HasState()},
+        {"framed", a_camera.IsFramed()},
         {"yaw", a_camera.Yaw()},
         {"pitch", a_camera.Pitch()},
         {"distance", a_camera.Distance()},

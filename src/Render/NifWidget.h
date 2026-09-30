@@ -51,6 +51,9 @@ public:
     [[nodiscard]] const std::vector<SkippedShape>& SkippedShapes() const noexcept {
         return _skippedShapes;
     }
+    [[nodiscard]] const nifly::BoundingSphere& SceneBounds() const noexcept {
+        return _sceneBounds;
+    }
     [[nodiscard]] const TextureManager& Textures() const noexcept {
         return *_textureManager;
     }
@@ -75,6 +78,7 @@ protected:
     void resizeGL(int a_w, int a_h) override;
 
 private:
+    [[nodiscard]] float AspectRatio() const;
     void Cleanup();
     void CopySceneColorTexture(QOpenGLFunctions_2_1* a_f);
     void EnsureCollisionOverlay();
@@ -94,6 +98,7 @@ private:
 
     std::vector<OpenGLShape> _glShapes;
     std::vector<SkippedShape> _skippedShapes;
+    nifly::BoundingSphere _sceneBounds;
     std::unique_ptr<OpenGLCollisionOverlay> _collisionOverlay;
     bool _collisionOverlayBuildAttempted = false;
     bool _showCollision = false;

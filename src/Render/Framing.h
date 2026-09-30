@@ -1,0 +1,30 @@
+#pragma once
+
+#include <nifly/Object3d.hpp>
+
+#include <QMatrix4x4>
+#include <QVector3D>
+
+#include <span>
+
+class OpenGLShape;
+
+inline constexpr float kVerticalFieldOfView = 40.0F;
+
+struct ClipPlanes {
+    float nearPlane = 0.0F;
+    float farPlane = 0.0F;
+};
+
+// NIF space is Z-up. The preview's view space is Y-up with X mirrored.
+[[nodiscard]] QMatrix4x4 NifToViewSpace();
+[[nodiscard]] QVector3D ToQVector(const nifly::Vector3& a_vector);
+
+// A sphere enclosing the bounds of every drawn shape.
+[[nodiscard]] nifly::BoundingSphere SceneBounds(std::span<const OpenGLShape> a_shapes);
+
+// The camera distance at which a sphere fills the narrower of the two fields of view.
+[[nodiscard]] float FitDistance(float a_radius, float a_aspectRatio);
+
+// Planes enclosing a sphere whose center lies a_centerDepth in front of the camera.
+[[nodiscard]] ClipPlanes FitClipPlanes(float a_centerDepth, float a_radius);

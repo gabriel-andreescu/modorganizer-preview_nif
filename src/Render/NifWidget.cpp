@@ -2,6 +2,7 @@
 #include "Nif/CollisionGeometry.h"
 #include "Nif/ShaderFlags.h"
 #include "Render/CollisionOverlay.h"
+#include "Render/Framing.h"
 
 #include <QDebug>
 #include <QImage>
@@ -162,22 +163,19 @@ void NifWidget::ResetCamera() {
         return;
     }
 
-    float largestRadius = 0.0F;
-    QVector3D lookAt;
-    for (const auto& shape : _glShapes) {
-        if (shape.IsRefractionProxy()) {
-            continue;
-        }
-
-        if (shape.Bounds().radius > largestRadius) {
-            largestRadius = shape.Bounds().radius;
-            lookAt = {-shape.Bounds().center.x, shape.Bounds().center.z, shape.Bounds().center.y};
-        }
+    if (_sceneBounds.radius <= 0.0F) {
+        return;
     }
+    _camera->Frame({
+        .lookAt = NifToViewSpace().map(ToQVector(_sceneBounds.center)),
+        .distance = FitDistance(_sceneBounds.radius, AspectRatio()),
+    });
+}
 
-    if (largestRadius > 0.0F) {
-        _camera->SetState({.lookAt = lookAt, .pitch = 0.0F, .yaw = 0.0F, .distance = largestRadius * 2.4F});
-    }
+float NifWidget::AspectRatio() const {
+    const auto viewportWidth = _viewportWidth > 0.0F ? _viewportWidth : 1.0F;
+    const auto viewportHeight = _viewportHeight > 0.0F ? _viewportHeight : 1.0F;
+    return viewportWidth / viewportHeight;
 }
 
 void NifWidget::initializeGL() {
@@ -203,6 +201,7 @@ void NifWidget::initializeGL() {
         }
     }
 
+    _sceneBounds = ::SceneBounds(_glShapes);
     FrameCameraIfNeeded();
     UpdateCamera();
 
@@ -284,6 +283,9 @@ void NifWidget::resizeGL(const int a_w, const int a_h) {
     _viewportWidth = static_cast<float>(a_w);
     _viewportHeight = static_cast<float>(a_h);
 
+    if (_camera && _camera->IsFramed()) {
+        _camera->Refit(FitDistance(_sceneBounds.radius, AspectRatio()));
+    }
     SetProjectionMatrix();
 }
 
@@ -389,11 +391,10 @@ void NifWidget::SetProjectionMatrix() {
         return;
     }
 
-    const auto viewportWidth = _viewportWidth > 0.0F ? _viewportWidth : 1.0F;
-    const auto viewportHeight = _viewportHeight > 0.0F ? _viewportHeight : 1.0F;
-
+    const auto center = _viewMatrix.map(ToQVector(_sceneBounds.center));
+    const auto planes = FitClipPlanes(-center.z(), _sceneBounds.radius);
     _projectionMatrix.setToIdentity();
-    _projectionMatrix.perspective(40.0F, viewportWidth / viewportHeight, _camera->NearPlane(), _camera->FarPlane());
+    _projectionMatrix.perspective(kVerticalFieldOfView, AspectRatio(), planes.nearPlane, planes.farPlane);
 }
 
 void NifWidget::UpdateCamera() {
@@ -401,14 +402,12 @@ void NifWidget::UpdateCamera() {
         return;
     }
 
-    const QMatrix4x4 nifToView(-1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1);
-
     _viewMatrix.setToIdentity();
     _viewMatrix.translate(0.0F, 0.0F, -_camera->Distance());
     _viewMatrix.rotate(_camera->Pitch(), 1.0F, 0.0F, 0.0F);
     _viewMatrix.rotate(_camera->Yaw(), 0.0F, 1.0F, 0.0F);
     _viewMatrix.translate(-_camera->LookAt());
-    _viewMatrix *= nifToView;
+    _viewMatrix *= NifToViewSpace();
 
     SetProjectionMatrix();
 }

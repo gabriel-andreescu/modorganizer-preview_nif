@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Fixes small meshes opening with their front cut away, which made them look
   hollow until zoomed out.
+- Fits the whole mesh in view when opening a preview or resetting the camera.
+  Large and multi-part meshes were cropped or off-center.
 
 ## [0.5.1] - 2026-05-14
 
