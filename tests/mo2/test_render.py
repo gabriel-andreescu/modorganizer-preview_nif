@@ -94,6 +94,35 @@ CASES = [
         ),
     ),
     (
+        SKYRIM,
+        Case("male-body", "meshes/actors/character/character assets/malebody_1.nif"),
+    ),
+    (
+        SKYRIM,
+        Case("draugr", "meshes/actors/draugr/character assets/draugrmale01.nif"),
+    ),
+    (
+        SKYRIM,
+        Case("dragon", "meshes/actors/dragon/character assets/dragon.nif", pitch=60),
+    ),
+    (SKYRIM, Case("horse", "meshes/actors/horse/character assets/horse.nif", yaw=90)),
+    (
+        SKYRIM,
+        Case(
+            "frostbite-spider",
+            "meshes/actors/frostbitespider/character assets/frostbitespider.nif",
+        ),
+    ),
+    (
+        SKYRIM,
+        Case(
+            "elf-hair",
+            "meshes/actors/character/character assets/hair/elf/female/hair01.nif",
+        ),
+    ),
+    (SKYRIM, Case("steel-helmet", "meshes/armor/steel/f/helmet_1.nif")),
+    (SKYRIM, Case("steel-boots", "meshes/armor/steel/boots_1.nif")),
+    (
         FALLOUT4,
         Case("10mm-long-barrel", "meshes/weapons/10mmpistol/10mmlongbarrel.nif"),
     ),
@@ -168,6 +197,34 @@ CASES = [
         Case("diner-sign", "meshes/setdressing/diner/dinerentrancesign01.nif", yaw=90),
     ),
     (FALLOUT4, Case("nuka-quantum", "meshes/props/nukacolabottlequantum.nif")),
+    (
+        FALLOUT4,
+        Case("male-body", "meshes/actors/character/characterassets/malebody.nif"),
+    ),
+    (
+        FALLOUT4,
+        Case(
+            "female-hair",
+            "meshes/actors/character/characterassets/hair/female/femalehair01.nif",
+        ),
+    ),
+    (FALLOUT4, Case("deathclaw", "meshes/actors/deathclaw/deathclaw.nif")),
+    (
+        FALLOUT4,
+        Case("dogmeat", "meshes/actors/dogmeat/characterassets/dogmeat.nif"),
+    ),
+    (
+        FALLOUT4,
+        Case(
+            "super-mutant",
+            "meshes/actors/supermutant/characterassets/supermutantbody.nif",
+        ),
+    ),
+    (
+        FALLOUT4,
+        Case("vault-suit", "meshes/clothes/vault111suit/vault111suit.nif"),
+    ),
+    (FALLOUT4, Case("raider-outfit", "meshes/armor/raider01/raider01body.nif")),
 ]
 
 
