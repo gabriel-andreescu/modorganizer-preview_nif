@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   repeating them. Skyrim grass no longer shows stray patches above its blades.
 - Fixes Fallout 4 FaceGen heads rendering turned, with the neck cap stretched
   into a spike.
+- Fixes Fallout 4 bodies and other skin-tinted meshes rendering black.
 
 ## [0.5.1] - 2026-05-14
 

@@ -24,8 +24,6 @@ uniform float alpha;
 uniform float alphaThreshold;
 uniform int alphaTestMode;
 
-uniform vec3 tintColor;
-
 uniform vec2 uvScale;
 uniform vec2 uvOffset;
 
@@ -34,7 +32,6 @@ uniform bool hasGlowMap;
 uniform bool hasSoftlight;
 uniform bool hasBacklight;
 uniform bool hasRimlight;
-uniform bool hasTintColor;
 uniform bool hasCubeMap;
 uniform bool hasEnvMask;
 uniform bool hasSpecularMap;
@@ -346,10 +343,6 @@ void main( void )
         soft = albedo * max( 0.0, wrap ) * smoothstep( 1.0, 0.0, sqrt(diff) );
 
         diffuse += soft;
-    }
-
-    if ( hasTintColor ) {
-        albedo *= tintColor;
     }
 
     // Diffuse

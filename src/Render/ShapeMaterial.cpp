@@ -118,6 +118,8 @@ void OpenGLShapeMaterial::ApplyLightingShaderMaterial(nifly::BSLightingShaderPro
     _hasRefraction = ((a_shader->shaderFlags1 & (SLSF1::kRefraction | SLSF1::kFireRefraction)) != 0U);
     _refractionStrength = a_shader->refractionStrength;
     const auto bslspType = a_shader->GetShaderType();
+    // Fallout 4's lighting shaders never read the skin or hair tint, and its body NIFs store a black
+    // one, so fo4_default.frag applies none.
     if (bslspType == nifly::BSLSP_SKINTINT || bslspType == nifly::BSLSP_FACE) {
         _tintColor = ConvertVector3(a_shader->skinTintColor);
         _hasTintColor = true;
