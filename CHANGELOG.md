@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Support MO2 2.5.3beta12 instead of 2.5.3beta11
 
+### Fixed
+
+- Fixes small meshes opening with their front cut away, which made them look
+  hollow until zoomed out.
+
 ## [0.5.1] - 2026-05-14
 
 ### Added

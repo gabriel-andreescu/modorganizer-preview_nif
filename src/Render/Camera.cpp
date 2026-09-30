@@ -12,18 +12,22 @@ void Camera::SetState(const CameraState& a_state) {
     _pitch = Repeat(a_state.pitch, 0.0F, 360.0F);
     _yaw = Repeat(a_state.yaw, 0.0F, 360.0F);
     _distance = std::max(10.0F, a_state.distance);
-    _nearPlane = std::clamp(_distance - 5000.0F, 10.0F, 250.0F);
-    _farPlane = std::max(10000.0F, _distance * 2.0F);
+    UpdateClipPlanes();
     _hasState = true;
     CameraMoved();
 }
 
 void Camera::SetDistance(const float a_distance) {
     _distance = std::max(10.0F, a_distance);
-    _nearPlane = std::clamp(a_distance - 5000.0F, 10.0F, 250.0F);
-    _farPlane = std::max(10000.0F, a_distance * 2.0F);
+    UpdateClipPlanes();
     _hasState = true;
     CameraMoved();
+}
+
+void Camera::UpdateClipPlanes() {
+    // A fixed near plane clips the front of meshes framed closer than it.
+    _nearPlane = std::clamp(_distance * 0.05F, 0.1F, 250.0F);
+    _farPlane = std::max(10000.0F, _distance * 2.0F);
 }
 
 void Camera::SetLookAt(const QVector3D a_lookAt) {

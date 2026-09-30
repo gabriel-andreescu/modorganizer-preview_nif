@@ -51,6 +51,7 @@ public:
 
 private:
     static float Repeat(float a_value, float a_min, float a_max);
+    void UpdateClipPlanes();
 
     QVector3D _lookAt;
     float _pitch = 0.0F;
