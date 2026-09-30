@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixes Skyrim grass showing only its blade tips. Models under
   `meshes/landscape/grass/` now render the way the game's grass shader draws
   them.
+- Clamps textures where the mesh or its Fallout 4 material says to, instead of
+  repeating them. Skyrim grass no longer shows stray patches above its blades.
 
 ## [0.5.1] - 2026-05-14
 

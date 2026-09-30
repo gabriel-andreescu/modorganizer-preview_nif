@@ -29,6 +29,8 @@ struct Alpha {
 struct Material {
     Textures textures;
     Alpha alpha;
+    bool tileU = true;
+    bool tileV = true;
     bool valid = false;
 };
 

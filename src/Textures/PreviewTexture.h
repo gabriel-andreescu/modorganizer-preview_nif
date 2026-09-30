@@ -2,6 +2,11 @@
 
 #include "Render/Resources.h"
 
+struct TextureWrap {
+    GLint s = GL_REPEAT;
+    GLint t = GL_REPEAT;
+};
+
 class PreviewTexture {
 public:
     explicit PreviewTexture(QOpenGLTexture* a_texture);
@@ -12,7 +17,7 @@ public:
     PreviewTexture& operator=(const PreviewTexture&) = delete;
     PreviewTexture& operator=(PreviewTexture&&) = delete;
 
-    void Bind(int a_textureUnit) const;
+    void Bind(int a_textureUnit, const TextureWrap& a_wrap) const;
     void DestroyWithCurrentContext();
 
 private:

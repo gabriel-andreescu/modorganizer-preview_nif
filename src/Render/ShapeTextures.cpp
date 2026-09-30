@@ -9,6 +9,7 @@
 #include <nifly/NifFile.hpp>
 
 #include <algorithm>
+#include <cstdint>
 #include <string>
 
 namespace {
@@ -53,6 +54,29 @@ bool TextureFeatureEnabled(
     return false;
 }
 
+[[nodiscard]] GLint WrapMode(const bool a_tiles) {
+    return a_tiles ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+}
+
+// Clamp modes 0 to 3 are CLAMP_S_CLAMP_T, CLAMP_S_WRAP_T, WRAP_S_CLAMP_T and WRAP_S_WRAP_T.
+[[nodiscard]] TextureWrap ClampModeWrap(const std::uint32_t a_clampMode) {
+    return {.s = WrapMode((a_clampMode & 2U) != 0U), .t = WrapMode((a_clampMode & 1U) != 0U)};
+}
+
+[[nodiscard]] TextureWrap ShaderTextureWrap(const nifly::NiShader* a_shader, const Fo4Material::Material& a_material) {
+    // Fallout 4 tiles textures as the material says, not as the NIF's clamp mode says.
+    if (a_material.valid) {
+        return {.s = WrapMode(a_material.tileU), .t = WrapMode(a_material.tileV)};
+    }
+    if (const auto* const lighting = dynamic_cast<const nifly::BSLightingShaderProperty*>(a_shader)) {
+        return ClampModeWrap(lighting->textureClampMode);
+    }
+    // Effect shaders pack the clamp mode into the low byte, beside the lighting influence and environment map LOD.
+    if (const auto* const effect = dynamic_cast<const nifly::BSEffectShaderProperty*>(a_shader)) {
+        return ClampModeWrap(effect->textureClampMode & 0xFFU);
+    }
+    return {};
+}
 } // namespace
 
 void OpenGLShapeTextures::InitializeDescriptors(
@@ -75,6 +99,7 @@ void OpenGLShapeTextures::Load(
         return;
     }
 
+    _wrap = ShaderTextureWrap(a_shader, a_material);
     if (a_shaderType == ShaderManager::kFO4Default && a_material.valid) {
         LoadFo4MaterialTextures(a_material.textures, a_textureManager);
         return;
@@ -296,7 +321,7 @@ void OpenGLShapeTextures::EnsurePBRTextureDefaults(TextureManager* a_textureMana
 void OpenGLShapeTextures::BindTextures() const {
     for (std::size_t i = 0; i < _textures.size(); i++) {
         if (_textures[i]) {
-            _textures[i]->Bind(static_cast<int>(i + 1));
+            _textures[i]->Bind(static_cast<int>(i + 1), _wrap);
         }
     }
 }

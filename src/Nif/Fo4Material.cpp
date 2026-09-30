@@ -82,7 +82,13 @@ Material Read(const QByteArray& a_data) {
 
     const auto textures = file.signature == MaterialFile::BGEM ? EffectMaterialTextures(file)
                                                                : ShaderMaterialTextures(file);
-    return {.textures = textures, .alpha = MaterialAlpha(file), .valid = true};
+    return {
+        .textures = textures,
+        .alpha = MaterialAlpha(file),
+        .tileU = file.tileU,
+        .tileV = file.tileV,
+        .valid = true,
+    };
 }
 
 }

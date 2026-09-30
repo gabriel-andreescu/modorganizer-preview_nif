@@ -3,6 +3,7 @@
 #include "Nif/Fo4Material.h"
 #include "Render/ShaderManager.h"
 #include "Render/ShapeMaterial.h"
+#include "Textures/PreviewTexture.h"
 #include "Textures/SlotDescriptors.h"
 #include "Textures/Slots.h"
 
@@ -12,7 +13,6 @@
 #include <cstddef>
 #include <vector>
 
-class PreviewTexture;
 class QOpenGLShaderProgram;
 class TextureManager;
 
@@ -67,6 +67,7 @@ private:
     std::array<bool, kTextureSlotCount> _loadedTextures {};
     std::array<QString, kTextureSlotCount> _requestedPaths {};
     std::array<TextureFallback, kTextureSlotCount> _appliedFallbacks {};
+    TextureWrap _wrap;
     bool _hasSourceTexture = false;
     bool _hasGreyscaleMap = false;
 };
