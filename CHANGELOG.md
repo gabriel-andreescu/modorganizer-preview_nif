@@ -21,6 +21,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   them.
 - Clamps textures where the mesh or its Fallout 4 material says to, instead of
   repeating them. Skyrim grass no longer shows stray patches above its blades.
+- Fixes Fallout 4 FaceGen heads rendering turned, with the neck cap stretched
+  into a spike.
 
 ## [0.5.1] - 2026-05-14
 

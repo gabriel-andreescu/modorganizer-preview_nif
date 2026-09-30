@@ -14,6 +14,7 @@ add_requires(
     "devbench-api 0.1.0",
     "mo2-libbsarch 0.1.2",
     "bodyslide-material-file 2026.09.29",
+    "eigen 3.4.0",
     "gli 2026.04.05",
     "nifly 2026.09.14",
     { system = false }
@@ -30,7 +31,7 @@ target("Plugin", function()
     add_files("$(projectdir)/src/**.cpp", "$(projectdir)/src/**.h|PCH.h")
     add_includedirs("$(projectdir)/src")
     set_pcxxheader("$(projectdir)/src/PCH.h")
-    add_packages("qt6base", "mo2-uibase", "devbench-api", "mo2-libbsarch", "bodyslide-material-file", "gli", "nifly")
+    add_packages("qt6base", "mo2-uibase", "devbench-api", "mo2-libbsarch", "bodyslide-material-file", "eigen", "gli", "nifly")
     add_rules("@devbench-api/integration")
 end)
 

@@ -1,4 +1,5 @@
 #include "Render/ShapeRenderGeometry.h"
+#include "Nif/BindPose.h"
 #include "Nif/Transforms.h"
 
 #include <QDebug>
@@ -355,6 +356,25 @@ void CopyRigidVertices(const SkinTarget& a_target, const nifly::NifFile* a_nifFi
     }
 }
 
+ShapeRenderGeometry PlaceSkinnedGeometry(
+    const ShapeRenderGeometry& a_geometry,
+    const nifly::MatTransform& a_skinToModel
+) {
+    auto placed = MakeSkinnedGeometry(a_geometry);
+    for (std::size_t vertex = 0; vertex < a_geometry.rawPositions->size(); vertex++) {
+        CopyRigidVertex(a_geometry, vertex, a_skinToModel, placed);
+    }
+
+    NormalizeVectors(placed.skinnedNormals);
+    NormalizeVectors(placed.skinnedTangents);
+    NormalizeVectors(placed.skinnedBitangents);
+
+    placed.skinned = true;
+    placed.bounds = nifly::BoundingSphere(placed.skinnedPositions);
+    placed.modelTransform.Clear();
+    return placed;
+}
+
 bool TryBuildSkinnedGeometry(nifly::NifFile* a_nifFile, nifly::NiShape* a_shape, ShapeRenderGeometry& a_geometry) {
     if (!a_shape->HasSkinInstance() || !a_geometry.rawPositions || a_geometry.rawPositions->empty()) {
         return false;
@@ -368,6 +388,15 @@ bool TryBuildSkinnedGeometry(nifly::NifFile* a_nifFile, nifly::NiShape* a_shape,
     }
 
     const auto* const skinInstance = dynamic_cast<nifly::NiSkinInstance*>(skinContainer);
+    // Fallout 4 skin data stores no skin-to-model transform, and FaceGen bone nodes carry positions without
+    // rotations, so skinning with them tears FaceGen shapes. The fitted bind pose places the shape as one piece.
+    if (!skinInstance) {
+        if (const auto skinToModel = FitSkinToModel(a_nifFile, a_shape)) {
+            a_geometry = PlaceSkinnedGeometry(a_geometry, *skinToModel);
+            return true;
+        }
+    }
+
     auto* skinPartition = skinInstance ? header.GetBlock(skinInstance->skinPartitionRef) : nullptr;
 
     const bool useLegacyPartition = IsLegacyTriShape(a_shape) && HasPartitionWeights(skinPartition);
