@@ -109,6 +109,14 @@ TextureSourceProvider PreviewPaneController::CurrentTextureSourceProvider() cons
     return _textureSourceSet.providers[_currentTextureSourceIndex];
 }
 
+QString PreviewPaneController::CurrentDataPath() const {
+    if (_currentProviderIndex < 0 || _currentProviderIndex >= _providers.size()) {
+        return {};
+    }
+
+    return _providers[_currentProviderIndex].virtualPath;
+}
+
 void PreviewPaneController::ResetLoadedData() {
     _textureSourceSet = {};
     _currentTextureSourceIndex = 0;

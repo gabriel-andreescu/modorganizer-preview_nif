@@ -30,6 +30,7 @@ class NifWidget final : public QOpenGLWidget {
 public:
     NifWidget(
         std::shared_ptr<nifly::NifFile> a_nifFile,
+        const QString& a_dataPath,
         MOBase::IOrganizer* a_organizer,
         QSharedPointer<Camera> a_camera,
         TextureSourceProvider a_textureSource,
@@ -91,6 +92,7 @@ private:
     void UpdateCamera();
 
     std::shared_ptr<nifly::NifFile> _nifFile;
+    bool _isGrassModel = false;
     MOBase::IOrganizer* _moInfo = nullptr;
 
     std::unique_ptr<TextureManager> _textureManager;

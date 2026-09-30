@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Large and multi-part meshes were cropped or off-center.
 - Cuts out the transparent parts of alpha-tested meshes, such as Fallout 4
   grass, using the Fallout 4 material's alpha settings.
+- Fixes Skyrim grass showing only its blade tips. Models under
+  `meshes/landscape/grass/` now render the way the game's grass shader draws
+  them.
 
 ## [0.5.1] - 2026-05-14
 

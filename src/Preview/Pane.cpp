@@ -323,8 +323,14 @@ void NifPreviewPane::ReloadCurrentNifWidget() {
         return;
     }
 
-    auto* const
-        nifWidget = new NifWidget(nifFile, _organizer, _camera, _controller.CurrentTextureSourceProvider(), this);
+    auto* const nifWidget = new NifWidget(
+        nifFile,
+        _controller.CurrentDataPath(),
+        _organizer,
+        _camera,
+        _controller.CurrentTextureSourceProvider(),
+        this
+    );
     nifWidget->SetShowCollision(_showCollision);
     nifWidget->setMinimumSize(240, 240);
     _nifWidget = nifWidget;

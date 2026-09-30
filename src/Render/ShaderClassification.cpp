@@ -46,3 +46,13 @@ ShaderManager::ShaderType ClassifyShaderType(const nifly::NifFile* a_nifFile, co
 
     return ClassifyNonFo4ShaderType(a_shader);
 }
+
+bool IsSkyrimLightingShader(const ShaderManager::ShaderType a_shaderType) {
+    switch (a_shaderType) {
+        case ShaderManager::kSKDefault:
+        case ShaderManager::kSKMSN:
+        case ShaderManager::kSKMultilayer:
+        case ShaderManager::kSKPBR:        return true;
+        default:                           return false;
+    }
+}

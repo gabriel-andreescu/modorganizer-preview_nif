@@ -25,7 +25,12 @@ QString Fo4MaterialPath(const nifly::NiShader* a_shader, const ShaderManager::Sh
 }
 }
 
-OpenGLShape::OpenGLShape(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, TextureManager* a_textureManager)
+OpenGLShape::OpenGLShape(
+    nifly::NifFile* a_nifFile,
+    nifly::NiShape* a_niShape,
+    const bool a_isGrassModel,
+    TextureManager* a_textureManager
+)
     : _name {QString::fromStdString(a_niShape->name.get())}
     , _geometry {std::make_unique<OpenGLShapeGeometry>()}
     , _material {std::make_unique<OpenGLShapeMaterial>()}
@@ -43,9 +48,12 @@ OpenGLShape::OpenGLShape(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, T
     _isRefractionProxy = IsRefractionDistortionProxy(a_nifFile, a_niShape);
     _shaderType = ClassifyShaderType(a_nifFile, shader);
     const bool isPBR = _shaderType == ShaderManager::kSKPBR;
+    // Fallout 4 draws grass with the model's own shader flags and material, so only Skyrim needs the grass shader's
+    // vertex alpha and alpha state.
+    const bool usesSkyrimGrassShader = a_isGrassModel && IsSkyrimLightingShader(_shaderType);
 
     _textures->InitializeDescriptors(shader, _shaderType, _isRefractionProxy);
-    _geometry->Initialize(a_nifFile, a_niShape, shader);
+    _geometry->Initialize(a_nifFile, a_niShape, shader, usesSkyrimGrassShader);
 
     if (shader) {
         _materialPath = Fo4MaterialPath(shader, _shaderType);
@@ -54,6 +62,9 @@ OpenGLShape::OpenGLShape(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, T
         _textures->Load(a_nifFile, shader, _shaderType, isPBR, material, a_textureManager);
         _material->Apply(shader, isPBR);
         _drawState->Apply(a_nifFile, a_niShape, shader, material);
+        if (usesSkyrimGrassShader) {
+            _drawState->ApplySkyrimGrassAlpha(a_nifFile, a_niShape);
+        }
     } else {
         _textures->UseDefaultTextures(a_textureManager);
     }

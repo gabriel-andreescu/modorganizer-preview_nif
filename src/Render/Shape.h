@@ -23,7 +23,12 @@ class NiShape;
 
 class OpenGLShape {
 public:
-    OpenGLShape(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, TextureManager* a_textureManager);
+    OpenGLShape(
+        nifly::NifFile* a_nifFile,
+        nifly::NiShape* a_niShape,
+        bool a_isGrassModel,
+        TextureManager* a_textureManager
+    );
     ~OpenGLShape();
     OpenGLShape(const OpenGLShape&) = delete;
     OpenGLShape(OpenGLShape&&) noexcept;

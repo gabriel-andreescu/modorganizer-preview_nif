@@ -39,21 +39,32 @@ void OpenGLShapeDrawState::SetupOpenGLState(QOpenGLFunctions_2_1* a_f, const boo
     }
 }
 
-void OpenGLShapeDrawState::ApplyAlphaProperty(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape) {
+void OpenGLShapeDrawState::ApplySkyrimGrassAlpha(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape) {
+    // Skyrim gives a grass model without an alpha property one with these flags and a zero threshold.
+    constexpr unsigned kCreatedFlags = 0x00ECU;
+    // Skyrim enables blending and a GREATER alpha test on every grass model, keeping the blend factors and threshold.
+    constexpr unsigned kKeptFlags = 0xF3FFU;
+    constexpr unsigned kForcedFlags = 0x1201U;
+
     const auto* const alphaProperty = a_nifFile->GetAlphaProperty(a_niShape);
-    if (!alphaProperty) {
-        return;
+    const unsigned flags = alphaProperty ? alphaProperty->flags : kCreatedFlags;
+    const auto threshold = alphaProperty ? alphaProperty->threshold : std::uint8_t {0};
+    ApplyAlphaFlags(static_cast<std::uint16_t>((flags & kKeptFlags) | kForcedFlags), threshold);
+}
+
+void OpenGLShapeDrawState::ApplyAlphaProperty(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape) {
+    if (const auto* const alphaProperty = a_nifFile->GetAlphaProperty(a_niShape)) {
+        ApplyAlphaFlags(alphaProperty->flags, alphaProperty->threshold);
     }
+}
 
-    const NiAlphaPropertyFlags flags = alphaProperty->flags;
-
-    _alphaBlendEnable = flags.IsAlphaBlendEnabled();
-    _srcBlendMode = flags.SourceBlendingFactor();
-    _dstBlendMode = flags.DestinationBlendingFactor();
-    _alphaTestEnable = flags.IsAlphaTestEnabled();
-    _alphaTestMode = flags.AlphaTestMode();
-
-    _alphaThreshold = static_cast<float>(alphaProperty->threshold) / 255.0F;
+void OpenGLShapeDrawState::ApplyAlphaFlags(const NiAlphaPropertyFlags a_flags, const std::uint8_t a_threshold) {
+    _alphaBlendEnable = a_flags.IsAlphaBlendEnabled();
+    _srcBlendMode = a_flags.SourceBlendingFactor();
+    _dstBlendMode = a_flags.DestinationBlendingFactor();
+    _alphaTestEnable = a_flags.IsAlphaTestEnabled();
+    _alphaTestMode = a_flags.AlphaTestMode();
+    _alphaThreshold = static_cast<float>(a_threshold) / 255.0F;
 }
 
 void OpenGLShapeDrawState::ApplyMaterialAlpha(const Fo4Material::Alpha& a_alpha) {

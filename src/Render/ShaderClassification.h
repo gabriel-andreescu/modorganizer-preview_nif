@@ -11,3 +11,4 @@ class NiShader;
     const nifly::NifFile* a_nifFile,
     const nifly::NiShader* a_shader
 );
+[[nodiscard]] bool IsSkyrimLightingShader(ShaderManager::ShaderType a_shaderType);

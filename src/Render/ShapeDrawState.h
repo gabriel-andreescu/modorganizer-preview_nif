@@ -1,8 +1,11 @@
 #pragma once
 
 #include "Nif/Fo4Material.h"
+#include "Nif/ShaderFlags.h"
 
 #include <QOpenGLFunctions_2_1>
+
+#include <cstdint>
 
 class QOpenGLShaderProgram;
 
@@ -20,6 +23,7 @@ public:
         nifly::NiShader* a_shader,
         const Fo4Material::Material& a_material
     );
+    void ApplySkyrimGrassAlpha(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape);
     void SetupUniforms(QOpenGLShaderProgram* a_program) const;
     void SetupOpenGLState(QOpenGLFunctions_2_1* a_f, bool a_usesBlendedPass) const;
 
@@ -35,6 +39,7 @@ public:
 
 private:
     void ApplyAlphaProperty(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape);
+    void ApplyAlphaFlags(NiAlphaPropertyFlags a_flags, std::uint8_t a_threshold);
     void ApplyMaterialAlpha(const Fo4Material::Alpha& a_alpha);
     void ApplyShaderBufferFlags(nifly::NiShader* a_shader);
     void SetupDepthState(QOpenGLFunctions_2_1* a_f) const;

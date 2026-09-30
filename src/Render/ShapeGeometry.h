@@ -18,7 +18,12 @@ class NiShape;
 
 class OpenGLShapeGeometry {
 public:
-    void Initialize(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, nifly::NiShader* a_shader);
+    void Initialize(
+        nifly::NifFile* a_nifFile,
+        nifly::NiShape* a_niShape,
+        nifly::NiShader* a_shader,
+        bool a_vertexAlphaIsWind
+    );
     void DestroyWithCurrentContext();
     void Draw(QOpenGLFunctions_2_1* a_f) const;
     void SetupVertexAttributes(QOpenGLFunctions_2_1* a_f) const;
@@ -32,7 +37,12 @@ public:
 
 private:
     static void SetDefaultVertexAttributes(QOpenGLFunctions_2_1* a_f);
-    void InitializeColorBuffer(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, nifly::NiShader* a_shader);
+    void InitializeColorBuffer(
+        nifly::NifFile* a_nifFile,
+        nifly::NiShape* a_niShape,
+        nifly::NiShader* a_shader,
+        bool a_vertexAlphaIsWind
+    );
 
     OpenGLVertexArrayResource _vertexArray;
     std::array<OpenGLBufferResource, kAttribCount> _vertexBuffers;

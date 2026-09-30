@@ -53,6 +53,7 @@ public:
     }
 
     [[nodiscard]] TextureSourceProvider CurrentTextureSourceProvider() const;
+    [[nodiscard]] QString CurrentDataPath() const;
 
 private:
     void ResetLoadedData();

@@ -1,5 +1,6 @@
 #include "Render/NifWidget.h"
 #include "Nif/CollisionGeometry.h"
+#include "Nif/GrassModel.h"
 #include "Nif/ShaderFlags.h"
 #include "Render/CollisionOverlay.h"
 #include "Render/Framing.h"
@@ -26,6 +27,7 @@ QSharedPointer<Camera> MakeCamera() {
 
 NifWidget::NifWidget(
     std::shared_ptr<nifly::NifFile> a_nifFile,
+    const QString& a_dataPath,
     MOBase::IOrganizer* a_organizer,
     QSharedPointer<Camera> a_camera,
     TextureSourceProvider a_textureSource,
@@ -33,6 +35,7 @@ NifWidget::NifWidget(
 )
     : QOpenGLWidget(a_parent)
     , _nifFile {std::move(a_nifFile)}
+    , _isGrassModel {IsGrassModelPath(a_dataPath)}
     , _moInfo {a_organizer}
     , _textureManager {std::make_unique<TextureManager>(a_organizer, std::move(a_textureSource))}
     , _shaderManager {std::make_unique<ShaderManager>(a_organizer)} {
@@ -191,7 +194,7 @@ void NifWidget::initializeGL() {
         }
 
         try {
-            _glShapes.emplace_back(_nifFile.get(), shape, _textureManager.get());
+            _glShapes.emplace_back(_nifFile.get(), shape, _isGrassModel, _textureManager.get());
         } catch (const std::exception& e) {
             qWarning("Failed to prepare NIF shape '%s' for preview: %s", qUtf8Printable(name), e.what());
             _skippedShapes.push_back({.name = name, .reason = QString::fromUtf8(e.what())});

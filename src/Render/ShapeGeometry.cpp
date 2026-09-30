@@ -75,7 +75,12 @@ OpenGLBufferResource MakeVertexBuffer(const std::vector<T>* a_data, const GLuint
 }
 } // namespace
 
-void OpenGLShapeGeometry::Initialize(nifly::NifFile* a_nifFile, nifly::NiShape* a_niShape, nifly::NiShader* a_shader) {
+void OpenGLShapeGeometry::Initialize(
+    nifly::NifFile* a_nifFile,
+    nifly::NiShape* a_niShape,
+    nifly::NiShader* a_shader,
+    const bool a_vertexAlphaIsWind
+) {
     auto* const functions = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(QOpenGLContext::currentContext());
     if (!functions) {
         qWarning("Skipping NIF shape geometry: OpenGL 2.1 functions unavailable");
@@ -113,7 +118,7 @@ void OpenGLShapeGeometry::Initialize(nifly::NifFile* a_nifFile, nifly::NiShape* 
         _vertexBuffers[kAttribTexCoord] = MakeVertexBuffer(uvs, kAttribTexCoord);
     }
 
-    InitializeColorBuffer(a_nifFile, a_niShape, a_shader);
+    InitializeColorBuffer(a_nifFile, a_niShape, a_shader, a_vertexAlphaIsWind);
 
     auto* const glIndexBuffer = _indexBuffer.Create(QOpenGLBuffer::IndexBuffer);
     if (glIndexBuffer->create() && glIndexBuffer->bind()) {
@@ -179,7 +184,8 @@ void OpenGLShapeGeometry::SetDefaultVertexAttributes(QOpenGLFunctions_2_1* a_f) 
 void OpenGLShapeGeometry::InitializeColorBuffer(
     nifly::NifFile* a_nifFile,
     nifly::NiShape* a_niShape,
-    nifly::NiShader* a_shader
+    nifly::NiShader* a_shader,
+    const bool a_vertexAlphaIsWind
 ) {
     std::vector<nifly::Color4> colors;
     if (!a_nifFile->GetColorsForShape(a_niShape, colors)) {
@@ -187,8 +193,10 @@ void OpenGLShapeGeometry::InitializeColorBuffer(
     }
 
     const auto* const bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(a_shader);
-    if (bslsp
-        && (((bslsp->shaderFlags1 & SLSF1::kVertexAlpha) == 0U) || ((bslsp->shaderFlags2 & SLSF2::kTreeAnim) != 0U))) {
+    if (a_vertexAlphaIsWind
+        || (bslsp
+            && (((bslsp->shaderFlags1 & SLSF1::kVertexAlpha) == 0U)
+                || ((bslsp->shaderFlags2 & SLSF2::kTreeAnim) != 0U)))) {
         for (auto& color : colors) {
             color.a = 1.0F;
         }
