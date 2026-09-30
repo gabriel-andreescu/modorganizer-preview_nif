@@ -1,25 +1,16 @@
 CompileFlags:
-  CompilationDatabase: cmake-build-lint
+  CompilationDatabase: .
   Compiler: clang-cl
+  Remove: [-WX, /WX, '-std:*', '/std:*', '/clang:-std=*', '-Zc:*', '/Zc:*']
   Add:
     - --target=x86_64-pc-windows-msvc
-
-Diagnostics:
-  UnusedIncludes: None
-  ClangTidy:
-    Remove:
-      - misc-unused-alias-decls
-
-Index:
-  StandardLibrary: false
+    - /clang:-std=c++23
+    - /Y-
 
 ---
 
 If:
-  PathMatch: (mo2-abi|cmake-build[^/]*/_deps|cmake-build[^/]*/src/preview_nif_autogen)/.*
+  PathMatch: build/.*
 
 Index:
   Background: Skip
-
-Diagnostics:
-  Suppress: ['*']

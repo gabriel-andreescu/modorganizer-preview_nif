@@ -14,10 +14,7 @@
       "MinWorking": "2.5.3",
       "MaxWorking": "",
       "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.5.1/NIF.Preview.MO2-2.5.3beta11.zip",
-      "PluginPath": [
-        "preview_nif.dll",
-        "data"
-      ],
+      "PluginPath": ["preview_nif.dll", "data"],
       "LocalePath": [],
       "DataPath": [],
       "ReleaseNotes": []
@@ -30,10 +27,7 @@
       "MinWorking": "2.5.2",
       "MaxWorking": "",
       "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.5.1/NIF.Preview.MO2-2.5.2.zip",
-      "PluginPath": [
-        "preview_nif.dll",
-        "data"
-      ],
+      "PluginPath": ["preview_nif.dll", "data"],
       "LocalePath": [],
       "DataPath": [],
       "ReleaseNotes": []
@@ -46,10 +40,7 @@
       "MinWorking": "2.5.3",
       "MaxWorking": "",
       "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.5.0/NIF.Preview.MO2-2.5.3beta11.zip",
-      "PluginPath": [
-        "preview_nif.dll",
-        "data"
-      ],
+      "PluginPath": ["preview_nif.dll", "data"],
       "LocalePath": [],
       "DataPath": [],
       "ReleaseNotes": []
@@ -62,10 +53,7 @@
       "MinWorking": "2.5.2",
       "MaxWorking": "",
       "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.5.0/NIF.Preview.MO2-2.5.2.zip",
-      "PluginPath": [
-        "preview_nif.dll",
-        "data"
-      ],
+      "PluginPath": ["preview_nif.dll", "data"],
       "LocalePath": [],
       "DataPath": [],
       "ReleaseNotes": []
@@ -78,10 +66,7 @@
       "MinWorking": "2.5.3",
       "MaxWorking": "",
       "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.4.4/NIF.Preview.MO2-2.5.3beta11.zip",
-      "PluginPath": [
-        "preview_nif.dll",
-        "data"
-      ],
+      "PluginPath": ["preview_nif.dll", "data"],
       "LocalePath": [],
       "DataPath": [],
       "ReleaseNotes": []
@@ -94,10 +79,7 @@
       "MinWorking": "2.5.2",
       "MaxWorking": "",
       "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.4.4/NIF.Preview.MO2-2.5.2.zip",
-      "PluginPath": [
-        "preview_nif.dll",
-        "data"
-      ],
+      "PluginPath": ["preview_nif.dll", "data"],
       "LocalePath": [],
       "DataPath": [],
       "ReleaseNotes": []
@@ -110,10 +92,7 @@
       "MinWorking": "2.5.2",
       "MaxWorking": "",
       "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.4.3/preview_nif_0.4.3.zip",
-      "PluginPath": [
-        "preview_nif.dll",
-        "data"
-      ],
+      "PluginPath": ["preview_nif.dll", "data"],
       "LocalePath": [],
       "DataPath": [],
       "ReleaseNotes": []
@@ -126,10 +105,7 @@
       "MinWorking": "2.5.2",
       "MaxWorking": "",
       "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.4.0/preview_nif_0.4.0.zip",
-      "PluginPath": [
-        "preview_nif.dll",
-        "data"
-      ],
+      "PluginPath": ["preview_nif.dll", "data"],
       "LocalePath": [],
       "DataPath": [],
       "ReleaseNotes": []
@@ -142,10 +118,7 @@
       "MinWorking": "2.5.0",
       "MaxWorking": "",
       "DownloadUrl": "https://github.com/Exit-9B/modorganizer-preview_nif/releases/download/v0.2.0/preview_nif-0.2.0.7z",
-      "PluginPath": [
-        "preview_nif.dll",
-        "data"
-      ],
+      "PluginPath": ["preview_nif.dll", "data"],
       "LocalePath": [],
       "DataPath": [],
       "ReleaseNotes": []
@@ -158,10 +131,7 @@
       "MinWorking": "2.4.3",
       "MaxWorking": "2.4.5a3",
       "DownloadUrl": "https://github.com/Exit-9B/modorganizer-preview_nif/releases/download/v0.1.8/preview_nif-0.1.8.1.7z",
-      "PluginPath": [
-        "preview_nif.dll",
-        "data"
-      ],
+      "PluginPath": ["preview_nif.dll", "data"],
       "LocalePath": [],
       "DataPath": [],
       "ReleaseNotes": []

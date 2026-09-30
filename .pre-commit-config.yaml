@@ -1,0 +1,37 @@
+exclude: ^(build/|dist/|scratch/|\.xmake/)
+
+repos:
+  - repo: local
+    hooks:
+      - id: prettier
+        name: Prettier
+        language: node
+        entry: prettier --write
+        additional_dependencies: [prettier@3.9.7]
+        types: [text]
+        files: \.(md|ya?ml|jsonc?)$
+      - id: ruff-check
+        name: Ruff check
+        language: python
+        entry: ruff check --fix
+        additional_dependencies: [ruff==0.16.7]
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: Ruff format
+        language: python
+        entry: ruff format
+        additional_dependencies: [ruff==0.16.7]
+        types_or: [python, pyi]
+      - id: stylua
+        name: StyLua
+        language: node
+        entry: stylua
+        additional_dependencies: ["@johnnymorganz/stylua-bin@2.5.2"]
+        types: [lua]
+        args: [--verify]
+      - id: clang-format
+        name: clang-format
+        language: python
+        entry: clang-format -i
+        additional_dependencies: [clang-format==23.1.0]
+        types_or: [c, c++]

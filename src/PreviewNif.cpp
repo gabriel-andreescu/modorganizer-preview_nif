@@ -1,14 +1,30 @@
 #include "PreviewNif.h"
-#include "Camera.h"
-#include "NifPreviewSource.h"
-#include "NifPreviewWidget.h"
+#include "DevBench/Tool.h"
+#include "Preview/Source.h"
+#include "Preview/Widget.h"
+#include "Render/Camera.h"
+
+#include <DevBenchAPI.h>
 
 #include <QDebug>
+#include <QMainWindow>
+#include <QTimer>
 #include <algorithm>
 #include <utility>
 
-bool PreviewNif::init(MOBase::IOrganizer* moInfo) {
-    m_MOInfo = moInfo;
+PreviewNif::PreviewNif() = default;
+PreviewNif::~PreviewNif() = default;
+
+bool PreviewNif::init(MOBase::IOrganizer* a_moInfo) {
+    _moInfo = a_moInfo;
+    _moInfo->onUserInterfaceInitialized([this](QMainWindow* a_mainWindow) {
+        // Dev Bench starts from this notification too, so request its interface after every handler has run.
+        QTimer::singleShot(0, a_mainWindow, [this, a_mainWindow] {
+            if (auto* const api = DevBenchAPI::GetDevBenchInterface001()) {
+                _devBench = DevBench::Tool::Register(*api, *this, a_mainWindow);
+            }
+        });
+    });
     return true;
 }
 
@@ -25,7 +41,7 @@ QString PreviewNif::description() const {
 }
 
 MOBase::VersionInfo PreviewNif::version() const {
-    return {0, 5, 1, 0, MOBase::VersionInfo::RELEASE_BETA};
+    return {MOPK_VERSION_MAJOR, MOPK_VERSION_MINOR, MOPK_VERSION_PATCH, MOBase::VersionInfo::RELEASE_BETA};
 }
 
 QList<MOBase::PluginSetting> PreviewNif::settings() const {
@@ -44,29 +60,39 @@ bool PreviewNif::supportsArchives() const {
     return true;
 }
 
-QWidget* PreviewNif::genFilePreview(const QString& fileName, const QSize& maxSize) const {
-    return genDataPreview(nullptr, fileName, maxSize);
+QWidget* PreviewNif::genFilePreview(const QString& a_fileName, const QSize& a_maxSize) const {
+    Q_UNUSED(a_maxSize);
+
+    return CreatePreview(a_fileName, {});
 }
 
-QWidget* PreviewNif::genDataPreview(const QByteArray& fileData, const QString& fileName, const QSize& maxSize) const {
-    Q_UNUSED(maxSize);
+QWidget* PreviewNif::genDataPreview(
+    const QByteArray& a_fileData,
+    const QString& a_fileName,
+    const QSize& a_maxSize
+) const {
+    Q_UNUSED(a_maxSize);
 
-    auto sourceSet = NifPreviewSourceResolver::resolve(m_MOInfo, fileName, fileData);
+    return CreatePreview(a_fileName, a_fileData);
+}
+
+NifPreviewWidget* PreviewNif::CreatePreview(const QString& a_fileName, const QByteArray& a_fileData) const {
+    auto sourceSet = NifPreviewSourceResolver::Resolve(_moInfo, a_fileName, a_fileData);
     if (sourceSet.providers.isEmpty()) {
-        qWarning("Failed to find previewable NIF provider for '%s'", qUtf8Printable(fileName));
+        qWarning("Failed to find previewable NIF provider for '%s'", qUtf8Printable(a_fileName));
         return nullptr;
     }
 
     const auto lastProviderIndex = static_cast<int>(sourceSet.providers.size()) - 1;
     sourceSet.currentIndex = std::clamp(sourceSet.currentIndex, 0, lastProviderIndex);
-    return new NifPreviewWidget(std::move(sourceSet), m_MOInfo, sharedCamera());
+    return new NifPreviewWidget(std::move(sourceSet), _moInfo, SharedCamera());
 }
 
-QSharedPointer<Camera> PreviewNif::sharedCamera() const {
-    auto camera = m_SharedCamera.toStrongRef();
+QSharedPointer<Camera> PreviewNif::SharedCamera() const {
+    auto camera = _sharedCamera.toStrongRef();
     if (camera.isNull()) {
         camera = {new Camera(), &Camera::deleteLater};
-        m_SharedCamera = camera;
+        _sharedCamera = camera;
     }
 
     return camera;

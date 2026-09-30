@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.5.1 - 2026-05-14
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [Unreleased]
+
+### Changed
+
+- Support MO2 2.5.3beta12 instead of 2.5.3beta11
+
+## [0.5.1] - 2026-05-14
 
 ### Added
 
@@ -12,7 +20,7 @@
   follow MO2 conflict priority from winning mod to losing mod, with game
   archives last.
 
-## 0.5.0 - 2026-05-11
+## [0.5.0] - 2026-05-11
 
 ### Added
 
@@ -49,13 +57,15 @@
 - Fixes multilayer parallax texture source labels so inner-layer textures are
   identified correctly instead of being confused with height maps.
 
-## 0.4.4 - 2026-05-09
+## [0.4.4] - 2026-05-09
 
 ### Added
 
 - Adds MO2 2.5.3beta11 support while keeping a separate MO2 2.5.2 build.
-- Adds checked-in `uibase` ABI header snapshots and versioned CMake presets for both supported MO2 versions.
-- Adds package and GitHub Actions release targets that produce one ZIP per supported MO2 version.
+- Adds checked-in `uibase` ABI header snapshots and versioned CMake presets for
+  both supported MO2 versions.
+- Adds package and GitHub Actions release targets that produce one ZIP per
+  supported MO2 version.
 - Adds release notes publishing from the tagged `CHANGELOG.md` section.
 
 ### Changed
@@ -70,6 +80,7 @@
 - Fixes MO2 2.5.3beta11 crashes caused by plugin ABI mismatch.
 - Handles NIF parse failures without crashing MO2.
 - Skips invalid, null, hidden, or unsupported shapes during preview setup.
-- Guards OpenGL setup, drawing, cleanup, projection, and buffer allocation against invalid state.
+- Guards OpenGL setup, drawing, cleanup, projection, and buffer allocation
+  against invalid state.
 - Handles missing shader texture sets and unsupported texture slots.
 - Handles loose, mod-provided, and BSA texture failures without crashing.

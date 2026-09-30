@@ -1,5 +1,17 @@
 {
-    "files.associations": {
-        "*.ts": "xml"
-    }
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+  "ruff.path": ["${workspaceFolder}/.venv/Scripts/ruff.exe"],
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "xmake.autoGenerateCompileCommands": "disabled",
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "[c]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  }
 }

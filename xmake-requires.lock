@@ -1,0 +1,88 @@
+{
+    __meta__ = {
+        version = "1.0"
+    },
+    ["windows|x64"] = {
+        ["aqt#f56260b5"] = {
+            repo = {
+                branch = "master",
+                commit = "4926ec06715e271bbab50f726a168fe9da8dd79c",
+                url = "https://github.com/xmake-io/xmake-repo.git"
+            },
+            version = "3.3.0"
+        },
+        ["devbench-api 0.1.0#f56260b5"] = {
+            repo = {
+                commit = "64b85b8c64a78ce2402495d12e6af22eb11af103",
+                url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit.git"
+            },
+            version = "0.1.0"
+        },
+        ["gli 2026.04.05#f56260b5"] = {
+            version = "2026.04.05"
+        },
+        ["glm#f56260b5"] = {
+            repo = {
+                branch = "master",
+                commit = "4926ec06715e271bbab50f726a168fe9da8dd79c",
+                url = "https://github.com/xmake-io/xmake-repo.git"
+            },
+            version = "1.0.3"
+        },
+        ["half#f56260b5"] = {
+            repo = {
+                branch = "master",
+                commit = "4926ec06715e271bbab50f726a168fe9da8dd79c",
+                url = "https://github.com/xmake-io/xmake-repo.git"
+            },
+            version = "2.2.1"
+        },
+        ["miniball#f56260b5"] = {
+            repo = {
+                branch = "master",
+                commit = "4926ec06715e271bbab50f726a168fe9da8dd79c",
+                url = "https://github.com/xmake-io/xmake-repo.git"
+            },
+            version = "v3.0"
+        },
+        ["mo2-dds-header#f56260b5"] = {
+            repo = {
+                commit = "64b85b8c64a78ce2402495d12e6af22eb11af103",
+                url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit.git"
+            },
+            version = "2024.06"
+        },
+        ["mo2-libbsarch 0.1.2#f56260b5"] = {
+            repo = {
+                commit = "64b85b8c64a78ce2402495d12e6af22eb11af103",
+                url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit.git"
+            },
+            version = "0.1.2"
+        },
+        ["mo2-uibase 2.5.2#f56260b5"] = {
+            repo = {
+                commit = "64b85b8c64a78ce2402495d12e6af22eb11af103",
+                url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit.git"
+            },
+            version = "2.5.2"
+        },
+        ["mo2-uibase 2.5.3beta12#f56260b5"] = {
+            repo = {
+                commit = "64b85b8c64a78ce2402495d12e6af22eb11af103",
+                url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit.git"
+            },
+            version = "2.5.3beta12"
+        },
+        ["nifly 2026.09.14#f56260b5"] = {
+            version = "2026.09.14"
+        },
+        ["qt6base 6.7.1#f56260b5"] = {
+            repo = {
+                branch = "master",
+                commit = "4926ec06715e271bbab50f726a168fe9da8dd79c",
+                url = "https://github.com/xmake-io/xmake-repo.git"
+            },
+            version = "6.7.1"
+        }
+    }
+}

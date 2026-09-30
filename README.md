@@ -1,89 +1,34 @@
-# NIF Preview
+# preview_nif
 
-NIF preview plugin for Mod Organizer 2.
+This project uses
+[ModOrganizerPluginKit (MOPK)](https://github.com/gabriel-andreescu/ModOrganizerPluginKit)
+for project generation and development tooling.
 
-See [CHANGELOG.md](CHANGELOG.md) for release history.
+## Development
 
-## MO2 Compatibility
+See MOPK's
+[project build instructions](https://github.com/gabriel-andreescu/ModOrganizerPluginKit/blob/main/docs/plugin-authors/template/projects.md#build-a-generated-project)
+and
+[deployment and packaging](https://github.com/gabriel-andreescu/ModOrganizerPluginKit/blob/main/docs/plugin-authors/tooling/packaging.md).
 
-MO2 2.5.2 and MO2 2.5.3beta11 use different `uibase` plugin ABIs. Build and
-release separate DLLs for them.
+See
+[formatting setup](https://github.com/gabriel-andreescu/ModOrganizerPluginKit/blob/main/docs/plugin-authors/template/defaults.md#formatting).
 
-This repository includes the required ABI header snapshots in `mo2-abi/`:
+See
+[Clang tooling](https://github.com/gabriel-andreescu/ModOrganizerPluginKit/blob/main/docs/plugin-authors/tooling/clang.md)
+for formatting and linting.
 
-- `mo2-abi/2.5.2/include`
-- `mo2-abi/2.5.3beta11/include`
+See
+[DevBench native integration](https://github.com/gabriel-andreescu/ModOrganizerPluginKit/blob/main/docs/plugin-authors/tooling/devbench.md#native-api).
 
-Do not use current MO2 `master` headers for the 2.5.3beta11 release build.
-
-## CLion
-
-In CLion, select one of the versioned configure presets and reload CMake:
-
-- `ninja-multi-mo2-2.5.2`
-- `ninja-multi-mo2-2.5.3beta11`
-
-Then build `preview_nif` with the `RelWithDebInfo` configuration.
-
-To create release archives from CLion, build `preview_nif_zip` under each
-versioned profile.
-
-## Command Line
-
-Configure both release build directories:
-
-```powershell
-cmake --preset ninja-multi-mo2-2.5.2
-cmake --preset ninja-multi-mo2-2.5.3beta11
+```sh
+xmake
+xmake package
 ```
 
-Build both DLLs:
+## Tests
 
-```powershell
-cmake --build --preset ninja-multi-mo2-2.5.2-relwithdebinfo
-cmake --build --preset ninja-multi-mo2-2.5.3beta11-relwithdebinfo
-```
-
-Create both Nexus-style ZIP files:
-
-```powershell
-cmake --build --preset package-ninja-multi-mo2-2.5.2-relwithdebinfo
-cmake --build --preset package-ninja-multi-mo2-2.5.3beta11-relwithdebinfo
-```
-
-Output:
-
-- `dist/NIF.Preview.MO2-2.5.2.zip`
-- `dist/NIF.Preview.MO2-2.5.3beta11.zip`
-
-Each ZIP contains:
-
-- `preview_nif.dll`
-- `data/shaders`
-
-## GitHub Release Builds
-
-The GitHub Actions workflow builds both MO2 targets with `mob`, then configures
-the plugin against the checked-in ABI header snapshot for each matrix entry.
-
-On tag pushes, the workflow uploads these release assets:
-
-- `NIF.Preview.MO2-2.5.2.zip`
-- `NIF.Preview.MO2-2.5.3beta11.zip`
-
-Those asset names must stay in sync with `plugindefinition.json`.
-
-## Manual Deployment
-
-Extract the matching package into the matching MO2 install's `plugins/`
-directory:
-
-- MO2 2.5.2: extract `dist/NIF.Preview.MO2-2.5.2.zip` into `<MO2 2.5.2 install>/plugins/`
-- MO2 2.5.3beta11: extract `dist/NIF.Preview.MO2-2.5.3beta11.zip` into `<MO2 2.5.3beta11 install>/plugins/`
-
-After extraction, the install should include:
-
-- `<MO2 install>/plugins/preview_nif.dll`
-- `<MO2 install>/plugins/data/shaders`
-
-Do not mix the two DLLs. They may load, but the plugin interface ABI is different.
+See
+[DevBench setup](https://github.com/gabriel-andreescu/ModOrganizerPluginKit/blob/main/docs/plugin-authors/template/defaults.md#devbench)
+and the
+[Python client and fixtures](https://github.com/gabriel-andreescu/ModOrganizerPluginKit/blob/main/docs/plugin-authors/tooling/devbench.md).
