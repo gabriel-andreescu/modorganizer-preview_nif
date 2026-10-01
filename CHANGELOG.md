@@ -43,6 +43,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Draws only the variant a switch node selects, instead of stacking every
   variant of trees and plants on top of each other.
 - Hides shapes under hidden nodes.
+- Fixes effect meshes, such as blowing snow and glass, rendering too
+  transparent, and effects whose falloff angles run in reverse rendering
+  unpredictably.
 
 ## [0.5.1] - 2026-05-14
 

@@ -89,19 +89,15 @@ void main( void )
 
     float tmp2 = falloffDepth; // Unused right now
 
-    // Falloff
+    // Skyrim computes falloff this way rather than with smoothstep, so a start angle above the stop angle stays
+    // defined, and it leaves the opacities unclamped.
     float falloff = 1.0;
     if ( useFalloff ) {
-        float startO = min(falloffParams.z, 1.0);
-        float stopO = max(falloffParams.w, 0.0);
-
-        // TODO: When X and Y are both 0.0 or both 1.0 the effect is reversed.
-        falloff = smoothstep( falloffParams.y, falloffParams.x, abs(E.b));
-
-        falloff = mix( max(falloffParams.w, 0.0), min(falloffParams.z, 1.0), falloff );
+        float t = clamp( (abs(E.b) - falloffParams.x) / (falloffParams.y - falloffParams.x), 0.0, 1.0 );
+        falloff = mix( falloffParams.z, falloffParams.w, t * t * (3.0 - 2.0 * t) );
     }
 
-    float alphaMult = glowColor.a * glowColor.a;
+    float alphaMult = glowColor.a;
 
     color.rgb = baseMap.rgb;
     color.a = baseMap.a;
@@ -114,13 +110,9 @@ void main( void )
     color.rgb *= C.rgb * glowColor.rgb;
     color.a *= C.a * falloff * alphaMult;
 
+    // Skyrim picks the palette row from the base color's and vertex color's red channels, without falloff.
     if ( hasGreyscaleMap && greyscaleColor ) {
-        // Only Red emissive channel is used
-        float emRGB = glowColor.r;
-
-        vec4 luG = colorLookup( baseMap.g, C.g * falloff * emRGB );
-
-        color.rgb = luG.rgb;
+        color.rgb = colorLookup( baseMap.g, glowColor.r * C.r ).rgb;
     }
 
     if ( hasGreyscaleMap && greyscaleAlpha ) {
