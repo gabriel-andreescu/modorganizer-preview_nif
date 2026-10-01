@@ -41,7 +41,12 @@ CASES = [
     (SKYRIM, Case("barrel-collision", "meshes/clutter/barrel01.nif", collision=True)),
     (
         SKYRIM,
-        Case("fence-collision", "meshes/architecture/farmhouse/fencewoven01.nif", collision=True, pitch=30),
+        Case(
+            "fence-collision",
+            "meshes/architecture/farmhouse/fencewoven01.nif",
+            collision=True,
+            pitch=30,
+        ),
     ),
     (
         SKYRIM,
@@ -53,7 +58,30 @@ CASES = [
     ),
     (
         SKYRIM,
-        Case("prison-collision", "meshes/architecture/windhelm/whprison02.nif", collision=True, pitch=45),
+        Case(
+            "prison-collision",
+            "meshes/architecture/windhelm/whprison02.nif",
+            collision=True,
+            pitch=45,
+        ),
+    ),
+    (
+        SKYRIM,
+        Case(
+            "sewer-entrance-collision",
+            "meshes/architecture/solitude/sewerentrancecollision01.nif",
+            collision=True,
+            pitch=30,
+        ),
+    ),
+    (
+        SKYRIM,
+        Case(
+            "fish-eggs-collision",
+            "meshes/plants/switchnodechildren/slaughterfisheggcluster01_1.nif",
+            collision=True,
+            pitch=30,
+        ),
     ),
     (SKYRIM, Case("skeleton", "meshes/actors/character/character assets/skeleton.nif")),
     (SKYRIM, Case("glass-cuirass", "meshes/armor/glass/m/cuirass_1.nif")),
@@ -169,10 +197,21 @@ CASES = [
     ),
     (FALLOUT4, Case("blasted-tree", "meshes/landscape/trees/treeblasted01.nif")),
     (FALLOUT4, Case("beach-grass", "meshes/landscape/grass/beachgrassobj01.nif")),
-    (FALLOUT4, Case("fire-barrel", "meshes/setdressing/metalbarrel/metalbarrel01fire.nif", pitch=70)),
     (
         FALLOUT4,
-        Case("barrel-collision", "meshes/setdressing/metalbarrel/metalbarrel01.nif", collision=True),
+        Case(
+            "fire-barrel",
+            "meshes/setdressing/metalbarrel/metalbarrel01fire.nif",
+            pitch=70,
+        ),
+    ),
+    (
+        FALLOUT4,
+        Case(
+            "barrel-collision",
+            "meshes/setdressing/metalbarrel/metalbarrel01.nif",
+            collision=True,
+        ),
     ),
     (
         FALLOUT4,
@@ -183,7 +222,10 @@ CASES = [
             pitch=30,
         ),
     ),
-    (FALLOUT4, Case("skeleton", "meshes/actors/deathclaw/characterassets/skeleton.nif")),
+    (
+        FALLOUT4,
+        Case("skeleton", "meshes/actors/deathclaw/characterassets/skeleton.nif"),
+    ),
     (
         FALLOUT4,
         Case(

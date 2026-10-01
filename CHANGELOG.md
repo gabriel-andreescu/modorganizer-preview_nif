@@ -54,6 +54,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Shows NIFs without meshes, such as skeletons, by framing and drawing their
   collision, even with Show Collision off.
 - Draws the per-bone collision of Fallout 4 skeletons.
+- Draws cylinder and plane collision shapes, which Show Collision left out.
+- Fixes packed triangle strip collision in Skyrim meshes drawing at a tenth of
+  its size and ignoring its scale.
 
 ## [0.5.1] - 2026-05-14
 

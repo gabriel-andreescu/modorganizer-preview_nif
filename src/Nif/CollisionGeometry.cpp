@@ -508,6 +508,10 @@ private:
                 std::max(capsule->radius1, capsule->radius2) * _havokScale,
                 a_color
             );
+        } else if (const auto* cylinder = dynamic_cast<nifly::bhkCylinderShape*>(a_shape)) {
+            AddCylinderShape(*cylinder, a_transform, a_color);
+        } else if (const auto* plane = dynamic_cast<nifly::bhkPlaneShape*>(a_shape)) {
+            AddPlaneShape(*plane, a_transform, a_color);
         } else if (auto* strips = dynamic_cast<nifly::bhkNiTriStripsShape*>(a_shape)) {
             AddNiTriStripsShape(strips, a_transform.ComposeTransforms(ScaleTransform(1.0F / kBodyScale)), a_color);
         } else if (auto* convex = dynamic_cast<nifly::bhkConvexVerticesShape*>(a_shape)) {
@@ -515,7 +519,7 @@ private:
         } else if (auto* packed = dynamic_cast<nifly::bhkPackedNiTriStripsShape*>(a_shape)) {
             AddPackedNiTriStripsShape(packed, a_transform, a_color);
         } else if (auto* packedData = dynamic_cast<nifly::hkPackedNiTriStripsData*>(a_shape)) {
-            AddPackedNiTriStripsData(packedData, a_transform, a_color);
+            AddPackedNiTriStripsData(packedData, {1.0F, 1.0F, 1.0F}, a_transform, a_color);
         } else if (auto* compressed = dynamic_cast<nifly::bhkCompressedMeshShape*>(a_shape)) {
             AddCompressedMeshShape(compressed, a_transform, a_color);
         }
@@ -547,8 +551,12 @@ private:
         const nifly::MatTransform& a_transform,
         const CollisionColor& a_color
     ) {
+        // The game scales the triangles by the shape's scaling only when its x is not 1, whatever y and z hold.
+        const auto scaling = a_shape->scaling.x != 1.0F ? ToVector3(a_shape->scaling)
+                                                        : nifly::Vector3(1.0F, 1.0F, 1.0F);
         AddPackedNiTriStripsData(
             _header.GetBlock<nifly::hkPackedNiTriStripsData>(a_shape->dataRef),
+            scaling,
             a_transform,
             a_color
         );
@@ -556,6 +564,7 @@ private:
 
     void AddPackedNiTriStripsData(
         nifly::hkPackedNiTriStripsData* a_data,
+        const nifly::Vector3& a_scaling,
         const nifly::MatTransform& a_transform,
         const CollisionColor& a_color
     ) {
@@ -563,11 +572,79 @@ private:
             return;
         }
 
+        std::vector<nifly::Vector3> vertices;
+        vertices.reserve(a_data->compressedVertData.size());
+        for (const auto& vertex : a_data->compressedVertData) {
+            vertices.emplace_back(
+                vertex.x * a_scaling.x * _havokScale,
+                vertex.y * a_scaling.y * _havokScale,
+                vertex.z * a_scaling.z * _havokScale
+            );
+        }
+
         for (const auto& triangle : a_data->triData) {
-            AddTriangleEdges(a_data->compressedVertData, triangle.tri, a_transform, a_color);
+            AddTriangleEdges(vertices, triangle.tri, a_transform, a_color);
         }
         for (const auto& triangle : a_data->triNormData) {
-            AddTriangleEdges(a_data->compressedVertData, triangle.tri, a_transform, a_color);
+            AddTriangleEdges(vertices, triangle.tri, a_transform, a_color);
+        }
+    }
+
+    // The convex radius pads the cylinder on every side, so the surface reaches past the stored radius and ends.
+    void AddCylinderShape(
+        const nifly::bhkCylinderShape& a_shape,
+        const nifly::MatTransform& a_transform,
+        const CollisionColor& a_color
+    ) {
+        const auto start = ToVector3(a_shape.vertexA) * _havokScale;
+        const auto end = ToVector3(a_shape.vertexB) * _havokScale;
+        const auto padding = a_shape.radius * _havokScale;
+        const auto axis = Normalized(end - start) * padding;
+        // A capsule's outline is its two end circles joined by lines, which is also a flat-capped cylinder's outline.
+        AddCapsule(a_transform, start - axis, end + axis, (a_shape.cylinderRadius * _havokScale) + padding, a_color);
+    }
+
+    // The game collides with the plane only inside its box, so the outline is the plane cut by that box.
+    void AddPlaneShape(
+        const nifly::bhkPlaneShape& a_shape,
+        const nifly::MatTransform& a_transform,
+        const CollisionColor& a_color
+    ) {
+        const auto center = ToVector3(a_shape.center) * _havokScale;
+        const auto halfExtents = ToVector3(a_shape.halfExtents) * _havokScale;
+        const auto& normal = a_shape.plane.normal;
+        const auto constant = a_shape.plane.constant * _havokScale;
+
+        std::array<nifly::Vector3, 8> corners;
+        for (std::size_t i = 0; i < corners.size(); i++) {
+            corners[i] = center
+                         + nifly::Vector3(
+                             (i & 1U) != 0 ? halfExtents.x : -halfExtents.x,
+                             (i & 2U) != 0 ? halfExtents.y : -halfExtents.y,
+                             (i & 4U) != 0 ? halfExtents.z : -halfExtents.z
+                         );
+        }
+
+        std::vector<nifly::Vector3> outline;
+        for (std::size_t start = 0; start < corners.size(); start++) {
+            for (const auto bit : {1U, 2U, 4U}) {
+                const auto end = start | bit;
+                if (end == start) {
+                    continue;
+                }
+
+                const auto startDistance = normal.dot(corners[start]) + constant;
+                const auto endDistance = normal.dot(corners[end]) + constant;
+                if ((startDistance <= 0.0F) != (endDistance <= 0.0F)) {
+                    const auto fraction = startDistance / (startDistance - endDistance);
+                    outline.push_back(corners[start] + ((corners[end] - corners[start]) * fraction));
+                }
+            }
+        }
+
+        // A plane that misses its box collides with nothing.
+        if (outline.size() >= 3) {
+            AddConvexHullEdges(outline, a_transform, a_color);
         }
     }
 
