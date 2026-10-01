@@ -7,7 +7,8 @@
 #include <span>
 
 namespace Havok {
-// The bodies of a Fallout 4 bhkPhysicsSystem. Each bhkNPCollisionObject selects one body by its ID.
+// The bodies of a Fallout 4 bhkPhysicsSystem or bhkRagdollSystem. Each bhkNPCollisionObject selects one body by its
+// ID.
 class PhysicsSystem {
 public:
     explicit PhysicsSystem(std::span<const char> a_bytes);

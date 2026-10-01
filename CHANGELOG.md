@@ -51,6 +51,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   such as windmill frames, drawing piled up at the object's origin.
 - Draws convex collision as its face outlines, without diagonals across each
   face.
+- Shows NIFs without meshes, such as skeletons, by framing and drawing their
+  collision, even with Show Collision off.
+- Draws the per-bone collision of Fallout 4 skeletons.
 
 ## [0.5.1] - 2026-05-14
 

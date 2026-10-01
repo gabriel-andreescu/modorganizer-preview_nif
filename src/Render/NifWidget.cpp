@@ -169,11 +169,22 @@ void NifWidget::SetShowEditorMarkers(const bool a_showEditorMarkers) {
     }
 
     _showEditorMarkers = a_showEditorMarkers;
-    _sceneBounds = ::SceneBounds(DrawnShapes());
+    UpdateSceneBounds();
     if (_camera && _camera->IsFramed()) {
         ResetCamera();
     }
     update();
+}
+
+bool NifWidget::DrawsCollision() const {
+    return _showCollision || _glShapes.empty();
+}
+
+void NifWidget::UpdateSceneBounds() {
+    _sceneBounds = ::SceneBounds(DrawnShapes());
+    if (_glShapes.empty() && _collisionOverlay) {
+        _sceneBounds = Enclose(_sceneBounds, _collisionOverlay->Bounds());
+    }
 }
 
 std::vector<const OpenGLShape*> NifWidget::DrawnShapes() const {
@@ -239,7 +250,11 @@ void NifWidget::initializeGL() {
         }
     }
 
-    _sceneBounds = ::SceneBounds(DrawnShapes());
+    // The collision overlay needs the GL context, which only initialization and painting have.
+    if (_glShapes.empty()) {
+        EnsureCollisionOverlay();
+    }
+    UpdateSceneBounds();
     FrameCameraIfNeeded();
     UpdateCamera();
 
@@ -261,6 +276,12 @@ void NifWidget::paintGL() {
     }
     functions->glDepthMask(GL_TRUE);
     functions->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Shown collision can reach past the meshes, so the clip planes follow whether it is drawn.
+    if (DrawsCollision()) {
+        EnsureCollisionOverlay();
+    }
+    SetProjectionMatrix();
 
     const auto drawShape = [&](const OpenGLShape& a_shape) {
         if (auto* const program = _shaderManager->GetProgram(a_shape.ShaderType());
@@ -427,8 +448,12 @@ void NifWidget::SetProjectionMatrix() {
         return;
     }
 
-    const auto center = _viewMatrix.map(ToQVector(_sceneBounds.center));
-    const auto planes = FitClipPlanes(-center.z(), _sceneBounds.radius);
+    auto drawnBounds = _sceneBounds;
+    if (DrawsCollision() && _collisionOverlay) {
+        drawnBounds = Enclose(drawnBounds, _collisionOverlay->Bounds());
+    }
+    const auto center = _viewMatrix.map(ToQVector(drawnBounds.center));
+    const auto planes = FitClipPlanes(-center.z(), drawnBounds.radius);
     _projectionMatrix.setToIdentity();
     _projectionMatrix.perspective(kVerticalFieldOfView, AspectRatio(), planes.nearPlane, planes.farPlane);
 }
@@ -449,11 +474,10 @@ void NifWidget::UpdateCamera() {
 }
 
 void NifWidget::RenderCollisionOverlay() {
-    if (!_showCollision) {
+    if (!DrawsCollision()) {
         return;
     }
 
-    EnsureCollisionOverlay();
     if (!_collisionOverlay || _collisionOverlay->Empty()) {
         return;
     }

@@ -84,6 +84,10 @@ protected:
 
 private:
     [[nodiscard]] float AspectRatio() const;
+    // A NIF without meshes, such as a skeleton, has nothing to show but its collision, so the collision is drawn
+    // even while Show Collision is unchecked. The checkbox keeps the user's choice on purpose: both split panes
+    // share it and it carries over to the next file, so ticking it for one skeleton would change every other view.
+    [[nodiscard]] bool DrawsCollision() const;
     [[nodiscard]] std::vector<const OpenGLShape*> DrawnShapes() const;
     void Cleanup();
     void CopySceneColorTexture(QOpenGLFunctions_2_1* a_f);
@@ -95,6 +99,7 @@ private:
     void RenderRefractionProxyPass(QOpenGLFunctions_2_1* a_f);
     void SetProjectionMatrix();
     void UpdateCamera();
+    void UpdateSceneBounds();
 
     std::shared_ptr<nifly::NifFile> _nifFile;
     bool _isGrassModel = false;

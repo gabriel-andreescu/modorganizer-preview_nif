@@ -376,16 +376,26 @@ private:
     const Havok::PhysicsSystem* PhysicsSystem(const std::uint32_t a_blockId) {
         auto [entry, inserted] = _physicsSystems.try_emplace(a_blockId);
         if (inserted) {
-            if (const auto* block = _header.GetBlock<nifly::bhkPhysicsSystem>(a_blockId)) {
-                const std::vector<char> bytes(block->data.cbegin(), block->data.cend());
+            if (const auto bytes = PhysicsSystemBytes(a_blockId)) {
                 try {
-                    entry->second.emplace(bytes);
+                    entry->second.emplace(*bytes);
                 } catch (const std::exception& error) {
                     qWarning("Skipping Fallout 4 physics system block %u: %s", a_blockId, error.what());
                 }
             }
         }
         return entry->second ? &*entry->second : nullptr;
+    }
+
+    // Skeletons keep their bones' bodies in a ragdoll system, which stores the same data as a physics system.
+    [[nodiscard]] std::optional<std::vector<char>> PhysicsSystemBytes(const std::uint32_t a_blockId) const {
+        if (const auto* system = _header.GetBlock<nifly::bhkPhysicsSystem>(a_blockId)) {
+            return std::vector<char>(system->data.cbegin(), system->data.cend());
+        }
+        if (const auto* ragdoll = _header.GetBlock<nifly::bhkRagdollSystem>(a_blockId)) {
+            return std::vector<char>(ragdoll->data.cbegin(), ragdoll->data.cend());
+        }
+        return std::nullopt;
     }
 
     void AddHavokGeometry(

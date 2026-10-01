@@ -20,6 +20,12 @@ struct ClipPlanes {
 [[nodiscard]] QMatrix4x4 NifToViewSpace();
 [[nodiscard]] QVector3D ToQVector(const nifly::Vector3& a_vector);
 
+// A sphere enclosing both spheres. An empty sphere, one with no radius, adds nothing.
+[[nodiscard]] nifly::BoundingSphere Enclose(
+    const nifly::BoundingSphere& a_first,
+    const nifly::BoundingSphere& a_second
+);
+
 // A sphere enclosing the bounds of every drawn shape.
 [[nodiscard]] nifly::BoundingSphere SceneBounds(const std::vector<const OpenGLShape*>& a_shapes);
 

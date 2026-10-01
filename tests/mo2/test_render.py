@@ -55,6 +55,7 @@ CASES = [
         SKYRIM,
         Case("prison-collision", "meshes/architecture/windhelm/whprison02.nif", collision=True, pitch=45),
     ),
+    (SKYRIM, Case("skeleton", "meshes/actors/character/character assets/skeleton.nif")),
     (SKYRIM, Case("glass-cuirass", "meshes/armor/glass/m/cuirass_1.nif")),
     (SKYRIM, Case("aspen", "meshes/landscape/trees/treeaspen01.nif")),
     (SKYRIM, Case("field-grass", "meshes/landscape/grass/fieldgrass01.nif")),
@@ -182,6 +183,7 @@ CASES = [
             pitch=30,
         ),
     ),
+    (FALLOUT4, Case("skeleton", "meshes/actors/deathclaw/characterassets/skeleton.nif")),
     (
         FALLOUT4,
         Case(

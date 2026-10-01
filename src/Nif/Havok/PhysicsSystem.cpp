@@ -14,11 +14,23 @@ namespace {
     constexpr std::uint32_t kBodyCinfoSize = 0x60;
     constexpr std::uint32_t kBodyShape = 0x00;
     constexpr std::uint32_t kBodyCollisionFilterInfo = 0x14;
+
+    // Ragdoll data extends the physics system data, so both keep their bodies at the same offset.
+    std::uint32_t SystemData(const Packfile& a_packfile) {
+        const auto root = a_packfile.Root();
+        const auto className = a_packfile.ClassOf(root);
+        if (className != "hknpPhysicsSystemData" && className != "hknpRagdollData") {
+            throw std::runtime_error(QStringLiteral("Havok packfile root is a %1, not physics system or ragdoll data")
+                    .arg(QString::fromUtf8(className.data(), static_cast<qsizetype>(className.size())))
+                    .toStdString());
+        }
+        return root;
+    }
 } // namespace
 
 PhysicsSystem::PhysicsSystem(const std::span<const char> a_bytes)
     : _packfile(a_bytes)
-    , _bodies(_packfile.Array(_packfile.FindObject("hknpPhysicsSystemData") + kBodyCinfos)) {}
+    , _bodies(_packfile.Array(SystemData(_packfile) + kBodyCinfos)) {}
 
 // Body infos also hold the body's model-space position, but the game places each body at its collision object's
 // node, and the shapes are authored in that node's space.

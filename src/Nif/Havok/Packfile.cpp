@@ -6,7 +6,6 @@
 #include <array>
 #include <cstddef>
 #include <iterator>
-#include <optional>
 #include <utility>
 
 namespace Havok {
@@ -151,6 +150,14 @@ Packfile::Packfile(const std::span<const char> a_bytes) {
     const auto bytes = file.Bytes(data.start, data.localFixups);
     _data.assign(bytes.begin(), bytes.end());
 
+    const auto rootSection = file.Read<std::int32_t>(24);
+    if (std::cmp_not_equal(rootSection, dataIndex)) {
+        throw std::runtime_error(QStringLiteral("Havok packfile root lies in section %1, not the data section")
+                .arg(rootSection)
+                .toStdString());
+    }
+    _root = file.Read<std::uint32_t>(28);
+
     for (std::uint64_t entry = data.start + data.localFixups; entry + 8 <= data.start + data.globalFixups; entry += 8) {
         const auto source = file.Read<std::int32_t>(entry);
         if (source == kEndOfFixups) {
@@ -182,19 +189,8 @@ Packfile::Packfile(const std::span<const char> a_bytes) {
     }
 }
 
-std::uint32_t Packfile::FindObject(const std::string_view a_className) const {
-    std::optional<std::uint32_t> found;
-    for (const auto& [offset, className] : _objects) {
-        if (className == a_className && (!found || offset < *found)) {
-            found = offset;
-        }
-    }
-    if (!found) {
-        throw std::runtime_error(QStringLiteral("Havok packfile has no %1 object")
-                .arg(QString::fromUtf8(a_className.data(), static_cast<qsizetype>(a_className.size())))
-                .toStdString());
-    }
-    return *found;
+std::uint32_t Packfile::Root() const {
+    return _root;
 }
 
 std::string_view Packfile::ClassOf(const std::uint32_t a_offset) const {

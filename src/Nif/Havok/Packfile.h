@@ -23,7 +23,8 @@ public:
 
     explicit Packfile(std::span<const char> a_bytes);
 
-    [[nodiscard]] std::uint32_t FindObject(std::string_view a_className) const;
+    // The data offset of the packfile's top-level object.
+    [[nodiscard]] std::uint32_t Root() const;
     [[nodiscard]] std::string_view ClassOf(std::uint32_t a_offset) const;
     [[nodiscard]] bool HasPointer(std::uint32_t a_offset) const;
     [[nodiscard]] std::uint32_t Pointer(std::uint32_t a_offset) const;
@@ -45,5 +46,6 @@ private:
     std::vector<char> _data;
     std::unordered_map<std::uint32_t, std::uint32_t> _pointers;
     std::unordered_map<std::uint32_t, std::string> _objects;
+    std::uint32_t _root = 0;
 };
 } // namespace Havok
