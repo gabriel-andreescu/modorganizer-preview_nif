@@ -2,6 +2,7 @@
 #include "Nif/CollisionGeometry.h"
 #include "Nif/GrassModel.h"
 #include "Nif/ShaderFlags.h"
+#include "Nif/ShapeVisibility.h"
 #include "Render/CollisionOverlay.h"
 #include "Render/DrawOrder.h"
 #include "Render/Framing.h"
@@ -162,6 +163,33 @@ void NifWidget::SetShowCollision(const bool a_showCollision) {
     update();
 }
 
+void NifWidget::SetShowEditorMarkers(const bool a_showEditorMarkers) {
+    if (_showEditorMarkers == a_showEditorMarkers) {
+        return;
+    }
+
+    _showEditorMarkers = a_showEditorMarkers;
+    _sceneBounds = ::SceneBounds(DrawnShapes());
+    if (_camera && _camera->IsFramed()) {
+        ResetCamera();
+    }
+    update();
+}
+
+std::vector<const OpenGLShape*> NifWidget::DrawnShapes() const {
+    std::vector<const OpenGLShape*> shapes;
+    shapes.reserve(_glShapes.size() + (_showEditorMarkers ? _editorMarkerShapes.size() : 0));
+    for (const auto& shape : _glShapes) {
+        shapes.push_back(&shape);
+    }
+    if (_showEditorMarkers) {
+        for (const auto& shape : _editorMarkerShapes) {
+            shapes.push_back(&shape);
+        }
+    }
+    return shapes;
+}
+
 void NifWidget::ResetCamera() {
     if (!_camera) {
         return;
@@ -189,13 +217,19 @@ void NifWidget::initializeGL() {
             continue;
         }
         const auto name = QString::fromStdString(shape->name.get());
-        if ((shape->flags & TriShape::kHidden) != 0U) {
+        const auto visibility = ClassifyShapeVisibility(*_nifFile, shape);
+        if (visibility == ShapeVisibility::kHidden) {
             _skippedShapes.push_back({.name = name, .reason = QStringLiteral("hidden")});
             continue;
         }
+        if (visibility == ShapeVisibility::kInactiveSwitchChild) {
+            _skippedShapes.push_back({.name = name, .reason = QStringLiteral("inactive switch child")});
+            continue;
+        }
 
+        auto& target = visibility == ShapeVisibility::kEditorMarker ? _editorMarkerShapes : _glShapes;
         try {
-            _glShapes.emplace_back(_nifFile.get(), shape, _isGrassModel, _textureManager.get());
+            target.emplace_back(_nifFile.get(), shape, _isGrassModel, _textureManager.get());
         } catch (const std::exception& e) {
             qWarning("Failed to prepare NIF shape '%s' for preview: %s", qUtf8Printable(name), e.what());
             _skippedShapes.push_back({.name = name, .reason = QString::fromUtf8(e.what())});
@@ -205,7 +239,7 @@ void NifWidget::initializeGL() {
         }
     }
 
-    _sceneBounds = ::SceneBounds(_glShapes);
+    _sceneBounds = ::SceneBounds(DrawnShapes());
     FrameCameraIfNeeded();
     UpdateCamera();
 
@@ -253,15 +287,16 @@ void NifWidget::paintGL() {
     functions->glEnable(GL_POLYGON_OFFSET_FILL);
     functions->glPolygonOffset(1.0F, 2.0F);
 
-    for (const auto& shape : _glShapes) {
-        if (!shape.IsRefractionProxy() && !shape.UsesAlphaPass()) {
-            drawShape(shape);
+    const auto drawnShapes = DrawnShapes();
+    for (const auto* const shape : drawnShapes) {
+        if (!shape->IsRefractionProxy() && !shape->UsesAlphaPass()) {
+            drawShape(*shape);
         }
     }
 
     functions->glDisable(GL_POLYGON_OFFSET_FILL);
 
-    for (const auto* const shape : BackToFrontAlphaShapes(_glShapes, _viewMatrix)) {
+    for (const auto* const shape : BackToFrontAlphaShapes(drawnShapes, _viewMatrix)) {
         drawShape(*shape);
     }
 
@@ -297,6 +332,10 @@ void NifWidget::Cleanup() {
         shape.Destroy();
     }
     _glShapes.clear();
+    for (auto& shape : _editorMarkerShapes) {
+        shape.Destroy();
+    }
+    _editorMarkerShapes.clear();
 
     if (_collisionOverlay) {
         _collisionOverlay->Destroy();

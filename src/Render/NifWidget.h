@@ -49,6 +49,9 @@ public:
     [[nodiscard]] const std::vector<OpenGLShape>& Shapes() const noexcept {
         return _glShapes;
     }
+    [[nodiscard]] const std::vector<OpenGLShape>& EditorMarkerShapes() const noexcept {
+        return _editorMarkerShapes;
+    }
     [[nodiscard]] const std::vector<SkippedShape>& SkippedShapes() const noexcept {
         return _skippedShapes;
     }
@@ -67,6 +70,7 @@ public:
     [[nodiscard]] QImage RenderImage(QSize a_size);
     void SetCamera(QSharedPointer<Camera> a_camera);
     void SetShowCollision(bool a_showCollision);
+    void SetShowEditorMarkers(bool a_showEditorMarkers);
     void ResetCamera();
 
 protected:
@@ -80,6 +84,7 @@ protected:
 
 private:
     [[nodiscard]] float AspectRatio() const;
+    [[nodiscard]] std::vector<const OpenGLShape*> DrawnShapes() const;
     void Cleanup();
     void CopySceneColorTexture(QOpenGLFunctions_2_1* a_f);
     void EnsureCollisionOverlay();
@@ -99,11 +104,13 @@ private:
     std::unique_ptr<ShaderManager> _shaderManager;
 
     std::vector<OpenGLShape> _glShapes;
+    std::vector<OpenGLShape> _editorMarkerShapes;
     std::vector<SkippedShape> _skippedShapes;
     nifly::BoundingSphere _sceneBounds;
     std::unique_ptr<OpenGLCollisionOverlay> _collisionOverlay;
     bool _collisionOverlayBuildAttempted = false;
     bool _showCollision = false;
+    bool _showEditorMarkers = false;
 
     QSharedPointer<Camera> _camera;
     QMetaObject::Connection _cameraConnection;

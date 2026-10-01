@@ -206,6 +206,7 @@ QJsonObject PaneDetails(const PreviewPaneSide a_side, const NifPreviewPane& a_pa
         {"side", a_side == PreviewPaneSide::kLeft ? QStringLiteral("left") : QStringLiteral("right")},
         {"status", PaneStatus(controller)},
         {"collision", a_pane.ShowsCollision()},
+        {"editorMarkers", a_pane.ShowsEditorMarkers()},
         {"providers", providers},
         {"currentProvider", controller.CurrentProviderIndex()},
         {"textureSources", textureSources},
@@ -225,6 +226,11 @@ QJsonObject PaneDetails(const PreviewPaneSide a_side, const NifPreviewPane& a_pa
         QJsonArray shapes;
         for (const auto& shape : view->Shapes()) {
             shapes.append(ShapeDetails(shape, *view));
+        }
+        for (const auto& shape : view->EditorMarkerShapes()) {
+            auto markerDetails = ShapeDetails(shape, *view);
+            markerDetails.insert("editorMarker", true);
+            shapes.append(markerDetails);
         }
         details.insert("shapes", shapes);
         details.insert("bounds", BoundsDetails(view->SceneBounds()));

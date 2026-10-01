@@ -169,6 +169,17 @@ void NifPreviewPane::SetShowCollision(const bool a_showCollision) {
     }
 }
 
+void NifPreviewPane::SetShowEditorMarkers(const bool a_showEditorMarkers) {
+    if (_showEditorMarkers == a_showEditorMarkers) {
+        return;
+    }
+
+    _showEditorMarkers = a_showEditorMarkers;
+    if (_nifWidget) {
+        _nifWidget->SetShowEditorMarkers(_showEditorMarkers);
+    }
+}
+
 void NifPreviewPane::ResetCamera() {
     if (_nifWidget) {
         _nifWidget->ResetCamera();
@@ -332,6 +343,7 @@ void NifPreviewPane::ReloadCurrentNifWidget() {
         this
     );
     nifWidget->SetShowCollision(_showCollision);
+    nifWidget->SetShowEditorMarkers(_showEditorMarkers);
     nifWidget->setMinimumSize(240, 240);
     _nifWidget = nifWidget;
     SetViewWidget(nifWidget);

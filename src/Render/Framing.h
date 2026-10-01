@@ -5,7 +5,7 @@
 #include <QMatrix4x4>
 #include <QVector3D>
 
-#include <span>
+#include <vector>
 
 class OpenGLShape;
 
@@ -21,7 +21,7 @@ struct ClipPlanes {
 [[nodiscard]] QVector3D ToQVector(const nifly::Vector3& a_vector);
 
 // A sphere enclosing the bounds of every drawn shape.
-[[nodiscard]] nifly::BoundingSphere SceneBounds(std::span<const OpenGLShape> a_shapes);
+[[nodiscard]] nifly::BoundingSphere SceneBounds(const std::vector<const OpenGLShape*>& a_shapes);
 
 // The camera distance at which a sphere fills the narrower of the two fields of view.
 [[nodiscard]] float FitDistance(float a_radius, float a_aspectRatio);

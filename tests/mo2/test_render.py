@@ -18,6 +18,7 @@ class Case:
     checkpoint: str
     path: str
     collision: bool = False
+    markers: bool = False
     split: bool = False
     yaw: float = 0
     pitch: float = 0
@@ -149,7 +150,7 @@ CASES = [
     ),
     (FALLOUT4, Case("blasted-tree", "meshes/landscape/trees/treeblasted01.nif")),
     (FALLOUT4, Case("beach-grass", "meshes/landscape/grass/beachgrassobj01.nif")),
-    (FALLOUT4, Case("fire", "meshes/effects/fxfiremed01.nif")),
+    (FALLOUT4, Case("fire", "meshes/effects/flamejetmuzzleflash.nif")),
     (
         FALLOUT4,
         Case(
@@ -188,6 +189,10 @@ CASES = [
     (FALLOUT4, Case("boulder", "meshes/landscape/rocks/rockboulder01.nif")),
     (FALLOUT4, Case("cliff", "meshes/landscape/rocks/rockcliff01.nif")),
     (FALLOUT4, Case("corn", "meshes/landscape/plants/cornstalk01.nif")),
+    (
+        FALLOUT4,
+        Case("corn-markers", "meshes/landscape/plants/cornstalk01.nif", markers=True),
+    ),
     (
         FALLOUT4,
         Case("chainlink-fence", "meshes/setdressing/fencesgrates/fencechainlink01.nif"),
@@ -273,6 +278,8 @@ def test_render(devbench, visual, managed_game, game, case):
     try:
         if case.collision:
             check(devbench, "Show Collision")
+        if case.markers:
+            check(devbench, "Show Editor Markers")
         if case.split:
             check(devbench, "Split Preview")
         details = devbench.call(

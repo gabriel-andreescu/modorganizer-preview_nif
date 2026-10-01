@@ -4,6 +4,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Adds a Show Editor Markers toggle for the Creation Kit markers the game hides.
+
 ### Changed
 
 - Support MO2 2.5.3beta12 instead of 2.5.3beta11
@@ -34,6 +38,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the ones behind them.
 - Fades Fallout 4 blended layers, such as the wet film on the eyes, by their
   vertex alpha.
+- Hides editor markers, such as the blue dome next to Fallout 4 plants, unless
+  Show Editor Markers is on.
+- Draws only the variant a switch node selects, instead of stacking every
+  variant of trees and plants on top of each other.
+- Hides shapes under hidden nodes.
 
 ## [0.5.1] - 2026-05-14
 

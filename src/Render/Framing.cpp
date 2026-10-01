@@ -32,13 +32,13 @@ QVector3D ToQVector(const nifly::Vector3& a_vector) {
     return {a_vector.x, a_vector.y, a_vector.z};
 }
 
-nifly::BoundingSphere SceneBounds(const std::span<const OpenGLShape> a_shapes) {
+nifly::BoundingSphere SceneBounds(const std::vector<const OpenGLShape*>& a_shapes) {
     nifly::BoundingSphere bounds;
-    for (const auto& shape : a_shapes) {
-        if (shape.IsRefractionProxy() || shape.Bounds().radius <= 0.0F) {
+    for (const auto* const shape : a_shapes) {
+        if (shape->IsRefractionProxy() || shape->Bounds().radius <= 0.0F) {
             continue;
         }
-        bounds = bounds.radius > 0.0F ? Enclose(bounds, shape.Bounds()) : shape.Bounds();
+        bounds = bounds.radius > 0.0F ? Enclose(bounds, shape->Bounds()) : shape->Bounds();
     }
     return bounds;
 }

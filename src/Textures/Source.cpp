@@ -3,6 +3,7 @@
 #include "Data/MoDataPaths.h"
 #include "Nif/Fo4Material.h"
 #include "Nif/ShaderUtils.h"
+#include "Nif/ShapeVisibility.h"
 #include "Render/ShaderClassification.h"
 #include "Textures/Loader.h"
 #include "Textures/SlotDescriptors.h"
@@ -232,7 +233,11 @@ QVector<TextureReference> TextureReferencesFor(MOBase::IOrganizer* a_organizer, 
     }
 
     for (auto* shape : a_nifFile->GetShapes()) {
-        if (!shape || ((shape->flags & TriShape::kHidden) != 0U)) {
+        if (!shape) {
+            continue;
+        }
+        if (const auto visibility = ClassifyShapeVisibility(*a_nifFile, shape);
+            visibility == ShapeVisibility::kHidden || visibility == ShapeVisibility::kInactiveSwitchChild) {
             continue;
         }
 

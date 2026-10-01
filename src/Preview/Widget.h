@@ -49,6 +49,7 @@ protected:
 private:
     void SetSplitViewEnabled(bool a_enabled, bool a_persistPreference);
     void SetShowCollisionEnabled(bool a_enabled);
+    void SetShowEditorMarkersEnabled(bool a_enabled);
     void SetCameraSyncEnabled(bool a_enabled);
     void ResetCameras();
     void RestoreSplitViewPreference();
@@ -69,6 +70,7 @@ private:
     QFrame* _globalControlsWidget = nullptr;
     QPushButton* _resetCameraButton = nullptr;
     QCheckBox* _showCollisionButton = nullptr;
+    QCheckBox* _showEditorMarkersButton = nullptr;
     QCheckBox* _splitButton = nullptr;
     QCheckBox* _cameraSyncButton = nullptr;
     QSplitter* _splitter = nullptr;

@@ -67,6 +67,9 @@ NifPreviewWidget::NifPreviewWidget(
     _showCollisionButton = new QCheckBox(tr("Show Collision"), _globalControlsWidget);
     _showCollisionButton->setToolTip(tr("Show collision preview overlay"));
 
+    _showEditorMarkersButton = new QCheckBox(tr("Show Editor Markers"), _globalControlsWidget);
+    _showEditorMarkersButton->setToolTip(tr("Show the Creation Kit markers the game hides"));
+
     _splitButton = new QCheckBox(tr("Split Preview"), _globalControlsWidget);
     _splitButton->setToolTip(tr("Compare two previewable versions of this NIF"));
 
@@ -79,6 +82,7 @@ NifPreviewWidget::NifPreviewWidget(
     toolbarLayout->setSpacing(12);
     toolbarLayout->addWidget(_resetCameraButton);
     toolbarLayout->addWidget(_showCollisionButton);
+    toolbarLayout->addWidget(_showEditorMarkersButton);
     toolbarLayout->addWidget(_splitButton);
     toolbarLayout->addWidget(_cameraSyncButton);
     toolbarLayout->addStretch(1);
@@ -106,6 +110,7 @@ NifPreviewWidget::NifPreviewWidget(
         SetSplitViewEnabled(a_enabled, true);
     });
     connect(_showCollisionButton, &QCheckBox::toggled, this, &NifPreviewWidget::SetShowCollisionEnabled);
+    connect(_showEditorMarkersButton, &QCheckBox::toggled, this, &NifPreviewWidget::SetShowEditorMarkersEnabled);
     connect(_cameraSyncButton, &QCheckBox::toggled, this, &NifPreviewWidget::SetCameraSyncEnabled);
     connect(_resetCameraButton, &QPushButton::clicked, this, &NifPreviewWidget::ResetCameras);
     connect(_leftPane, &NifPreviewPane::CameraMoved, this, [this] { HandleCameraMoved(_leftPane); });
@@ -188,6 +193,11 @@ void NifPreviewWidget::SetShowCollisionEnabled(const bool a_enabled) {
     _rightPane->SetShowCollision(a_enabled);
 }
 
+void NifPreviewWidget::SetShowEditorMarkersEnabled(const bool a_enabled) {
+    _leftPane->SetShowEditorMarkers(a_enabled);
+    _rightPane->SetShowEditorMarkers(a_enabled);
+}
+
 void NifPreviewWidget::SetCameraSyncEnabled(const bool a_enabled) {
     if (!IsSplitViewEnabled() && a_enabled) {
         return;
@@ -263,6 +273,7 @@ void NifPreviewWidget::InitializeRightPaneForSplit() {
 
     _rightPane->SetProviders(_sourceSet.providers, SecondaryProviderIndex());
     _rightPane->SetShowCollision(_showCollisionButton->isChecked());
+    _rightPane->SetShowEditorMarkers(_showEditorMarkersButton->isChecked());
     _rightPaneInitialized = true;
     UpdateCameraSnapshot(_rightPane);
 }

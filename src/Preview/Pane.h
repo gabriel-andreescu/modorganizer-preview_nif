@@ -26,6 +26,7 @@ public:
     void SetProviders(QVector<NifPreviewProvider> a_providers, int a_currentIndex);
     void SetCamera(QSharedPointer<Camera> a_camera);
     void SetShowCollision(bool a_showCollision);
+    void SetShowEditorMarkers(bool a_showEditorMarkers);
     void ResetCamera();
     [[nodiscard]] QSharedPointer<Camera> SharedCamera() const {
         return _camera;
@@ -44,6 +45,9 @@ public:
     }
     [[nodiscard]] bool ShowsCollision() const noexcept {
         return _showCollision;
+    }
+    [[nodiscard]] bool ShowsEditorMarkers() const noexcept {
+        return _showEditorMarkers;
     }
 
 signals:
@@ -75,6 +79,7 @@ private:
     bool _updatingControls = false;
     bool _updatingTextureControls = false;
     bool _showCollision = false;
+    bool _showEditorMarkers = false;
 
     QSharedPointer<Camera> _camera;
     QMetaObject::Connection _cameraConnection;

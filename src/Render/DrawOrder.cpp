@@ -19,13 +19,13 @@ float ViewDepth(const OpenGLShape& a_shape, const QMatrix4x4& a_viewMatrix) {
 } // namespace
 
 std::vector<const OpenGLShape*> BackToFrontAlphaShapes(
-    const std::vector<OpenGLShape>& a_shapes,
+    const std::vector<const OpenGLShape*>& a_shapes,
     const QMatrix4x4& a_viewMatrix
 ) {
     std::vector<const OpenGLShape*> shapes;
-    for (const auto& shape : a_shapes) {
-        if (!shape.IsRefractionProxy() && shape.UsesAlphaPass()) {
-            shapes.push_back(&shape);
+    for (const auto* const shape : a_shapes) {
+        if (!shape->IsRefractionProxy() && shape->UsesAlphaPass()) {
+            shapes.push_back(shape);
         }
     }
 
