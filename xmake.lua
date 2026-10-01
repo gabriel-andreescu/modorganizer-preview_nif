@@ -8,7 +8,7 @@ add_repositories("mopk https://github.com/gabriel-andreescu/ModOrganizerPluginKi
 add_repositories("xmake-luals https://github.com/gabriel-andreescu/xmake-luals.git")
 add_addons("mopk 0.1.0", "xmake-luals 0.1.0")
 includes("@addon/mopk/project", "@addon/mopk/native", "@addon/xmake-luals/luals")
-includes("xmake/bodyslide-material-file", "xmake/gli", "xmake/nifly")
+includes("packages/*/*/xmake.lua")
 
 add_requires(
     "devbench-api 0.1.0",
