@@ -39,6 +39,22 @@ CASES = [
     ),
     (SKYRIM, Case("barrel", "meshes/clutter/barrel01.nif")),
     (SKYRIM, Case("barrel-collision", "meshes/clutter/barrel01.nif", collision=True)),
+    (
+        SKYRIM,
+        Case("fence-collision", "meshes/architecture/farmhouse/fencewoven01.nif", collision=True, pitch=30),
+    ),
+    (
+        SKYRIM,
+        Case(
+            "windmill-collision",
+            "meshes/architecture/farmhouse/farmhousewindmill/farmhousewindmill.nif",
+            collision=True,
+        ),
+    ),
+    (
+        SKYRIM,
+        Case("prison-collision", "meshes/architecture/windhelm/whprison02.nif", collision=True, pitch=45),
+    ),
     (SKYRIM, Case("glass-cuirass", "meshes/armor/glass/m/cuirass_1.nif")),
     (SKYRIM, Case("aspen", "meshes/landscape/trees/treeaspen01.nif")),
     (SKYRIM, Case("field-grass", "meshes/landscape/grass/fieldgrass01.nif")),

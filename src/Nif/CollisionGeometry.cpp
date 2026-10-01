@@ -15,8 +15,10 @@
 #include <cmath>
 #include <cstdint>
 #include <exception>
+#include <map>
 #include <numbers>
 #include <optional>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -79,17 +81,22 @@ nifly::MatTransform ScaleTransform(const float a_scale) {
     return transform;
 }
 
+// A Havok transform is stored column by column: the three rotation axes, then the translation.
 nifly::MatTransform TransformFromMatrix(const nifly::Matrix4& a_matrix, const float a_translationScale = 1.0F) {
     nifly::MatTransform transform;
-    transform.translation = nifly::Vector3(a_matrix[3], a_matrix[7], a_matrix[11]) * a_translationScale;
+    transform.translation = nifly::Vector3(a_matrix[12], a_matrix[13], a_matrix[14]) * a_translationScale;
 
-    const auto row0 = nifly::Vector3(a_matrix[0], a_matrix[1], a_matrix[2]);
-    const auto row1 = nifly::Vector3(a_matrix[4], a_matrix[5], a_matrix[6]);
-    const auto row2 = nifly::Vector3(a_matrix[8], a_matrix[9], a_matrix[10]);
+    const auto column0 = nifly::Vector3(a_matrix[0], a_matrix[1], a_matrix[2]);
+    const auto column1 = nifly::Vector3(a_matrix[4], a_matrix[5], a_matrix[6]);
+    const auto column2 = nifly::Vector3(a_matrix[8], a_matrix[9], a_matrix[10]);
 
-    const auto scale = (row0.length() + row1.length() + row2.length()) / 3.0F;
+    const auto scale = (column0.length() + column1.length() + column2.length()) / 3.0F;
     transform.scale = scale > kEpsilon ? scale : 1.0F;
-    transform.rotation = nifly::Matrix3(row0 / transform.scale, row1 / transform.scale, row2 / transform.scale);
+    const auto axisX = column0 / transform.scale;
+    const auto axisY = column1 / transform.scale;
+    const auto axisZ = column2 / transform.scale;
+    transform
+        .rotation = nifly::Matrix3(axisX.x, axisY.x, axisZ.x, axisX.y, axisY.y, axisZ.y, axisX.z, axisY.z, axisZ.z);
     return transform;
 }
 
@@ -156,7 +163,10 @@ private:
             , _transform(a_transform)
             , _color(a_color) {}
 
+        // Draws the outline of each hull face. Hull triangles that share a plane form one face, so an edge is drawn
+        // only where its triangles' planes differ, which leaves out the diagonals inside flat faces.
         void AddEdges() {
+            _tolerance = Extent() * kHullTolerance;
             for (std::size_t i = 0; i + 2 < _vertices.size(); i++) {
                 for (std::size_t j = i + 1; j + 1 < _vertices.size(); j++) {
                     for (std::size_t k = j + 1; k < _vertices.size(); k++) {
@@ -164,66 +174,120 @@ private:
                     }
                 }
             }
-        }
 
-    private:
-        void AddTriangleIfHullFace(const std::size_t a_first, const std::size_t a_second, const std::size_t a_third) {
-            const auto& first = _vertices[a_first];
-            const auto& second = _vertices[a_second];
-            const auto& third = _vertices[a_third];
-            const auto normal = (second - first).cross(third - first);
-            if (normal.length() > kEpsilon && IsHullFace(first, second, third, normal)) {
-                AddTriangleEdges(a_first, a_second, a_third);
+            for (const auto& [edgeKey, normals] : _edgeNormals) {
+                const auto bends = std::ranges::any_of(normals, [&](const nifly::Vector3& a_normal) {
+                    return a_normal.dot(normals.front()) < 1.0F - kHullTolerance;
+                });
+                if (bends) {
+                    AddEdgeLine(edgeKey);
+                }
+            }
+            for (const auto edgeKey : _flatEdges) {
+                AddEdgeLine(edgeKey);
             }
         }
 
-        [[nodiscard]] bool IsHullFace(
-            const nifly::Vector3& a_first,
-            const nifly::Vector3& a_second,
-            const nifly::Vector3& a_third,
+    private:
+        // Hull tests run relative to the hull's size, since Havok units, game units and float noise vary by shape.
+        static constexpr float kHullTolerance = 0.0001F;
+
+        [[nodiscard]] float Extent() const {
+            nifly::Vector3 min = _vertices.front();
+            nifly::Vector3 max = _vertices.front();
+            for (const auto& vertex : _vertices) {
+                min = nifly::Vector3(std::min(min.x, vertex.x), std::min(min.y, vertex.y), std::min(min.z, vertex.z));
+                max = nifly::Vector3(std::max(max.x, vertex.x), std::max(max.y, vertex.y), std::max(max.z, vertex.z));
+            }
+            return std::max((max - min).length(), kEpsilon);
+        }
+
+        void AddTriangleIfHullFace(const std::size_t a_first, const std::size_t a_second, const std::size_t a_third) {
+            const auto& first = _vertices[a_first];
+            auto normal = (_vertices[a_second] - first).cross(_vertices[a_third] - first);
+            if (normal.length() <= _tolerance * _tolerance) {
+                return;
+            }
+            normal.Normalize();
+
+            const auto side = HullSide(first, normal);
+            if (!side) {
+                return;
+            }
+            // Outward normals make the two faces at an edge compare equal only when they share a plane.
+            if (*side != 0) {
+                AddTriangle(a_first, a_second, a_third, normal * static_cast<float>(-*side));
+                return;
+            }
+
+            // A flat hull has no outside. Its outline is the edges with every vertex on one side within the plane.
+            AddFlatEdgeIfOutline(a_first, a_second, normal);
+            AddFlatEdgeIfOutline(a_second, a_third, normal);
+            AddFlatEdgeIfOutline(a_third, a_first, normal);
+        }
+
+        void AddFlatEdgeIfOutline(
+            const std::size_t a_edgeStart,
+            const std::size_t a_edgeEnd,
             const nifly::Vector3& a_normal
-        ) const {
+        ) {
+            auto across = a_normal.cross(_vertices[a_edgeEnd] - _vertices[a_edgeStart]);
+            across.Normalize();
+            if (HullSide(_vertices[a_edgeStart], across)) {
+                _flatEdges.insert(EdgeKey(a_edgeStart, a_edgeEnd));
+            }
+        }
+
+        // The side of the plane every other vertex lies on: 1 or -1, 0 when all are on it, none when they straddle it.
+        [[nodiscard]] std::optional<int> HullSide(const nifly::Vector3& a_point, const nifly::Vector3& a_normal) const {
             int side = 0;
             for (const auto& vertex : _vertices) {
-                if (vertex == a_first || vertex == a_second || vertex == a_third) {
-                    continue;
-                }
-
-                const auto distance = (vertex - a_first).dot(a_normal);
-                if (std::fabs(distance) <= kEpsilon) {
+                const auto distance = (vertex - a_point).dot(a_normal);
+                if (std::fabs(distance) <= _tolerance) {
                     continue;
                 }
 
                 const auto vertexSide = distance > 0.0F ? 1 : -1;
                 if (side != 0 && side != vertexSide) {
-                    return false;
+                    return std::nullopt;
                 }
                 side = vertexSide;
             }
-
-            return true;
+            return side;
         }
 
-        void AddTriangleEdges(const std::size_t a_first, const std::size_t a_second, const std::size_t a_third) {
-            AddEdge(a_first, a_second);
-            AddEdge(a_second, a_third);
-            AddEdge(a_third, a_first);
+        void AddTriangle(
+            const std::size_t a_first,
+            const std::size_t a_second,
+            const std::size_t a_third,
+            const nifly::Vector3& a_normal
+        ) {
+            AddEdgeNormal(a_first, a_second, a_normal);
+            AddEdgeNormal(a_second, a_third, a_normal);
+            AddEdgeNormal(a_third, a_first, a_normal);
         }
 
-        void AddEdge(const std::size_t a_edgeStart, const std::size_t a_edgeEnd) {
+        void AddEdgeNormal(const std::size_t a_edgeStart, const std::size_t a_edgeEnd, const nifly::Vector3& a_normal) {
+            _edgeNormals[EdgeKey(a_edgeStart, a_edgeEnd)].push_back(a_normal);
+        }
+
+        [[nodiscard]] static std::uint64_t EdgeKey(const std::size_t a_edgeStart, const std::size_t a_edgeEnd) {
             const auto minIndex = static_cast<std::uint64_t>(std::min(a_edgeStart, a_edgeEnd));
             const auto maxIndex = static_cast<std::uint64_t>(std::max(a_edgeStart, a_edgeEnd));
-            const auto edgeKey = (minIndex << 32U) | maxIndex;
-            if (_hullEdges.insert(edgeKey).second) {
-                _builder.AddLine(_transform, _vertices[a_edgeStart], _vertices[a_edgeEnd], _color);
-            }
+            return (minIndex << 32U) | maxIndex;
+        }
+
+        void AddEdgeLine(const std::uint64_t a_edgeKey) {
+            _builder.AddLine(_transform, _vertices[a_edgeKey >> 32U], _vertices[a_edgeKey & 0xFFFFFFFFU], _color);
         }
 
         Builder& _builder;
         const std::vector<nifly::Vector3>& _vertices;
         const nifly::MatTransform& _transform;
         const CollisionColor& _color;
-        std::unordered_set<std::uint64_t> _hullEdges;
+        float _tolerance = 0.0F;
+        std::map<std::uint64_t, std::vector<nifly::Vector3>> _edgeNormals;
+        std::set<std::uint64_t> _flatEdges;
     };
 
     void VisitObject(nifly::NiAVObject* a_object, const nifly::MatTransform& a_parent) {

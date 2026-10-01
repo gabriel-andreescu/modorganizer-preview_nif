@@ -47,6 +47,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   transparent, and effects whose falloff angles run in reverse rendering
   unpredictably.
 - Fixes Show Collision drawing nothing for Fallout 4 meshes.
+- Fixes Skyrim collision parts that are moved or rotated within their shape,
+  such as windmill frames, drawing piled up at the object's origin.
+- Draws convex collision as its face outlines, without diagonals across each
+  face.
 
 ## [0.5.1] - 2026-05-14
 
