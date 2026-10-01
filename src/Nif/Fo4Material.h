@@ -26,9 +26,16 @@ struct Alpha {
     std::uint8_t testReference = 0;
 };
 
+struct Palette {
+    bool color = false;
+    bool alpha = false;
+    float scale = 1.0F;
+};
+
 struct Material {
     Textures textures;
     Alpha alpha;
+    Palette palette;
     bool tileU = true;
     bool tileV = true;
     bool valid = false;

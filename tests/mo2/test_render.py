@@ -41,7 +41,7 @@ CASES = [
     (SKYRIM, Case("glass-cuirass", "meshes/armor/glass/m/cuirass_1.nif")),
     (SKYRIM, Case("aspen", "meshes/landscape/trees/treeaspen01.nif")),
     (SKYRIM, Case("field-grass", "meshes/landscape/grass/fieldgrass01.nif")),
-    (SKYRIM, Case("fire-volume", "meshes/effects/bfxfirevol01.nif")),
+    (SKYRIM, Case("fire-volume", "meshes/effects/bfxfirevol01.nif", pitch=75)),
     (
         SKYRIM,
         Case("stained-glass", "meshes/clutter/dbhood/dbstainglass01.nif", yaw=90),

@@ -85,6 +85,12 @@ Material Read(const QByteArray& a_data) {
     return {
         .textures = textures,
         .alpha = MaterialAlpha(file),
+        .palette =
+            {
+                .color = file.grayscaleToPaletteColor,
+                .alpha = file.grayscaleToPaletteAlpha,
+                .scale = file.grayscaleToPaletteScale,
+            },
         .tileU = file.tileU,
         .tileV = file.tileV,
         .valid = true,

@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixes Fallout 4 FaceGen heads rendering turned, with the neck cap stretched
   into a spike.
 - Fixes Fallout 4 bodies and other skin-tinted meshes rendering black.
+- Fixes Fallout 4 meshes colored through a palette texture, such as weapons,
+  armor and FaceGen hair, rendering white or grey.
+- Fixes palette-colored effects, such as Skyrim forge flames, picking up colors
+  from the wrong end of their palette.
 
 ## [0.5.1] - 2026-05-14
 

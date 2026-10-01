@@ -60,7 +60,7 @@ OpenGLShape::OpenGLShape(
         const auto material = _materialPath.isEmpty() ? Fo4Material::Material {}
                                                       : a_textureManager->GetFo4Material(_materialPath);
         _textures->Load(a_nifFile, shader, _shaderType, isPBR, material, a_textureManager);
-        _material->Apply(shader, isPBR);
+        _material->Apply(shader, isPBR, material);
         _drawState->Apply(a_nifFile, a_niShape, shader, material);
         if (usesSkyrimGrassShader) {
             _drawState->ApplySkyrimGrassAlpha(a_nifFile, a_niShape);

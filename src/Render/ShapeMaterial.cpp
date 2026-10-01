@@ -33,9 +33,14 @@ QVector4D ColorRgba(const QColor& a_color) {
 }
 } // namespace
 
-void OpenGLShapeMaterial::Apply(nifly::NiShader* a_shader, const bool a_isPBR) {
+void OpenGLShapeMaterial::Apply(
+    nifly::NiShader* a_shader,
+    const bool a_isPBR,
+    const Fo4Material::Material& a_material
+) {
     _isPBR = a_isPBR;
     ApplyCommonShaderMaterial(a_shader);
+    ApplyPalette(a_shader, a_material);
 
     if (auto* const bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(a_shader)) {
         ApplyLightingShaderMaterial(bslsp);
@@ -92,7 +97,6 @@ void OpenGLShapeMaterial::ApplyCommonShaderMaterial(nifly::NiShader* a_shader) {
     _specStrength = a_shader->GetSpecularStrength();
     _specGlossiness = qBound(0.0F, a_shader->GetGlossiness(), 128.0F);
     _fresnelPower = a_shader->GetFresnelPower();
-    _paletteScale = a_shader->GetGrayscaleToPaletteScale();
 
     _hasGlowMap = a_shader->HasGlowmap();
     _glowColor = ConvertColor(a_shader->GetEmissiveColor());
@@ -173,8 +177,6 @@ void OpenGLShapeMaterial::ApplyLightingShaderMaterial(nifly::BSLightingShaderPro
 
 void OpenGLShapeMaterial::ApplyEffectShaderMaterial(nifly::BSEffectShaderProperty* a_shader) {
     _hasWeaponBlood = ((a_shader->shaderFlags2 & SLSF2::kWeaponBlood) != 0U);
-    _greyscaleAlpha = ((a_shader->shaderFlags1 & SLSF1::kGreyscaleToPaletteAlpha) != 0U);
-    _greyscaleColor = ((a_shader->shaderFlags1 & SLSF1::kGreyscaleToPaletteColor) != 0U);
     _useFalloff = ((a_shader->shaderFlags1 & SLSF1::kUseFalloff) != 0U);
     _falloffParams = QVector4D(
         a_shader->falloffStartAngle,
@@ -183,6 +185,22 @@ void OpenGLShapeMaterial::ApplyEffectShaderMaterial(nifly::BSEffectShaderPropert
         a_shader->falloffStopOpacity
     );
     _falloffDepth = a_shader->softFalloffDepth;
+}
+
+void OpenGLShapeMaterial::ApplyPalette(const nifly::NiShader* a_shader, const Fo4Material::Material& a_material) {
+    // Fallout 4 takes the palette settings from the material file when the shape has one.
+    if (a_material.valid) {
+        _greyscaleColor = a_material.palette.color;
+        _greyscaleAlpha = a_material.palette.alpha;
+        _paletteScale = a_material.palette.scale;
+        return;
+    }
+
+    if (const auto* const bsShader = dynamic_cast<const nifly::BSShaderProperty*>(a_shader)) {
+        _greyscaleColor = ((bsShader->shaderFlags1 & SLSF1::kGreyscaleToPaletteColor) != 0U);
+        _greyscaleAlpha = ((bsShader->shaderFlags1 & SLSF1::kGreyscaleToPaletteAlpha) != 0U);
+    }
+    _paletteScale = a_shader->GetGrayscaleToPaletteScale();
 }
 
 void OpenGLShapeMaterial::ConfigurePBRFlags(const nifly::BSLightingShaderProperty* a_shader) {

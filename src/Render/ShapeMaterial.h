@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Nif/Fo4Material.h"
 #include "Render/ShaderManager.h"
 
 #include <QColor>
@@ -22,7 +23,7 @@ struct OpenGLShapeTextureFeatureFlags {
 
 class OpenGLShapeMaterial {
 public:
-    void Apply(nifly::NiShader* a_shader, bool a_isPBR);
+    void Apply(nifly::NiShader* a_shader, bool a_isPBR, const Fo4Material::Material& a_material);
     void SetupUniforms(QOpenGLShaderProgram* a_program, ShaderManager::ShaderType a_shaderType) const;
 
     [[nodiscard]] OpenGLShapeTextureFeatureFlags TextureFeatureFlags() const noexcept {
@@ -42,6 +43,7 @@ private:
     void ApplyCommonShaderMaterial(nifly::NiShader* a_shader);
     void ApplyLightingShaderMaterial(nifly::BSLightingShaderProperty* a_shader);
     void ApplyEffectShaderMaterial(nifly::BSEffectShaderProperty* a_shader);
+    void ApplyPalette(const nifly::NiShader* a_shader, const Fo4Material::Material& a_material);
     void ConfigurePBRFlags(const nifly::BSLightingShaderProperty* a_shader);
     void SetupGlowUniforms(QOpenGLShaderProgram* a_program, ShaderManager::ShaderType a_shaderType) const;
     void SetupPBRUniforms(QOpenGLShaderProgram* a_program) const;

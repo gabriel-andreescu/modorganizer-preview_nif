@@ -319,9 +319,13 @@ void OpenGLShapeTextures::EnsurePBRTextureDefaults(TextureManager* a_textureMana
 }
 
 void OpenGLShapeTextures::BindTextures() const {
+    // Skyrim's effect shader samples its palette clamped. A palette scale of 1 reads the last row, which repeating
+    // would blend with the first.
+    constexpr TextureWrap kPaletteWrap {.s = GL_CLAMP_TO_EDGE, .t = GL_CLAMP_TO_EDGE};
     for (std::size_t i = 0; i < _textures.size(); i++) {
         if (_textures[i]) {
-            _textures[i]->Bind(static_cast<int>(i + 1), _wrap);
+            const bool isPalette = _slotDescriptors[i].role == TextureSlotRole::kGreyscale;
+            _textures[i]->Bind(static_cast<int>(i + 1), isPalette ? kPaletteWrap : _wrap);
         }
     }
 }

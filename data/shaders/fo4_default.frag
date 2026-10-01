@@ -204,7 +204,8 @@ vec3 tonemap(vec3 x)
 
 vec4 colorLookup( float x, float y ) {
 
-    return texture2D( GreyscaleMap, vec2( clamp(x, 0.0, 1.0), clamp(y, 0.0, 1.0) ) );
+    // Fallout 4 reads the palette's full-size mip, since the grayscale value is not a smooth coordinate.
+    return texture2DLod( GreyscaleMap, vec2( clamp(x, 0.0, 1.0), clamp(y, 0.0, 1.0) ), 0.0 );
 }
 
 bool passesAlphaTest(float value)
