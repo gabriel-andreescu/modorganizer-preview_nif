@@ -46,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixes effect meshes, such as blowing snow and glass, rendering too
   transparent, and effects whose falloff angles run in reverse rendering
   unpredictably.
+- Fixes Show Collision drawing nothing for Fallout 4 meshes.
 
 ## [0.5.1] - 2026-05-14
 

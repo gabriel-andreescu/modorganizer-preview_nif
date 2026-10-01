@@ -1,5 +1,7 @@
 #include "Nif/CollisionGeometry.h"
 
+#include "Nif/Havok/PhysicsSystem.h"
+
 #include <nifly/ExtraData.hpp>
 #include <nifly/Nodes.hpp>
 #include <nifly/bhk.hpp>
@@ -12,7 +14,10 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <exception>
 #include <numbers>
+#include <optional>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -22,6 +27,8 @@ constexpr float kEpsilon = 0.00001F;
 constexpr int kCircleSegments = 32;
 constexpr float kBodyScale = 7.0F;
 constexpr float kSkyrimBhkScale = 10.0F;
+// One game unit is 0.0142875 Havok units in Fallout 4.
+constexpr float kFallout4HavokScale = 1.0F / 0.0142875F;
 
 constexpr std::array<CollisionColor, 8> kLayerColors {
     {
@@ -101,6 +108,10 @@ CollisionColor BodyLayerColor(const nifly::bhkWorldObject* a_body) {
     }
 
     return kLayerColors[a_body->collisionFilter.layer & 7U];
+}
+
+nifly::Vector3 ToVector3(const glm::vec3& a_vector) {
+    return {a_vector.x, a_vector.y, a_vector.z};
 }
 
 bool SameColor(const CollisionColor& a_lhs, const CollisionColor& a_rhs) {
@@ -250,6 +261,11 @@ private:
 
     void AddBhkCollision(nifly::NiAVObject* a_object, const nifly::MatTransform& a_transform) {
         auto* collision = _header.GetBlock<nifly::NiCollisionObject>(a_object->collisionRef);
+        if (const auto* physicsCollision = dynamic_cast<nifly::bhkNPCollisionObject*>(collision)) {
+            AddPhysicsSystemBody(*physicsCollision, a_transform);
+            return;
+        }
+
         const auto* bhkCollision = dynamic_cast<nifly::bhkNiCollisionObject*>(collision);
         if (!bhkCollision) {
             return;
@@ -272,6 +288,66 @@ private:
             a_transform.ComposeTransforms(bodyTransform),
             BodyLayerColor(body)
         );
+    }
+
+    void AddPhysicsSystemBody(const nifly::bhkNPCollisionObject& a_collision, const nifly::MatTransform& a_transform) {
+        const auto* system = PhysicsSystem(a_collision.bodyRef.index);
+        if (!system) {
+            return;
+        }
+
+        try {
+            const auto body = system->ReadBody(a_collision.bodyID);
+            AddHavokGeometry(
+                body.geometry,
+                a_transform.ComposeTransforms(ScaleTransform(kFallout4HavokScale)),
+                kLayerColors[body.collisionFilterInfo & 7U]
+            );
+        } catch (const std::exception& error) {
+            qWarning("Skipping Fallout 4 collision body %u: %s", a_collision.bodyID, error.what());
+        }
+    }
+
+    // Every collision object of a model usually shares one physics system, so each is parsed once.
+    const Havok::PhysicsSystem* PhysicsSystem(const std::uint32_t a_blockId) {
+        auto [entry, inserted] = _physicsSystems.try_emplace(a_blockId);
+        if (inserted) {
+            if (const auto* block = _header.GetBlock<nifly::bhkPhysicsSystem>(a_blockId)) {
+                const std::vector<char> bytes(block->data.cbegin(), block->data.cend());
+                try {
+                    entry->second.emplace(bytes);
+                } catch (const std::exception& error) {
+                    qWarning("Skipping Fallout 4 physics system block %u: %s", a_blockId, error.what());
+                }
+            }
+        }
+        return entry->second ? &*entry->second : nullptr;
+    }
+
+    void AddHavokGeometry(
+        const Havok::ShapeGeometry& a_geometry,
+        const nifly::MatTransform& a_transform,
+        const CollisionColor& a_color
+    ) {
+        for (const auto& polygon : a_geometry.polygons) {
+            for (std::size_t i = 0; i < polygon.size(); i++) {
+                AddLine(a_transform, ToVector3(polygon[i]), ToVector3(polygon[(i + 1) % polygon.size()]), a_color);
+            }
+        }
+        for (const auto& hull : a_geometry.hulls) {
+            std::vector<nifly::Vector3> vertices;
+            vertices.reserve(hull.size());
+            for (const auto& vertex : hull) {
+                vertices.push_back(ToVector3(vertex));
+            }
+            AddConvexHullEdges(vertices, a_transform, a_color);
+        }
+        for (const auto& sphere : a_geometry.spheres) {
+            AddSphere(a_transform, ToVector3(sphere.center), sphere.radius, a_color);
+        }
+        for (const auto& capsule : a_geometry.capsules) {
+            AddCapsule(a_transform, ToVector3(capsule.start), ToVector3(capsule.end), capsule.radius, a_color);
+        }
     }
 
     void AddBounds(nifly::NiAVObject* a_object, const nifly::MatTransform& a_transform) {
@@ -802,6 +878,7 @@ private:
     std::vector<nifly::Vector3> _bounds;
     std::unordered_set<std::uint32_t> _visitedObjects;
     std::unordered_set<std::uint32_t> _shapeStack;
+    std::unordered_map<std::uint32_t, std::optional<Havok::PhysicsSystem>> _physicsSystems;
 };
 } // namespace
 

@@ -155,6 +155,19 @@ CASES = [
     (FALLOUT4, Case("fire-barrel", "meshes/setdressing/metalbarrel/metalbarrel01fire.nif", pitch=70)),
     (
         FALLOUT4,
+        Case("barrel-collision", "meshes/setdressing/metalbarrel/metalbarrel01.nif", collision=True),
+    ),
+    (
+        FALLOUT4,
+        Case(
+            "burn-pile-collision",
+            "meshes/architecture/diamondcity/stadium_ext/diamondrubbletrashburnpile01.nif",
+            collision=True,
+            pitch=30,
+        ),
+    ),
+    (
+        FALLOUT4,
         Case(
             "flammable-barrel",
             "meshes/setdressing/barrelflammable/barrelflammable.nif",
