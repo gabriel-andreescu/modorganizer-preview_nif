@@ -28,6 +28,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   armor and FaceGen hair, rendering white or grey.
 - Fixes palette-colored effects, such as Skyrim forge flames, picking up colors
   from the wrong end of their palette.
+- Fixes Fallout 4 FaceGen heads with gaps around the eyes and hairline, and with
+  the eyelashes and eye shadow out of place.
+- Draws transparent parts from back to front, so nearer layers no longer hide
+  the ones behind them.
+- Fades Fallout 4 blended layers, such as the wet film on the eyes, by their
+  vertex alpha.
 
 ## [0.5.1] - 2026-05-14
 

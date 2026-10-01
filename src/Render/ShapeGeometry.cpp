@@ -79,7 +79,7 @@ void OpenGLShapeGeometry::Initialize(
     nifly::NifFile* a_nifFile,
     nifly::NiShape* a_niShape,
     nifly::NiShader* a_shader,
-    const bool a_vertexAlphaIsWind
+    const VertexAlpha a_vertexAlpha
 ) {
     auto* const functions = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(QOpenGLContext::currentContext());
     if (!functions) {
@@ -118,7 +118,7 @@ void OpenGLShapeGeometry::Initialize(
         _vertexBuffers[kAttribTexCoord] = MakeVertexBuffer(uvs, kAttribTexCoord);
     }
 
-    InitializeColorBuffer(a_nifFile, a_niShape, a_shader, a_vertexAlphaIsWind);
+    InitializeColorBuffer(a_nifFile, a_niShape, a_shader, a_vertexAlpha);
 
     auto* const glIndexBuffer = _indexBuffer.Create(QOpenGLBuffer::IndexBuffer);
     if (glIndexBuffer->create() && glIndexBuffer->bind()) {
@@ -185,7 +185,7 @@ void OpenGLShapeGeometry::InitializeColorBuffer(
     nifly::NifFile* a_nifFile,
     nifly::NiShape* a_niShape,
     nifly::NiShader* a_shader,
-    const bool a_vertexAlphaIsWind
+    const VertexAlpha a_vertexAlpha
 ) {
     std::vector<nifly::Color4> colors;
     if (!a_nifFile->GetColorsForShape(a_niShape, colors)) {
@@ -193,10 +193,10 @@ void OpenGLShapeGeometry::InitializeColorBuffer(
     }
 
     const auto* const bslsp = dynamic_cast<nifly::BSLightingShaderProperty*>(a_shader);
-    if (a_vertexAlphaIsWind
-        || (bslsp
-            && (((bslsp->shaderFlags1 & SLSF1::kVertexAlpha) == 0U)
-                || ((bslsp->shaderFlags2 & SLSF2::kTreeAnim) != 0U)))) {
+    const bool flagsDropAlpha = bslsp != nullptr
+                                && (((bslsp->shaderFlags1 & SLSF1::kVertexAlpha) == 0U)
+                                    || ((bslsp->shaderFlags2 & SLSF2::kTreeAnim) != 0U));
+    if (a_vertexAlpha == VertexAlpha::kWind || (a_vertexAlpha == VertexAlpha::kShaderFlags && flagsDropAlpha)) {
         for (auto& color : colors) {
             color.a = 1.0F;
         }

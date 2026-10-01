@@ -16,13 +16,20 @@ class NiShader;
 class NiShape;
 }
 
+// What a shape's vertex color alpha means to its shader.
+enum class VertexAlpha {
+    kShaderFlags,
+    kWind,
+    kOpacity,
+};
+
 class OpenGLShapeGeometry {
 public:
     void Initialize(
         nifly::NifFile* a_nifFile,
         nifly::NiShape* a_niShape,
         nifly::NiShader* a_shader,
-        bool a_vertexAlphaIsWind
+        VertexAlpha a_vertexAlpha
     );
     void DestroyWithCurrentContext();
     void Draw(QOpenGLFunctions_2_1* a_f) const;
@@ -41,7 +48,7 @@ private:
         nifly::NifFile* a_nifFile,
         nifly::NiShape* a_niShape,
         nifly::NiShader* a_shader,
-        bool a_vertexAlphaIsWind
+        VertexAlpha a_vertexAlpha
     );
 
     OpenGLVertexArrayResource _vertexArray;

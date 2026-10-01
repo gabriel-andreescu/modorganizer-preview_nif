@@ -3,6 +3,7 @@
 #include "Nif/GrassModel.h"
 #include "Nif/ShaderFlags.h"
 #include "Render/CollisionOverlay.h"
+#include "Render/DrawOrder.h"
 #include "Render/Framing.h"
 
 #include <QDebug>
@@ -260,18 +261,11 @@ void NifWidget::paintGL() {
 
     functions->glDisable(GL_POLYGON_OFFSET_FILL);
 
-    bool hasRefractionProxy = false;
-    for (const auto& shape : _glShapes) {
-        if (shape.IsRefractionProxy()) {
-            hasRefractionProxy = true;
-            continue;
-        }
-
-        if (shape.UsesAlphaPass()) {
-            drawShape(shape);
-        }
+    for (const auto* const shape : BackToFrontAlphaShapes(_glShapes, _viewMatrix)) {
+        drawShape(*shape);
     }
 
+    const bool hasRefractionProxy = std::ranges::any_of(_glShapes, &OpenGLShape::IsRefractionProxy);
     if (hasRefractionProxy) {
         CopySceneColorTexture(functions);
         RenderRefractionProxyPass(functions);

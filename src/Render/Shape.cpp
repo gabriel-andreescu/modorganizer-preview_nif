@@ -23,6 +23,22 @@ QString Fo4MaterialPath(const nifly::NiShader* a_shader, const ShaderManager::Sh
         default:                              return {};
     }
 }
+
+VertexAlpha ShapeVertexAlpha(
+    const bool a_usesSkyrimGrassShader,
+    const ShaderManager::ShaderType a_shaderType,
+    const bool a_blends
+) {
+    if (a_usesSkyrimGrassShader) {
+        return VertexAlpha::kWind;
+    }
+    // Fallout 4 materials have no vertex alpha switch, and blended layers such as the eye wetness fade through vertex
+    // alpha. Alpha-tested grass and gore caps store other data there.
+    if (a_shaderType == ShaderManager::kFO4Default && a_blends) {
+        return VertexAlpha::kOpacity;
+    }
+    return VertexAlpha::kShaderFlags;
+}
 }
 
 OpenGLShape::OpenGLShape(
@@ -53,18 +69,29 @@ OpenGLShape::OpenGLShape(
     const bool usesSkyrimGrassShader = a_isGrassModel && IsSkyrimLightingShader(_shaderType);
 
     _textures->InitializeDescriptors(shader, _shaderType, _isRefractionProxy);
-    _geometry->Initialize(a_nifFile, a_niShape, shader, usesSkyrimGrassShader);
 
+    Fo4Material::Material material;
     if (shader) {
         _materialPath = Fo4MaterialPath(shader, _shaderType);
-        const auto material = _materialPath.isEmpty() ? Fo4Material::Material {}
-                                                      : a_textureManager->GetFo4Material(_materialPath);
-        _textures->Load(a_nifFile, shader, _shaderType, isPBR, material, a_textureManager);
-        _material->Apply(shader, isPBR, material);
+        if (!_materialPath.isEmpty()) {
+            material = a_textureManager->GetFo4Material(_materialPath);
+        }
         _drawState->Apply(a_nifFile, a_niShape, shader, material);
         if (usesSkyrimGrassShader) {
             _drawState->ApplySkyrimGrassAlpha(a_nifFile, a_niShape);
         }
+    }
+
+    _geometry->Initialize(
+        a_nifFile,
+        a_niShape,
+        shader,
+        ShapeVertexAlpha(usesSkyrimGrassShader, _shaderType, _drawState->AlphaBlendEnabled())
+    );
+
+    if (shader) {
+        _textures->Load(a_nifFile, shader, _shaderType, isPBR, material, a_textureManager);
+        _material->Apply(shader, isPBR, material);
     } else {
         _textures->UseDefaultTextures(a_textureManager);
     }
