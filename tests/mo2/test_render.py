@@ -152,7 +152,7 @@ CASES = [
     ),
     (FALLOUT4, Case("blasted-tree", "meshes/landscape/trees/treeblasted01.nif")),
     (FALLOUT4, Case("beach-grass", "meshes/landscape/grass/beachgrassobj01.nif")),
-    (FALLOUT4, Case("fire", "meshes/effects/flamejetmuzzleflash.nif")),
+    (FALLOUT4, Case("fire-barrel", "meshes/setdressing/metalbarrel/metalbarrel01fire.nif", pitch=70)),
     (
         FALLOUT4,
         Case(
