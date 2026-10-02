@@ -8,6 +8,9 @@
 #include <QSharedPointer>
 #include <QWidget>
 
+#include <memory>
+
+class GameFiles;
 class NifPreviewPane;
 class QCheckBox;
 class QFrame;
@@ -25,6 +28,7 @@ public:
     NifPreviewWidget(
         NifPreviewSourceSet a_sourceSet,
         MOBase::IOrganizer* a_organizer,
+        const std::shared_ptr<const GameFiles>& a_gameFiles,
         QSharedPointer<Camera> a_camera,
         QWidget* a_parent = nullptr
     );

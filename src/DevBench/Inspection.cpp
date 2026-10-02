@@ -105,10 +105,6 @@ QJsonObject TextureSourceDetails(const int a_index, const TextureSourceProvider&
         {"totalTextures", static_cast<qint64>(a_source.totalTextureCount)},
     };
     InsertIfNotEmpty(details, "sourceName", a_source.sourceName);
-    InsertIfNotEmpty(details, "sourcePath", a_source.sourcePath);
-    if (!a_source.archivePaths.isEmpty()) {
-        details.insert("archives", QJsonArray::fromStringList(a_source.archivePaths));
-    }
     return details;
 }
 

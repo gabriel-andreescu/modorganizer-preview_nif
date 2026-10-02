@@ -1,8 +1,12 @@
 #pragma once
 
+#include "Data/DataFileSource.h"
+
 #include <QString>
 #include <QStringList>
 #include <QVector>
+
+class GameFiles;
 
 namespace nifly {
 class NifFile;
@@ -25,13 +29,12 @@ struct TextureReference {
     QString key;
 };
 
+// A mod or the game's own data that the preview prefers textures from. It supplies the textures it has, and the game's
+// winner supplies the rest.
 struct TextureSourceProvider {
     QString displayName;
     TextureSourceProviderKind kind = TextureSourceProviderKind::kAuto;
     QString sourceName;
-    QString sourcePath;
-    QStringList archivePaths;
-    QStringList coveredTextureKeys;
     qsizetype coveredTextureCount = 0;
     qsizetype totalTextureCount = 0;
 };
@@ -41,9 +44,19 @@ struct TextureSourceSet {
     QVector<TextureSourceProvider> providers;
 };
 
+// The copies of a texture under the first path variant any copy uses.
+struct TextureFiles {
+    QString dataPath;
+    QVector<DataFileSource> sources;
+};
+
 class TextureSourceResolver {
 public:
-    static TextureSourceSet Resolve(MOBase::IOrganizer* a_organizer, const nifly::NifFile* a_nifFile);
+    static TextureSourceSet Resolve(
+        const MOBase::IOrganizer* a_organizer,
+        const GameFiles& a_gameFiles,
+        const nifly::NifFile* a_nifFile
+    );
 };
 
 QString MakeTextureSummaryText(const TextureSourceSet& a_sourceSet);
@@ -51,4 +64,9 @@ QString MakeTextureToolTipText(const TextureSourceSet& a_sourceSet, int a_provid
 QString NormalizeTextureDataPath(QString a_path);
 QStringList TextureDataPathVariants(const QString& a_path);
 QString TextureDataPathKey(const QString& a_path);
-bool TextureProviderCoversPath(const TextureSourceProvider& a_provider, const QString& a_texturePath);
+TextureFiles FindTextureFiles(const GameFiles& a_gameFiles, const QString& a_texturePath);
+// The copy the provider supplies, or the game's winner when it has none. Null when no copy exists.
+const DataFileSource* ChooseTextureFile(
+    const TextureSourceProvider& a_provider,
+    const QVector<DataFileSource>& a_sources
+);

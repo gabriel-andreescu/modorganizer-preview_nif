@@ -1,9 +1,7 @@
 #include "Render/ShaderManager.h"
 
 #include <QOpenGLContext>
-
-ShaderManager::ShaderManager(MOBase::IOrganizer* a_moInfo)
-    : _moInfo {a_moInfo} {}
+#include <uibase/imoinfo.h>
 
 QOpenGLShaderProgram* ShaderManager::GetProgram(const ShaderType a_type) {
     if (a_type == kNone) {

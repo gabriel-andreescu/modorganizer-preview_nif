@@ -1,6 +1,5 @@
 #include "Textures/Source.h"
-#include "Data/ArchiveAccess.h"
-#include "Data/MoDataPaths.h"
+#include "Data/GameFiles.h"
 #include "Nif/Fo4Material.h"
 #include "Nif/ShaderUtils.h"
 #include "Nif/ShapeVisibility.h"
@@ -10,33 +9,20 @@
 
 #include <nifly/NifFile.hpp>
 
-#include <QDebug>
 #include <QDir>
-#include <QFileInfo>
 #include <QMap>
 #include <QObject>
 #include <QSet>
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 #include <ranges>
-#include <uibase/imodinterface.h>
 #include <uibase/imodlist.h>
 #include <uibase/imoinfo.h>
-#include <uibase/iplugingame.h>
 #include <utility>
 
-#include <libbsarch/bs_archive.h>
-
 namespace {
-struct TextureProviderBuilder {
-    QString sourceName;
-    QString sourcePath;
-    QString displayName;
-    QStringList archivePaths;
-    QStringList coveredTextureKeys;
-};
-
 struct TextureSlotSummary {
     QString name;
     int count = 0;
@@ -46,79 +32,6 @@ void AppendUnique(QStringList& a_values, const QString& a_value) {
     if (!a_value.isEmpty() && !a_values.contains(a_value, Qt::CaseInsensitive)) {
         a_values.append(a_value);
     }
-}
-
-bool LoadArchivePath(libbsarch::bs_archive& a_archive, const QString& a_archivePath) {
-    QString error;
-    if (ArchiveAccess::LoadArchive(a_archive, a_archivePath, &error)) {
-        return true;
-    }
-
-    qWarning(
-        "Failed to load BSA archive '%s' while resolving texture sources: %s",
-        qUtf8Printable(a_archivePath),
-        qUtf8Printable(error)
-    );
-    return false;
-}
-
-bool ArchiveContainsTexture(libbsarch::bs_archive& a_archive, const QString& a_texturePath) {
-    QString errorPath;
-    QString error;
-    if (ArchiveAccess::ContainsDataPath(a_archive, a_texturePath, &errorPath, &error)) {
-        return true;
-    }
-
-    if (!errorPath.isEmpty()) {
-        qWarning(
-            "Failed to inspect BSA archive texture path '%s': %s",
-            qUtf8Printable(errorPath),
-            qUtf8Printable(error)
-        );
-    }
-
-    return false;
-}
-
-void AppendArchiveCoverage(
-    QStringList& a_coveredTextureKeys,
-    const QStringList& a_archivePaths,
-    const QVector<TextureReference>& a_references
-) {
-    for (const auto& archivePath : a_archivePaths) {
-        if (a_coveredTextureKeys.size() >= a_references.size()) {
-            return;
-        }
-
-        libbsarch::bs_archive archive;
-        if (archivePath.isEmpty() || !LoadArchivePath(archive, archivePath)) {
-            continue;
-        }
-
-        for (const auto& reference : a_references) {
-            if (a_coveredTextureKeys.contains(reference.key, Qt::CaseInsensitive)) {
-                continue;
-            }
-
-            if (ArchiveContainsTexture(archive, reference.path)) {
-                AppendUnique(a_coveredTextureKeys, reference.key);
-            }
-        }
-    }
-}
-
-bool GameDataContainsTexture(const MOBase::IOrganizer* a_organizer, const QString& a_texturePath) {
-    if (!a_organizer) {
-        return false;
-    }
-
-    const auto* const game = a_organizer->managedGame();
-    if (!game) {
-        return false;
-    }
-
-    const auto dataPath = game->dataDirectory().absoluteFilePath(QDir::cleanPath(a_texturePath));
-    return QFileInfo::exists(dataPath) && QFileInfo(dataPath).isFile();
 }
 
 struct ShaderTextureReferences {
@@ -200,14 +113,14 @@ void AppendEffectShaderTextureReferences(
     );
 }
 
-void AppendFo4MaterialTextureReferences(const ShaderTextureReferences& a_target, MOBase::IOrganizer* a_organizer) {
+void AppendFo4MaterialTextureReferences(const ShaderTextureReferences& a_target, const GameFiles& a_gameFiles) {
     const bool isEffectShader = a_target.shaderType == ShaderManager::kFO4EffectShader;
     const auto materialPath = GetShaderMaterialPath(a_target.shader, isEffectShader ? ".bgem" : ".bgsm");
     if (materialPath.isEmpty()) {
         return;
     }
 
-    const TextureLoader loader(a_organizer);
+    const TextureLoader loader(a_gameFiles);
     const auto material = Fo4Material::Read(
         loader.LoadDataFile(Fo4Material::NormalizeMaterialDataPath(materialPath)).data
     );
@@ -225,7 +138,7 @@ void AppendFo4MaterialTextureReferences(const ShaderTextureReferences& a_target,
     AppendTextureReference(a_target, TextureSlot::kGlowMap, textures.glow);
 }
 
-QVector<TextureReference> TextureReferencesFor(MOBase::IOrganizer* a_organizer, const nifly::NifFile* a_nifFile) {
+QVector<TextureReference> TextureReferencesFor(const GameFiles& a_gameFiles, const nifly::NifFile* a_nifFile) {
     QVector<TextureReference> references;
     QSet<QString> seenPaths;
     if (!a_nifFile) {
@@ -256,7 +169,7 @@ QVector<TextureReference> TextureReferencesFor(MOBase::IOrganizer* a_organizer, 
         };
 
         if (shaderType == ShaderManager::kFO4Default || shaderType == ShaderManager::kFO4EffectShader) {
-            AppendFo4MaterialTextureReferences(target, a_organizer);
+            AppendFo4MaterialTextureReferences(target, a_gameFiles);
         }
 
         if (const auto* const effectShader = dynamic_cast<nifly::BSEffectShaderProperty*>(shader)) {
@@ -325,34 +238,39 @@ QString TextureSlotSummaryList(const QVector<TextureSlotSummary>& a_summaries) {
 }
 
 TextureSourceProvider MakeProvider(
-    TextureSourceProviderKind a_kind,
-    const TextureProviderBuilder& a_builder,
+    const TextureSourceProviderKind a_kind,
+    const QString& a_sourceName,
+    const QString& a_displayName,
+    const qsizetype a_coveredTextureCount,
     const qsizetype a_totalTextureCount
 ) {
-    TextureSourceProvider provider;
-    provider.kind = a_kind;
-    provider.sourceName = a_builder.sourceName;
-    provider.sourcePath = a_builder.sourcePath;
-    provider.archivePaths = a_builder.archivePaths;
-    provider.coveredTextureKeys = a_builder.coveredTextureKeys;
-    provider.coveredTextureCount = a_builder.coveredTextureKeys.size();
-    provider.totalTextureCount = a_totalTextureCount;
-    provider.displayName = CoverageDisplayName(
-        a_builder.displayName,
-        provider.coveredTextureCount,
-        provider.totalTextureCount
-    );
-    return provider;
+    return {
+        .displayName = CoverageDisplayName(a_displayName, a_coveredTextureCount, a_totalTextureCount),
+        .kind = a_kind,
+        .sourceName = a_sourceName,
+        .coveredTextureCount = a_coveredTextureCount,
+        .totalTextureCount = a_totalTextureCount,
+    };
 }
 
-void OrderModsByProfilePriority(QStringList& a_modOrder, MOBase::IModList* a_modList) {
-    if (!a_modList || a_modOrder.size() < 2) {
+QString ModDisplayName(const MOBase::IOrganizer* a_organizer, const QString& a_modName) {
+    const auto* const modList = a_organizer ? a_organizer->modList() : nullptr;
+    const auto displayName = modList ? modList->displayName(a_modName) : QString();
+    return displayName.isEmpty() ? a_modName : displayName;
+}
+
+// Matches MO2's mod list: highest priority first, with the overwrite folder above every mod.
+void OrderModsByPriority(QStringList& a_mods, const MOBase::IOrganizer* a_organizer) {
+    const auto* const modList = a_organizer ? a_organizer->modList() : nullptr;
+    if (!modList) {
         return;
     }
 
-    std::ranges::stable_sort(a_modOrder, [&](const QString& a_lhs, const QString& a_rhs) {
-        return a_modList->priority(a_lhs) > a_modList->priority(a_rhs);
-    });
+    const auto rank = [&](const QString& a_mod) {
+        return a_mod.compare(QStringLiteral("overwrite"), Qt::CaseInsensitive) == 0 ? std::numeric_limits<int>::max()
+                                                                                    : modList->priority(a_mod);
+    };
+    std::ranges::stable_sort(a_mods, std::ranges::greater {}, rank);
 }
 } // namespace
 
@@ -403,101 +321,92 @@ QString TextureDataPathKey(const QString& a_path) {
     return NormalizeTextureDataPath(a_path).toLower();
 }
 
-bool TextureProviderCoversPath(const TextureSourceProvider& a_provider, const QString& a_texturePath) {
-    return a_provider.coveredTextureKeys.contains(TextureDataPathKey(a_texturePath), Qt::CaseInsensitive);
+TextureFiles FindTextureFiles(const GameFiles& a_gameFiles, const QString& a_texturePath) {
+    for (const auto& path : TextureDataPathVariants(a_texturePath)) {
+        if (auto sources = a_gameFiles.Sources(path); !sources.isEmpty()) {
+            return {.dataPath = path, .sources = std::move(sources)};
+        }
+    }
+    return {.dataPath = NormalizeTextureDataPath(a_texturePath), .sources = {}};
+}
+
+const DataFileSource* ChooseTextureFile(
+    const TextureSourceProvider& a_provider,
+    const QVector<DataFileSource>& a_sources
+) {
+    if (a_sources.isEmpty()) {
+        return nullptr;
+    }
+
+    const auto supplies = [&](const DataFileSource& a_source) {
+        switch (a_provider.kind) {
+            case TextureSourceProviderKind::kMod:      return a_source.modName == a_provider.sourceName;
+            case TextureSourceProviderKind::kGameData: return a_source.modName.isEmpty();
+            case TextureSourceProviderKind::kAuto:     return true;
+        }
+        return false;
+    };
+    const auto chosen = std::ranges::find_if(a_sources, supplies);
+    return chosen != a_sources.end() ? &*chosen : &a_sources.front();
 }
 
 namespace {
-TextureSourceProvider MakeAutoProvider(const qsizetype a_referenceCount) {
-    TextureSourceProvider provider;
-    provider.kind = TextureSourceProviderKind::kAuto;
-    provider.displayName = QObject::tr("Auto: MO2 winners");
-    provider.coveredTextureCount = a_referenceCount;
-    provider.totalTextureCount = a_referenceCount;
-    return provider;
-}
-
-void AddModCoverage(
-    QMap<QString, TextureProviderBuilder>& a_builders,
-    QStringList& a_modOrder,
-    const MOBase::IModList* a_modList,
-    const QString& a_modName,
-    const QString& a_textureKey
+void AppendSourceProviders(
+    TextureSourceSet& a_sourceSet,
+    const MOBase::IOrganizer* a_organizer,
+    const GameFiles& a_gameFiles
 ) {
-    const auto* const mod = a_modList->getMod(a_modName);
-    if (!mod) {
-        return;
-    }
-
-    auto& builder = a_builders[a_modName];
-    if (builder.sourceName.isEmpty()) {
-        a_modOrder.append(a_modName);
-        builder.sourceName = a_modName;
-        builder.sourcePath = QDir::fromNativeSeparators(mod->absolutePath());
-        builder.displayName = a_modList->displayName(a_modName);
-        builder.archivePaths = MoDataPaths::ArchivePathsFromMod(mod);
-    }
-    AppendUnique(builder.coveredTextureKeys, a_textureKey);
-}
-
-void AppendModProviders(TextureSourceSet& a_sourceSet, const MOBase::IOrganizer* a_organizer) {
-    auto* const modList = a_organizer->modList();
-    if (!modList) {
-        return;
-    }
-
-    QMap<QString, TextureProviderBuilder> modBuilders;
-    QStringList modOrder;
+    QMap<QString, QSet<QString>> covered;
+    QSet<QString> gameCovered;
     for (const auto& reference : a_sourceSet.references) {
-        for (const auto& modName : a_organizer->getFileOrigins(reference.path)) {
-            AddModCoverage(modBuilders, modOrder, modList, modName, reference.key);
+        for (const auto& source : FindTextureFiles(a_gameFiles, reference.path).sources) {
+            if (source.modName.isEmpty()) {
+                gameCovered.insert(reference.key);
+            } else {
+                covered[source.modName].insert(reference.key);
+            }
         }
     }
 
-    OrderModsByProfilePriority(modOrder, modList);
+    auto modOrder = covered.keys();
+    OrderModsByPriority(modOrder, a_organizer);
+    const auto total = a_sourceSet.references.size();
     for (const auto& modName : modOrder) {
-        const auto& builder = modBuilders[modName];
-        if (!builder.coveredTextureKeys.isEmpty()) {
-            a_sourceSet.providers.push_back(
-                MakeProvider(TextureSourceProviderKind::kMod, builder, a_sourceSet.references.size())
-            );
-        }
+        a_sourceSet.providers.push_back(MakeProvider(
+            TextureSourceProviderKind::kMod,
+            modName,
+            ModDisplayName(a_organizer, modName),
+            covered[modName].size(),
+            total
+        ));
     }
-}
-
-void AppendGameDataProvider(TextureSourceSet& a_sourceSet, const MOBase::IOrganizer* a_organizer) {
-    TextureProviderBuilder gameBuilder;
-    gameBuilder.displayName = QObject::tr("Game Data");
-    if (const auto* const game = a_organizer->managedGame()) {
-        gameBuilder.sourcePath = QDir::fromNativeSeparators(game->dataDirectory().absolutePath());
-    }
-    gameBuilder.archivePaths = MoDataPaths::ArchivePathsFromGame(a_organizer);
-    for (const auto& reference : a_sourceSet.references) {
-        if (GameDataContainsTexture(a_organizer, reference.path)) {
-            AppendUnique(gameBuilder.coveredTextureKeys, reference.key);
-        }
-    }
-    AppendArchiveCoverage(gameBuilder.coveredTextureKeys, gameBuilder.archivePaths, a_sourceSet.references);
-
-    if (!gameBuilder.coveredTextureKeys.isEmpty()) {
+    if (!gameCovered.isEmpty()) {
         a_sourceSet.providers.push_back(
-            MakeProvider(TextureSourceProviderKind::kGameData, gameBuilder, a_sourceSet.references.size())
+            MakeProvider(TextureSourceProviderKind::kGameData, {}, QObject::tr("Game Data"), gameCovered.size(), total)
         );
     }
 }
 } // namespace
 
-TextureSourceSet TextureSourceResolver::Resolve(MOBase::IOrganizer* a_organizer, const nifly::NifFile* a_nifFile) {
+TextureSourceSet TextureSourceResolver::Resolve(
+    const MOBase::IOrganizer* a_organizer,
+    const GameFiles& a_gameFiles,
+    const nifly::NifFile* a_nifFile
+) {
     TextureSourceSet sourceSet;
-    sourceSet.references = TextureReferencesFor(a_organizer, a_nifFile);
-    sourceSet.providers.push_back(MakeAutoProvider(sourceSet.references.size()));
+    sourceSet.references = TextureReferencesFor(a_gameFiles, a_nifFile);
+    const auto total = sourceSet.references.size();
+    sourceSet.providers.push_back({
+        .displayName = QObject::tr("Auto: winners"),
+        .kind = TextureSourceProviderKind::kAuto,
+        .sourceName = {},
+        .coveredTextureCount = total,
+        .totalTextureCount = total,
+    });
 
-    if (!a_organizer || sourceSet.references.isEmpty()) {
-        return sourceSet;
+    if (!sourceSet.references.isEmpty()) {
+        AppendSourceProviders(sourceSet, a_organizer, a_gameFiles);
     }
-
-    AppendModProviders(sourceSet, a_organizer);
-    AppendGameDataProvider(sourceSet, a_organizer);
     return sourceSet;
 }
 

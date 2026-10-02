@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QOpenGLShaderProgram>
-#include <uibase/imoinfo.h>
 
 #include <array>
 
@@ -33,7 +32,7 @@ public:
         kShaderCount,
     };
 
-    explicit ShaderManager(MOBase::IOrganizer* a_moInfo);
+    ShaderManager() = default;
     ~ShaderManager() = default;
     ShaderManager(const ShaderManager&) = delete;
     ShaderManager(ShaderManager&&) = delete;
@@ -47,6 +46,5 @@ public:
 private:
     static QOpenGLShaderProgram* LoadProgram(ShaderType a_type);
 
-    MOBase::IOrganizer* _moInfo;
     std::array<QOpenGLShaderProgram*, kShaderCount> _programs {};
 };

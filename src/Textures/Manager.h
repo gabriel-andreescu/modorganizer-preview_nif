@@ -10,13 +10,14 @@
 #include <memory>
 #include <string>
 
+class GameFiles;
 class PreviewTexture;
 class TextureCache;
 class TextureLoader;
 
 class TextureManager {
 public:
-    explicit TextureManager(MOBase::IOrganizer* a_organizer, TextureSourceProvider a_textureSource = {});
+    explicit TextureManager(const GameFiles& a_gameFiles, TextureSourceProvider a_textureSource = {});
     ~TextureManager();
     TextureManager(const TextureManager&) = delete;
     TextureManager(TextureManager&&) = delete;

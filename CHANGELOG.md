@@ -57,6 +57,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Draws cylinder and plane collision shapes, which Show Collision left out.
 - Fixes packed triangle strip collision in Skyrim meshes drawing at a tenth of
   its size and ignoring its scale.
+- Finds meshes and textures packed in mod archives without MO2's archive
+  parsing.
+- Picks between archives by plugin load order, as the game does, and ignores
+  archives the game never loads, such as those of disabled plugins.
 
 ## [0.5.1] - 2026-05-14
 

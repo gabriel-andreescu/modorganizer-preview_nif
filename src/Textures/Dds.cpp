@@ -2,8 +2,6 @@
 
 #include <gli/load_dds.hpp>
 
-#include <QFile>
-
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -375,14 +373,4 @@ private:
 gli::texture DdsTextures::LoadIfValid(const char* a_data, const std::size_t a_size) {
     DdsTextureReader reader(a_data, a_size);
     return reader.Load();
-}
-
-gli::texture DdsTextures::LoadFileIfValid(const QString& a_path) {
-    QFile file(a_path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        return {};
-    }
-
-    const auto data = file.readAll();
-    return LoadIfValid(data.constData(), static_cast<std::size_t>(data.size()));
 }

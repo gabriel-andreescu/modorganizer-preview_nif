@@ -50,6 +50,7 @@ bool SplitViewPreference(const MOBase::IOrganizer* a_organizer) {
 NifPreviewWidget::NifPreviewWidget(
     NifPreviewSourceSet a_sourceSet,
     MOBase::IOrganizer* a_organizer,
+    const std::shared_ptr<const GameFiles>& a_gameFiles,
     QSharedPointer<Camera> a_camera,
     QWidget* a_parent
 )
@@ -87,8 +88,8 @@ NifPreviewWidget::NifPreviewWidget(
     toolbarLayout->addWidget(_cameraSyncButton);
     toolbarLayout->addStretch(1);
 
-    _leftPane = new NifPreviewPane(a_organizer, this);
-    _rightPane = new NifPreviewPane(a_organizer, this);
+    _leftPane = new NifPreviewPane(a_organizer, a_gameFiles, this);
+    _rightPane = new NifPreviewPane(a_organizer, a_gameFiles, this);
 
     _leftPane->SetCamera(std::move(a_camera));
     _rightPane->SetCamera(MakePreviewCamera());

@@ -6,6 +6,9 @@
 #include <QSharedPointer>
 #include <QWidget>
 
+#include <memory>
+
+class GameFiles;
 class QComboBox;
 class QLabel;
 class QResizeEvent;
@@ -21,7 +24,11 @@ class NifPreviewPane final : public QWidget {
     Q_OBJECT
 
 public:
-    explicit NifPreviewPane(MOBase::IOrganizer* a_organizer, QWidget* a_parent = nullptr);
+    NifPreviewPane(
+        MOBase::IOrganizer* a_organizer,
+        std::shared_ptr<const GameFiles> a_gameFiles,
+        QWidget* a_parent = nullptr
+    );
 
     void SetProviders(QVector<NifPreviewProvider> a_providers, int a_currentIndex);
     void SetCamera(QSharedPointer<Camera> a_camera);
@@ -75,6 +82,7 @@ private:
     void SetViewWidget(QWidget* a_widget);
 
     MOBase::IOrganizer* _organizer = nullptr;
+    std::shared_ptr<const GameFiles> _gameFiles;
     PreviewPaneController _controller;
     bool _updatingControls = false;
     bool _updatingTextureControls = false;

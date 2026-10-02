@@ -1,4 +1,6 @@
 #include "PreviewNif.h"
+#include "Data/ArchiveIndex.h"
+#include "Data/GameFiles.h"
 #include "DevBench/Tool.h"
 #include "Preview/Source.h"
 #include "Preview/Widget.h"
@@ -12,7 +14,8 @@
 #include <algorithm>
 #include <utility>
 
-PreviewNif::PreviewNif() = default;
+PreviewNif::PreviewNif()
+    : _archiveIndex(std::make_unique<ArchiveIndex>()) {}
 PreviewNif::~PreviewNif() = default;
 
 bool PreviewNif::init(MOBase::IOrganizer* a_moInfo) {
@@ -77,7 +80,8 @@ QWidget* PreviewNif::genDataPreview(
 }
 
 NifPreviewWidget* PreviewNif::CreatePreview(const QString& a_fileName, const QByteArray& a_fileData) const {
-    auto sourceSet = NifPreviewSourceResolver::Resolve(_moInfo, a_fileName, a_fileData);
+    const auto gameFiles = std::make_shared<const GameFiles>(*_moInfo, *_archiveIndex);
+    auto sourceSet = NifPreviewSourceResolver::Resolve(_moInfo, *gameFiles, a_fileName, a_fileData);
     if (sourceSet.providers.isEmpty()) {
         qWarning("Failed to find previewable NIF provider for '%s'", qUtf8Printable(a_fileName));
         return nullptr;
@@ -85,7 +89,7 @@ NifPreviewWidget* PreviewNif::CreatePreview(const QString& a_fileName, const QBy
 
     const auto lastProviderIndex = static_cast<int>(sourceSet.providers.size()) - 1;
     sourceSet.currentIndex = std::clamp(sourceSet.currentIndex, 0, lastProviderIndex);
-    return new NifPreviewWidget(std::move(sourceSet), _moInfo, SharedCamera());
+    return new NifPreviewWidget(std::move(sourceSet), _moInfo, gameFiles, SharedCamera());
 }
 
 QSharedPointer<Camera> PreviewNif::SharedCamera() const {

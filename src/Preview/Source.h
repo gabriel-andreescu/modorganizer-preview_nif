@@ -8,6 +8,8 @@
 
 #include <memory>
 
+class GameFiles;
+
 namespace MOBase {
 class IOrganizer;
 }
@@ -37,7 +39,8 @@ struct NifPreviewSourceSet {
 class NifPreviewSourceResolver {
 public:
     static NifPreviewSourceSet Resolve(
-        MOBase::IOrganizer* a_organizer,
+        const MOBase::IOrganizer* a_organizer,
+        const GameFiles& a_gameFiles,
         const QString& a_fileName,
         const QByteArray& a_fileData
     );

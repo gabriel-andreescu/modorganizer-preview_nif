@@ -48,10 +48,15 @@ QComboBox* MakeSourceCombo(QWidget* a_parent) {
 }
 } // namespace
 
-NifPreviewPane::NifPreviewPane(MOBase::IOrganizer* a_organizer, QWidget* a_parent)
+NifPreviewPane::NifPreviewPane(
+    MOBase::IOrganizer* a_organizer,
+    std::shared_ptr<const GameFiles> a_gameFiles,
+    QWidget* a_parent
+)
     : QWidget(a_parent)
     , _organizer(a_organizer)
-    , _controller(a_organizer)
+    , _gameFiles(std::move(a_gameFiles))
+    , _controller(a_organizer, *_gameFiles)
     , _camera(MakePaneCamera()) {
     CreateControls();
     CreateLayout();
@@ -337,7 +342,7 @@ void NifPreviewPane::ReloadCurrentNifWidget() {
     auto* const nifWidget = new NifWidget(
         nifFile,
         _controller.CurrentDataPath(),
-        _organizer,
+        _gameFiles,
         _camera,
         _controller.CurrentTextureSourceProvider(),
         this

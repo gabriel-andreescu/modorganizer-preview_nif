@@ -21,8 +21,9 @@ QString PreviewTitleFor(const NifPreviewProvider& a_provider) {
 }
 } // namespace
 
-PreviewPaneController::PreviewPaneController(MOBase::IOrganizer* a_organizer)
-    : _organizer(a_organizer) {}
+PreviewPaneController::PreviewPaneController(const MOBase::IOrganizer* a_organizer, const GameFiles& a_gameFiles)
+    : _organizer(a_organizer)
+    , _gameFiles(&a_gameFiles) {}
 
 void PreviewPaneController::SetProviders(QVector<NifPreviewProvider> a_providers, const int a_currentIndex) {
     _providers = std::move(a_providers);
@@ -88,7 +89,7 @@ PreviewPaneLoadResult PreviewPaneController::LoadCurrentProvider() {
         }
 
         _currentNifFile = nifFile;
-        _textureSourceSet = TextureSourceResolver::Resolve(_organizer, nifFile.get());
+        _textureSourceSet = TextureSourceResolver::Resolve(_organizer, *_gameFiles, nifFile.get());
         _currentTextureSourceIndex = 0;
         return {.status = PreviewPaneLoadStatus::kLoaded, .title = title, .statsText = MakeNifStatsText(nifFile.get())};
     } catch (const std::exception& e) {

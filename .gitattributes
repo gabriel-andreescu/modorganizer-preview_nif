@@ -1,7 +1,11 @@
 * text=auto eol=lf
 
+*.bsa binary -eol
+*.dds binary -eol
 *.dll binary -eol
+*.esp binary -eol
 *.exe binary -eol
+*.nif binary -eol
 *.pdb binary -eol
 *.png binary -eol
 *.qm binary -eol

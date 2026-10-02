@@ -30,7 +30,7 @@ QSharedPointer<Camera> MakeCamera() {
 NifWidget::NifWidget(
     std::shared_ptr<nifly::NifFile> a_nifFile,
     const QString& a_dataPath,
-    MOBase::IOrganizer* a_organizer,
+    std::shared_ptr<const GameFiles> a_gameFiles,
     QSharedPointer<Camera> a_camera,
     TextureSourceProvider a_textureSource,
     QWidget* a_parent
@@ -38,9 +38,9 @@ NifWidget::NifWidget(
     : QOpenGLWidget(a_parent)
     , _nifFile {std::move(a_nifFile)}
     , _isGrassModel {IsGrassModelPath(a_dataPath)}
-    , _moInfo {a_organizer}
-    , _textureManager {std::make_unique<TextureManager>(a_organizer, std::move(a_textureSource))}
-    , _shaderManager {std::make_unique<ShaderManager>(a_organizer)} {
+    , _gameFiles {std::move(a_gameFiles)}
+    , _textureManager {std::make_unique<TextureManager>(*_gameFiles, std::move(a_textureSource))}
+    , _shaderManager {std::make_unique<ShaderManager>()} {
     SetCamera(std::move(a_camera));
 
     QSurfaceFormat format;

@@ -13,10 +13,10 @@
 #include <QSharedPointer>
 
 #include <nifly/NifFile.hpp>
-#include <uibase/imoinfo.h>
 
 #include <memory>
 
+class GameFiles;
 class OpenGLCollisionOverlay;
 
 struct SkippedShape {
@@ -31,7 +31,7 @@ public:
     NifWidget(
         std::shared_ptr<nifly::NifFile> a_nifFile,
         const QString& a_dataPath,
-        MOBase::IOrganizer* a_organizer,
+        std::shared_ptr<const GameFiles> a_gameFiles,
         QSharedPointer<Camera> a_camera,
         TextureSourceProvider a_textureSource,
         QWidget* a_parent = nullptr
@@ -103,8 +103,9 @@ private:
 
     std::shared_ptr<nifly::NifFile> _nifFile;
     bool _isGrassModel = false;
-    MOBase::IOrganizer* _moInfo = nullptr;
 
+    // The texture manager reads through it, so it's declared first and outlives the manager.
+    std::shared_ptr<const GameFiles> _gameFiles;
     std::unique_ptr<TextureManager> _textureManager;
     std::unique_ptr<ShaderManager> _shaderManager;
 

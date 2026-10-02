@@ -5,6 +5,8 @@
 
 #include <memory>
 
+class GameFiles;
+
 namespace MOBase {
 class IOrganizer;
 }
@@ -23,7 +25,7 @@ struct PreviewPaneLoadResult {
 
 class PreviewPaneController final {
 public:
-    explicit PreviewPaneController(MOBase::IOrganizer* a_organizer);
+    PreviewPaneController(const MOBase::IOrganizer* a_organizer, const GameFiles& a_gameFiles);
 
     void SetProviders(QVector<NifPreviewProvider> a_providers, int a_currentIndex);
     bool SelectProvider(int a_index);
@@ -58,7 +60,8 @@ public:
 private:
     void ResetLoadedData();
 
-    MOBase::IOrganizer* _organizer = nullptr;
+    const MOBase::IOrganizer* _organizer = nullptr;
+    const GameFiles* _gameFiles = nullptr;
     QVector<NifPreviewProvider> _providers;
     int _currentProviderIndex = 0;
     TextureSourceSet _textureSourceSet;

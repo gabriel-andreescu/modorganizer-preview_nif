@@ -6,6 +6,7 @@
 
 #include <memory>
 
+class ArchiveIndex;
 class Camera;
 class NifPreviewWidget;
 
@@ -54,6 +55,8 @@ private:
     [[nodiscard]] QSharedPointer<Camera> SharedCamera() const;
 
     MOBase::IOrganizer* _moInfo {};
+    // Shared by every preview, so each archive's member list is read once.
+    std::unique_ptr<ArchiveIndex> _archiveIndex;
     mutable QWeakPointer<Camera> _sharedCamera;
     std::unique_ptr<DevBench::Tool> _devBench;
 };
