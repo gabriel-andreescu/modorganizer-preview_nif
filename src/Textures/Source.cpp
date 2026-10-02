@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 #include <ranges>
 #include <uibase/imodlist.h>
@@ -330,24 +331,24 @@ TextureFiles FindTextureFiles(const GameFiles& a_gameFiles, const QString& a_tex
     return {.dataPath = NormalizeTextureDataPath(a_texturePath), .sources = {}};
 }
 
-const DataFileSource* ChooseTextureFile(
-    const TextureSourceProvider& a_provider,
-    const QVector<DataFileSource>& a_sources
-) {
+bool ProviderSupplies(const TextureSourceProvider& a_provider, const DataFileSource& a_source) {
+    switch (a_provider.kind) {
+        case TextureSourceProviderKind::kMod:      return a_source.modName == a_provider.sourceName;
+        case TextureSourceProviderKind::kGameData: return a_source.modName.isEmpty();
+        case TextureSourceProviderKind::kAuto:     return true;
+    }
+    return false;
+}
+
+qsizetype ChooseTextureFile(const TextureSourceProvider& a_provider, const QVector<DataFileSource>& a_sources) {
     if (a_sources.isEmpty()) {
-        return nullptr;
+        return -1;
     }
 
-    const auto supplies = [&](const DataFileSource& a_source) {
-        switch (a_provider.kind) {
-            case TextureSourceProviderKind::kMod:      return a_source.modName == a_provider.sourceName;
-            case TextureSourceProviderKind::kGameData: return a_source.modName.isEmpty();
-            case TextureSourceProviderKind::kAuto:     return true;
-        }
-        return false;
-    };
-    const auto chosen = std::ranges::find_if(a_sources, supplies);
-    return chosen != a_sources.end() ? &*chosen : &a_sources.front();
+    const auto chosen = std::ranges::find_if(a_sources, [&](const DataFileSource& a_source) {
+        return ProviderSupplies(a_provider, a_source);
+    });
+    return chosen != a_sources.end() ? std::distance(a_sources.begin(), chosen) : 0;
 }
 
 namespace {

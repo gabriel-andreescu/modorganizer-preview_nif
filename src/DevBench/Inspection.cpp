@@ -77,10 +77,64 @@ QJsonObject BoundsDetails(const nifly::BoundingSphere& a_bounds) {
     };
 }
 
-QJsonObject OriginDetails(const DataOrigin& a_origin) {
-    QJsonObject details;
-    InsertIfNotEmpty(details, "file", a_origin.filePath);
-    InsertIfNotEmpty(details, "archive", a_origin.archivePath);
+QString FileLoadStatusName(const FileLoadStatus a_status) {
+    switch (a_status) {
+        case FileLoadStatus::kMissing: return QStringLiteral("missing");
+        case FileLoadStatus::kLoaded:  return QStringLiteral("loaded");
+        case FileLoadStatus::kFailed:  return QStringLiteral("failed");
+    }
+    return {};
+}
+
+QJsonObject CopyDetails(const DataFileSource& a_copy) {
+    QJsonObject details {
+        {"kind", a_copy.kind == DataFileKind::kLoose ? QStringLiteral("loose") : QStringLiteral("archive")},
+        {"path", a_copy.path},
+    };
+    InsertIfNotEmpty(details, "mod", a_copy.modName);
+    InsertIfNotEmpty(details, "plugin", a_copy.plugin);
+    return details;
+}
+
+void InsertFileLoad(QJsonObject& a_details, const FileLoad& a_file) {
+    QJsonArray copies;
+    for (const auto& copy : a_file.copies) {
+        copies.append(CopyDetails(copy));
+    }
+
+    a_details.insert("dataPath", a_file.dataPath);
+    a_details.insert("status", FileLoadStatusName(a_file.status));
+    a_details.insert("copies", copies);
+    if (a_file.usedCopy >= 0) {
+        a_details.insert("usedCopy", static_cast<qint64>(a_file.usedCopy));
+    }
+    a_details.insert("chosenSourceLacksFile", a_file.chosenSourceLacksFile);
+}
+
+QJsonObject TextureUseDetails(const TextureUse& a_use) {
+    QJsonObject details {
+        {"shape", a_use.shapeName},
+        {"slot", static_cast<qint64>(a_use.slot)},
+        {"slotName", a_use.slotName},
+    };
+    InsertIfNotEmpty(details, "fallback", FallbackName(a_use.fallback));
+    if (a_use.editorMarker) {
+        details.insert("editorMarker", true);
+    }
+    return details;
+}
+
+QJsonObject TextureResultDetails(const TextureResult& a_result) {
+    QJsonArray uses;
+    for (const auto& use : a_result.uses) {
+        uses.append(TextureUseDetails(use));
+    }
+
+    QJsonObject details {
+        {"path", a_result.path},
+        {"uses", uses},
+    };
+    InsertFileLoad(details, a_result.file);
     return details;
 }
 
@@ -116,7 +170,7 @@ QJsonObject TextureReferenceDetails(const TextureReference& a_reference) {
     };
 }
 
-QJsonObject SlotDetails(const TextureSlotState& a_state, const TextureManager& a_textures) {
+QJsonObject SlotDetails(const TextureSlotState& a_state) {
     QJsonObject details {
         {"slot", static_cast<qint64>(a_state.descriptor.slot)},
         {"name", TextureSlotDisplayName(a_state.descriptor)},
@@ -124,9 +178,6 @@ QJsonObject SlotDetails(const TextureSlotState& a_state, const TextureManager& a
     };
     InsertIfNotEmpty(details, "path", a_state.requestedPath);
     InsertIfNotEmpty(details, "fallback", FallbackName(a_state.fallback));
-    if (a_state.loaded) {
-        details.insert("origin", OriginDetails(a_textures.TextureOrigin(a_state.requestedPath)));
-    }
     return details;
 }
 
@@ -146,7 +197,7 @@ QJsonObject ProgramDetails(const QOpenGLShaderProgram* a_program) {
 QJsonObject ShapeDetails(const OpenGLShape& a_shape, const NifWidget& a_view) {
     QJsonArray textures;
     for (const auto& state : a_shape.Textures().SlotStates()) {
-        textures.append(SlotDetails(state, a_view.Textures()));
+        textures.append(SlotDetails(state));
     }
 
     QJsonObject details {
@@ -161,13 +212,11 @@ QJsonObject ShapeDetails(const OpenGLShape& a_shape, const NifWidget& a_view) {
     };
 
     if (const auto& materialPath = a_shape.MaterialPath(); !materialPath.isEmpty()) {
-        details.insert(
-            "material",
-            QJsonObject {
-                {"path", materialPath},
-                {"origin", OriginDetails(a_view.Textures().MaterialOrigin(materialPath))},
-            }
-        );
+        QJsonObject material {{"path", materialPath}};
+        if (const auto* const file = a_view.Textures().MaterialFile(materialPath)) {
+            InsertFileLoad(material, *file);
+        }
+        details.insert("material", material);
     }
     return details;
 }
@@ -229,6 +278,11 @@ QJsonObject PaneDetails(const PreviewPaneSide a_side, const NifPreviewPane& a_pa
             shapes.append(markerDetails);
         }
         details.insert("shapes", shapes);
+        QJsonArray textures;
+        for (const auto& result : view->TextureResults()) {
+            textures.append(TextureResultDetails(result));
+        }
+        details.insert("textures", textures);
         details.insert("bounds", BoundsDetails(view->SceneBounds()));
     }
     return details;

@@ -4,6 +4,7 @@
 #include "Render/Resources.h"
 #include "Render/ShaderManager.h"
 #include "Render/Shape.h"
+#include "Render/TextureResults.h"
 #include "Textures/Manager.h"
 #include "Textures/Source.h"
 
@@ -64,6 +65,10 @@ public:
     [[nodiscard]] const ShaderManager& Shaders() const noexcept {
         return *_shaderManager;
     }
+    // Empty until the widget initializes, which TexturesLoaded announces.
+    [[nodiscard]] const QVector<TextureResult>& TextureResults() const noexcept {
+        return _textureResults;
+    }
     // Loads the shapes and GL state of a widget that has not been painted yet.
     void EnsureInitialized();
     // Renders the current scene into an offscreen image of the given size, independent of the widget's size.
@@ -72,6 +77,9 @@ public:
     void SetShowCollision(bool a_showCollision);
     void SetShowEditorMarkers(bool a_showEditorMarkers);
     void ResetCamera();
+
+signals:
+    void TexturesLoaded(const QVector<TextureResult>& a_results);
 
 protected:
     void mousePressEvent(QMouseEvent* a_event) override;
@@ -112,6 +120,7 @@ private:
     std::vector<OpenGLShape> _glShapes;
     std::vector<OpenGLShape> _editorMarkerShapes;
     std::vector<SkippedShape> _skippedShapes;
+    QVector<TextureResult> _textureResults;
     nifly::BoundingSphere _sceneBounds;
     std::unique_ptr<OpenGLCollisionOverlay> _collisionOverlay;
     bool _collisionOverlayBuildAttempted = false;

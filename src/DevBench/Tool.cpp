@@ -33,7 +33,8 @@ QJsonObject Descriptor() {
         {
             "description",
             "Inspect live NIF previews: the NIF versions and texture sources each pane resolved, every shape's shader "
-            "and program link state, and each texture slot's path, fallback and the file or archive that supplied it. "
+            "and program link state, each texture slot's path and fallback, and per texture the slots that use it, "
+            "every copy in game order, the copy the preview read and its load status. "
             "list returns live previews with ids. inspect, close and camera take an id, or use the only visible preview. "
             "open previews a data path such as meshes/foo.nif in a standalone dialog. close closes the window showing "
             "the preview. camera rotates a pane by yaw and pitch "

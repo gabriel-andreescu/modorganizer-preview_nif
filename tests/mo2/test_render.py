@@ -313,11 +313,15 @@ def foreign_sources(details: dict, archive_prefixes: tuple[str, ...]) -> list[st
     sources = []
     for pane in details["panes"]:
         sources.extend(p.get("archive") or p.get("file") for p in pane["providers"])
-        for shape in pane["shapes"]:
-            origins = [slot["origin"] for slot in shape["textures"] if "origin" in slot]
-            if "material" in shape:
-                origins.append(shape["material"]["origin"])
-            sources.extend(o.get("archive") or o.get("file") for o in origins)
+        files = list(pane["textures"])
+        files.extend(
+            shape["material"] for shape in pane["shapes"] if "material" in shape
+        )
+        sources.extend(
+            file["copies"][file["usedCopy"]]["path"]
+            for file in files
+            if "usedCopy" in file
+        )
     return sorted(
         {
             source

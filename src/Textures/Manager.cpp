@@ -31,7 +31,10 @@ PreviewTexture* TextureManager::GetTexture(const QString& a_texturePath) {
         return _cache->Texture(normalizedPath);
     }
 
-    LoadedTexture loaded;
+    LoadedTexture loaded {
+        .texture = nullptr,
+        .file = {.dataPath = normalizedPath, .status = FileLoadStatus::kFailed},
+    };
     try {
         loaded = _loader->Load(normalizedPath);
     } catch (const std::exception& e) {
@@ -40,7 +43,7 @@ PreviewTexture* TextureManager::GetTexture(const QString& a_texturePath) {
         qWarning("Failed to load NIF texture '%s': unknown exception", qUtf8Printable(normalizedPath));
     }
 
-    _origins[OriginKey(normalizedPath)] = std::move(loaded.origin);
+    _files[FileKey(normalizedPath)] = std::move(loaded.file);
     return _cache->StoreTexture(normalizedPath, std::move(loaded.texture));
 }
 
@@ -51,16 +54,20 @@ Fo4Material::Material TextureManager::GetFo4Material(const QString& a_materialPa
     }
 
     auto loaded = _loader->LoadDataFile(normalizedPath);
-    _origins[OriginKey(normalizedPath)] = std::move(loaded.origin);
-    return Fo4Material::Read(loaded.data);
+    auto material = Fo4Material::Read(loaded.data);
+    if (!material.valid && loaded.file.status == FileLoadStatus::kLoaded) {
+        loaded.file.status = FileLoadStatus::kFailed;
+    }
+    _files[FileKey(normalizedPath)] = std::move(loaded.file);
+    return material;
 }
 
-DataOrigin TextureManager::TextureOrigin(const QString& a_texturePath) const {
-    return Origin(NormalizeTextureDataPath(a_texturePath));
+const FileLoad* TextureManager::TextureFile(const QString& a_texturePath) const {
+    return File(NormalizeTextureDataPath(a_texturePath));
 }
 
-DataOrigin TextureManager::MaterialOrigin(const QString& a_materialPath) const {
-    return Origin(Fo4Material::NormalizeMaterialDataPath(a_materialPath));
+const FileLoad* TextureManager::MaterialFile(const QString& a_materialPath) const {
+    return File(Fo4Material::NormalizeMaterialDataPath(a_materialPath));
 }
 
 PreviewTexture* TextureManager::GetErrorTexture() {
@@ -79,11 +86,11 @@ PreviewTexture* TextureManager::GetFlatNormalTexture() {
     return _cache->GetFlatNormalTexture();
 }
 
-QString TextureManager::OriginKey(const QString& a_normalizedPath) {
+QString TextureManager::FileKey(const QString& a_normalizedPath) {
     return a_normalizedPath.toLower();
 }
 
-DataOrigin TextureManager::Origin(const QString& a_normalizedPath) const {
-    const auto entry = _origins.find(OriginKey(a_normalizedPath));
-    return entry != _origins.end() ? entry->second : DataOrigin {};
+const FileLoad* TextureManager::File(const QString& a_normalizedPath) const {
+    const auto entry = _files.find(FileKey(a_normalizedPath));
+    return entry != _files.end() ? &entry->second : nullptr;
 }

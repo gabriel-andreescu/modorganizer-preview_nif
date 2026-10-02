@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Nif/Fo4Material.h"
-#include "Textures/Origin.h"
+#include "Textures/FileLoad.h"
 #include "Textures/Source.h"
 
 #include <QString>
@@ -30,8 +30,9 @@ public:
     PreviewTexture* GetTexture(const QString& a_texturePath);
     [[nodiscard]] Fo4Material::Material GetFo4Material(const QString& a_materialPath);
 
-    [[nodiscard]] DataOrigin TextureOrigin(const QString& a_texturePath) const;
-    [[nodiscard]] DataOrigin MaterialOrigin(const QString& a_materialPath) const;
+    // Null for a path the manager never loaded.
+    [[nodiscard]] const FileLoad* TextureFile(const QString& a_texturePath) const;
+    [[nodiscard]] const FileLoad* MaterialFile(const QString& a_materialPath) const;
 
     PreviewTexture* GetErrorTexture();
     PreviewTexture* GetBlackTexture();
@@ -39,10 +40,10 @@ public:
     PreviewTexture* GetFlatNormalTexture();
 
 private:
-    [[nodiscard]] static QString OriginKey(const QString& a_normalizedPath);
-    [[nodiscard]] DataOrigin Origin(const QString& a_normalizedPath) const;
+    [[nodiscard]] static QString FileKey(const QString& a_normalizedPath);
+    [[nodiscard]] const FileLoad* File(const QString& a_normalizedPath) const;
 
     std::unique_ptr<TextureLoader> _loader;
     std::unique_ptr<TextureCache> _cache;
-    std::map<QString, DataOrigin> _origins;
+    std::map<QString, FileLoad> _files;
 };

@@ -250,6 +250,9 @@ void NifWidget::initializeGL() {
         }
     }
 
+    _textureResults = CollectTextureResults(_glShapes, _editorMarkerShapes, *_textureManager);
+    emit TexturesLoaded(_textureResults);
+
     // The collision overlay needs the GL context, which only initialization and painting have.
     if (_glShapes.empty()) {
         EnsureCollisionOverlay();

@@ -11,15 +11,9 @@
 #include <utility>
 
 namespace {
-DataOrigin OriginOf(const DataFileSource& a_source) {
-    if (a_source.kind == DataFileKind::kLoose) {
-        return {.filePath = a_source.path, .archivePath = {}};
-    }
-    return {.filePath = {}, .archivePath = a_source.path};
-}
-
-std::unique_ptr<PreviewTexture> Decode(const LoadedDataFile& a_file, const QString& a_texturePath) {
-    const auto& source = a_file.origin.filePath.isEmpty() ? a_file.origin.archivePath : a_file.origin.filePath;
+std::unique_ptr<PreviewTexture> Decode(const LoadedDataFile& a_file) {
+    const auto& dataPath = a_file.file.dataPath;
+    const auto& source = a_file.file.copies[a_file.file.usedCopy].path;
     try {
         const auto texture = DdsTextures::LoadIfValid(
             a_file.data.constData(),
@@ -28,7 +22,7 @@ std::unique_ptr<PreviewTexture> Decode(const LoadedDataFile& a_file, const QStri
         if (texture.empty()) {
             qWarning(
                 "Failed to decode DDS '%s' from '%s': invalid or unsupported DDS",
-                qUtf8Printable(a_texturePath),
+                qUtf8Printable(dataPath),
                 qUtf8Printable(source)
             );
             return nullptr;
@@ -37,7 +31,7 @@ std::unique_ptr<PreviewTexture> Decode(const LoadedDataFile& a_file, const QStri
     } catch (const std::exception& exception) {
         qWarning(
             "Failed to decode DDS '%s' from '%s': %s",
-            qUtf8Printable(a_texturePath),
+            qUtf8Printable(dataPath),
             qUtf8Printable(source),
             exception.what()
         );
@@ -51,25 +45,35 @@ TextureLoader::TextureLoader(const GameFiles& a_gameFiles, TextureSourceProvider
     , _textureSource {std::move(a_textureSource)} {}
 
 LoadedTexture TextureLoader::Load(const QString& a_texturePath) const {
-    const auto files = FindTextureFiles(*_gameFiles, a_texturePath);
-    auto file = Read(files.dataPath, files.sources);
-    if (file.data.isEmpty()) {
-        return {};
+    auto [dataPath, sources] = FindTextureFiles(*_gameFiles, a_texturePath);
+    auto file = Read(dataPath, std::move(sources));
+    if (file.file.status != FileLoadStatus::kLoaded) {
+        return {.texture = nullptr, .file = std::move(file.file)};
     }
 
-    auto texture = Decode(file, files.dataPath);
-    auto origin = texture ? std::move(file.origin) : DataOrigin {};
-    return {.texture = std::move(texture), .origin = std::move(origin)};
+    auto texture = Decode(file);
+    if (!texture) {
+        file.file.status = FileLoadStatus::kFailed;
+    }
+    return {.texture = std::move(texture), .file = std::move(file.file)};
 }
 
 LoadedDataFile TextureLoader::LoadDataFile(const QString& a_dataPath) const {
     return Read(a_dataPath, _gameFiles->Sources(a_dataPath));
 }
 
-LoadedDataFile TextureLoader::Read(const QString& a_dataPath, const QVector<DataFileSource>& a_sources) const {
-    const auto* const source = ChooseTextureFile(_textureSource, a_sources);
-    if (!source) {
-        return {};
+LoadedDataFile TextureLoader::Read(const QString& a_dataPath, QVector<DataFileSource> a_sources) const {
+    LoadedDataFile loaded;
+    loaded.file.dataPath = a_dataPath;
+    loaded.file.usedCopy = ChooseTextureFile(_textureSource, a_sources);
+    loaded.file.copies = std::move(a_sources);
+    if (loaded.file.usedCopy < 0) {
+        return loaded;
     }
-    return {.data = GameFiles::Read(*source, a_dataPath), .origin = OriginOf(*source)};
+
+    const auto& source = loaded.file.copies[loaded.file.usedCopy];
+    loaded.file.chosenSourceLacksFile = !ProviderSupplies(_textureSource, source);
+    loaded.data = GameFiles::Read(source, a_dataPath);
+    loaded.file.status = loaded.data.isEmpty() ? FileLoadStatus::kFailed : FileLoadStatus::kLoaded;
+    return loaded;
 }

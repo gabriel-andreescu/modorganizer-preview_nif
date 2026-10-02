@@ -32,7 +32,7 @@ NIF = "meshes/previewnif/cases.nif"
 # Every expected copy is green in the fixtures, and every other copy has another color.
 EXPECTED_TEXTURES = {
     "loose_vs_archive": (
-        "file",
+        "loose",
         "preview_nif - fixture loose high/textures/previewnif/loose_vs_archive.dds",
     ),
     "archive_order": ("archive", "previewnif_late - Textures.bsa"),
@@ -51,6 +51,23 @@ EXPECTED_TEXTURE_SOURCES = [
     ("mod", "preview_nif - fixture loose low"),
     ("gameData", ""),
 ]
+
+# The early archive's mod supplies two of the textures. Each of the others comes from the copy the game loads, which a
+# different mod supplies.
+FALLBACK_SOURCE = "preview_nif - fixture archive early"
+EXPECTED_FALLBACKS = {
+    "textures/previewnif/archive_order.dds": (FALLBACK_SOURCE, False),
+    "textures/previewnif/ignored_archives.dds": (FALLBACK_SOURCE, False),
+    "textures/previewnif/loose_vs_archive.dds": (
+        "preview_nif - fixture loose high",
+        True,
+    ),
+    "textures/previewnif/flat_n.dds": ("preview_nif - fixture loose low", True),
+    "textures/clutter/alchemyworkbench01.dds": (
+        "preview_nif - fixture archive late",
+        True,
+    ),
+}
 
 EXPECTED_VERSIONS = [
     ("loose", "preview_nif - fixture loose high"),
@@ -223,18 +240,35 @@ def preview(devbench, fixture_mods):
         devbench.call("preview_nif", {"action": "close", "id": opened["id"]})
 
 
-@pytest.fixture
-def cases(devbench, preview):
+def inspect_pane(devbench, preview: int) -> dict:
     return devbench.call("preview_nif", {"action": "inspect", "id": preview})["panes"][
         0
     ]
 
 
-def origin_of(texture: dict) -> tuple[str, str]:
-    origin = texture.get("origin", {})
-    if "file" in origin:
-        return "file", origin["file"]
-    return "archive", origin.get("archive", "")
+@pytest.fixture
+def cases(devbench, preview):
+    return inspect_pane(devbench, preview)
+
+
+def used_copy(texture: dict) -> dict:
+    return texture["copies"][texture["usedCopy"]]
+
+
+def select_texture_source(devbench, preview: int, pane: dict, mod: str) -> dict:
+    """Picks the mod in the pane's texture source dropdown and returns the pane once it shows that mod's textures."""
+    sources = pane["textureSources"]
+    index = next(s["index"] for s in sources if s.get("sourceName") == mod)
+    names = [source["displayName"] for source in sources]
+    controls = devbench.call("dialogs", {"action": "describe"})["controls"]
+    dropdown = next(c for c in controls if c.get("options") == names)
+    devbench.call("dialogs", {"action": "select", "id": dropdown["id"], "index": index})
+    # The pane replaces its view, and the new one loads its textures when it first paints.
+    return wait_for(
+        lambda: inspect_pane(devbench, preview),
+        lambda p: p["currentTextureSource"] == index and p.get("textures"),
+        f"The preview did not reload its textures from {mod}",
+    )
 
 
 @pytest.mark.mo2
@@ -243,15 +277,25 @@ def test_texture_winner(cases, shape):
     kind, suffix = EXPECTED_TEXTURES[shape]
     base = next(
         texture
-        for found in cases["shapes"]
-        if found["name"] == shape
-        for texture in found["textures"]
-        if texture["slot"] == 0
+        for texture in cases["textures"]
+        for use in texture["uses"]
+        if use["shape"] == shape and use["slot"] == 0
     )
-    assert base["loaded"]
-    actual_kind, actual = origin_of(base)
-    assert actual_kind == kind
-    assert actual.replace("\\", "/").endswith(suffix), actual
+    assert base["status"] == "loaded"
+    assert not base["chosenSourceLacksFile"]
+    copy = used_copy(base)
+    assert copy["kind"] == kind
+    assert copy["path"].endswith(suffix), copy["path"]
+
+
+@pytest.mark.mo2
+def test_texture_source_falls_back_to_winning_copy(devbench, preview, cases):
+    pane = select_texture_source(devbench, preview, cases, FALLBACK_SOURCE)
+    actual = {
+        texture["path"]: (used_copy(texture)["mod"], texture["chosenSourceLacksFile"])
+        for texture in pane["textures"]
+    }
+    assert actual == EXPECTED_FALLBACKS
 
 
 @pytest.mark.mo2

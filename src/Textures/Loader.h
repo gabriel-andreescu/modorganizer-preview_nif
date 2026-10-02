@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Textures/Origin.h"
+#include "Textures/FileLoad.h"
 #include "Textures/Source.h"
 
 #include <QByteArray>
@@ -13,12 +13,12 @@ class PreviewTexture;
 
 struct LoadedTexture {
     std::unique_ptr<PreviewTexture> texture;
-    DataOrigin origin;
+    FileLoad file;
 };
 
 struct LoadedDataFile {
     QByteArray data;
-    DataOrigin origin;
+    FileLoad file;
 };
 
 // Loads the copy of each file the texture source supplies, or the game's winner when it supplies none.
@@ -30,7 +30,7 @@ public:
     [[nodiscard]] LoadedDataFile LoadDataFile(const QString& a_dataPath) const;
 
 private:
-    [[nodiscard]] LoadedDataFile Read(const QString& a_dataPath, const QVector<DataFileSource>& a_sources) const;
+    [[nodiscard]] LoadedDataFile Read(const QString& a_dataPath, QVector<DataFileSource> a_sources) const;
 
     const GameFiles* _gameFiles;
     TextureSourceProvider _textureSource;

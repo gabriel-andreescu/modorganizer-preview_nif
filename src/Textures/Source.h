@@ -65,8 +65,10 @@ QString NormalizeTextureDataPath(QString a_path);
 QStringList TextureDataPathVariants(const QString& a_path);
 QString TextureDataPathKey(const QString& a_path);
 TextureFiles FindTextureFiles(const GameFiles& a_gameFiles, const QString& a_texturePath);
-// The copy the provider supplies, or the game's winner when it has none. Null when no copy exists.
-const DataFileSource* ChooseTextureFile(
+[[nodiscard]] bool ProviderSupplies(const TextureSourceProvider& a_provider, const DataFileSource& a_source);
+// The index of the first copy the provider supplies, or 0 for the copy the game loads when it supplies none. -1 when
+// no copy exists.
+[[nodiscard]] qsizetype ChooseTextureFile(
     const TextureSourceProvider& a_provider,
     const QVector<DataFileSource>& a_sources
 );
