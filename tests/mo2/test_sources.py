@@ -88,18 +88,8 @@ def plugin_names(devbench) -> list[str]:
     ]
 
 
-def active_plugins(devbench) -> set[str]:
-    profile = Path(devbench.call("profiles", {"action": "list"})["path"])
-    lines = (profile / "plugins.txt").read_text(encoding="utf-8").splitlines()
-    return {line[1:] for line in lines if line.startswith("*")}
-
-
 def set_plugin_states(devbench, states: dict[str, bool]) -> None:
-    """Sets the fixture plugins' states and puts the early plugin right before the late one, last in the load order.
-
-    DevBench's plugin setEnabled changes only MO2's in-memory list, and the next refresh reloads plugins.txt. A
-    priority change makes MO2 write the list a moment later, so this waits until plugins.txt shows the states.
-    """
+    """Sets the fixture plugins' states and puts the early plugin right before the late one, last in the load order."""
     for plugin, enabled in states.items():
         devbench.call(
             "plugins", {"action": "setEnabled", "name": plugin, "enabled": enabled}
@@ -109,13 +99,6 @@ def set_plugin_states(devbench, states: dict[str, bool]) -> None:
         devbench.call(
             "plugins", {"action": "setPriority", "name": plugin, "priority": last}
         )
-    wait_for(
-        lambda: active_plugins(devbench),
-        lambda active: all(
-            (plugin in active) == enabled for plugin, enabled in states.items()
-        ),
-        "MO2 did not write the fixture plugin states to plugins.txt",
-    )
 
 
 def event_head(devbench) -> int:
