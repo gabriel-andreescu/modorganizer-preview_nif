@@ -83,6 +83,13 @@ CASES = [
     ),
     (SKYRIM, Case("skeleton", "meshes/actors/character/character assets/skeleton.nif")),
     (SKYRIM, Case("glass-cuirass", "meshes/armor/glass/m/cuirass_1.nif")),
+    (
+        SKYRIM,
+        Case(
+            "frost-atronach",
+            "meshes/actors/atronachfrost/character assets/atronachfrost.nif",
+        ),
+    ),
     (SKYRIM, Case("aspen", "meshes/landscape/trees/treeaspen01.nif")),
     (SKYRIM, Case("field-grass", "meshes/landscape/grass/fieldgrass01.nif")),
     # The fire's layers add up to white from straight above, where it opens.

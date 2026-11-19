@@ -159,9 +159,9 @@ void main( void )
     vec3 outer = baseMap.rgb * C.rgb;
 
 
-    // Grazing angles and the outer map's alpha show the outer layer.
-    float outerMix = max( 1.0 - EdotN, baseMap.a );
-    albedo = mix( inner, outer, outerMix );
+    // The inner layer shows through where the view faces the surface and the outer map's alpha is low.
+    float innerMix = EdotN * (1.0 - baseMap.a);
+    albedo = mix( outer, inner, innerMix );
 
 
     if ( hasCubeMap ) {
