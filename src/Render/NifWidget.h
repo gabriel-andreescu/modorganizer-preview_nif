@@ -6,7 +6,7 @@
 #include "Render/Shape.h"
 #include "Render/TextureResults.h"
 #include "Textures/Manager.h"
-#include "Textures/Source.h"
+#include "Textures/Selection.h"
 
 #include <QOpenGLFunctions_2_1>
 #include <QOpenGLShaderProgram>
@@ -34,7 +34,7 @@ public:
         const QString& a_dataPath,
         std::shared_ptr<const GameFiles> a_gameFiles,
         QSharedPointer<Camera> a_camera,
-        TextureSourceProvider a_textureSource,
+        TextureSelection a_textureSelection,
         QWidget* a_parent = nullptr
     );
 
@@ -65,6 +65,10 @@ public:
     [[nodiscard]] const ShaderManager& Shaders() const noexcept {
         return *_shaderManager;
     }
+    // False until the widget initializes, which TexturesLoaded announces.
+    [[nodiscard]] bool HasMeshes() const noexcept {
+        return !_glShapes.empty();
+    }
     // Empty until the widget initializes, which TexturesLoaded announces.
     [[nodiscard]] const QVector<TextureResult>& TextureResults() const noexcept {
         return _textureResults;
@@ -93,8 +97,8 @@ protected:
 private:
     [[nodiscard]] float AspectRatio() const;
     // A NIF without meshes, such as a skeleton, has nothing to show but its collision, so the collision is drawn
-    // even while Show Collision is unchecked. The checkbox keeps the user's choice on purpose: both split panes
-    // share it and it carries over to the next file, so ticking it for one skeleton would change every other view.
+    // whatever the collision toggle says. The toggle keeps the user's choice: both panes share it and it carries over
+    // to the next file, so turning it on for one skeleton would change every other view.
     [[nodiscard]] bool DrawsCollision() const;
     [[nodiscard]] std::vector<const OpenGLShape*> DrawnShapes() const;
     void Cleanup();

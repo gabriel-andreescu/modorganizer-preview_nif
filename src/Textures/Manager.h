@@ -2,7 +2,7 @@
 
 #include "Nif/Fo4Material.h"
 #include "Textures/FileLoad.h"
-#include "Textures/Source.h"
+#include "Textures/Selection.h"
 
 #include <QString>
 
@@ -17,7 +17,7 @@ class TextureLoader;
 
 class TextureManager {
 public:
-    explicit TextureManager(const GameFiles& a_gameFiles, TextureSourceProvider a_textureSource = {});
+    explicit TextureManager(const GameFiles& a_gameFiles, TextureSelection a_selection = {});
     ~TextureManager();
     TextureManager(const TextureManager&) = delete;
     TextureManager(TextureManager&&) = delete;

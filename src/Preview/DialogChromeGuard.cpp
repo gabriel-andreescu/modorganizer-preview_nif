@@ -45,7 +45,8 @@ void PreviewDialogChromeGuard::Capture(QWidget* a_previewWidget) {
         return;
     }
 
-    const QStringList objectNames = {"nameLabel", "modLabel", "previousButton", "nextButton"};
+    // The file name stays. The mesh dropdown replaces the mod label and the buttons that step through the copies.
+    const QStringList objectNames = {"modLabel", "previousButton", "nextButton"};
     for (const auto& objectName : objectNames) {
         if (auto* const widget = hostWindow->findChild<QWidget*>(objectName)) {
             _hostChrome.push_back({.widget = widget, .wasVisible = widget->isVisible()});

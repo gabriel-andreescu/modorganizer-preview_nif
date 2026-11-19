@@ -332,12 +332,18 @@ def foreign_sources(details: dict, archive_prefixes: tuple[str, ...]) -> list[st
 
 
 def check(devbench, label):
+    """Checks the preview's option with this text.
+
+    A NIF without meshes shows Show Collision checked and disabled, so an already checked option is left alone.
+    """
     dialog = devbench.call("dialogs", {"action": "describe"})
-    checkbox = next(
+    toggle = next(
         control for control in dialog["controls"] if control.get("text") == label
     )
+    if toggle["checked"]:
+        return
     devbench.call(
-        "dialogs", {"action": "setChecked", "id": checkbox["id"], "checked": True}
+        "dialogs", {"action": "setChecked", "id": toggle["id"], "checked": True}
     )
 
 

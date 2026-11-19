@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <iterator>
 #include <limits>
 #include <ranges>
 #include <uibase/imodlist.h>
@@ -24,11 +23,6 @@
 #include <utility>
 
 namespace {
-struct TextureSlotSummary {
-    QString name;
-    int count = 0;
-};
-
 void AppendUnique(QStringList& a_values, const QString& a_value) {
     if (!a_value.isEmpty() && !a_values.contains(a_value, Qt::CaseInsensitive)) {
         a_values.append(a_value);
@@ -204,40 +198,6 @@ QString CoverageDisplayName(const QString& a_name, const qsizetype a_covered, co
     return QObject::tr("%1 (%2/%3)").arg(a_name).arg(a_covered).arg(a_total);
 }
 
-QVector<TextureSlotSummary> TextureSlotSummaries(const TextureSourceSet& a_sourceSet) {
-    QVector<TextureSlotSummary> summaries;
-    for (const auto& reference : a_sourceSet.references) {
-        const auto existing = std::ranges::find_if(summaries, [&](const auto& a_summary) {
-            return a_summary.name == reference.slotName;
-        });
-        if (existing != summaries.end()) {
-            existing->count++;
-            continue;
-        }
-
-        summaries.push_back({.name = reference.slotName, .count = 1});
-    }
-
-    return summaries;
-}
-
-QString TextureSlotSummaryLabel(const TextureSlotSummary& a_summary) {
-    if (a_summary.count <= 1) {
-        return a_summary.name;
-    }
-
-    return QObject::tr("%1 x%2").arg(a_summary.name).arg(a_summary.count);
-}
-
-QString TextureSlotSummaryList(const QVector<TextureSlotSummary>& a_summaries) {
-    QStringList labels;
-    for (const auto& summary : a_summaries) {
-        labels << TextureSlotSummaryLabel(summary);
-    }
-
-    return labels.join(QObject::tr(", "));
-}
-
 TextureSourceProvider MakeProvider(
     const TextureSourceProviderKind a_kind,
     const QString& a_sourceName,
@@ -332,6 +292,10 @@ TextureFiles FindTextureFiles(const GameFiles& a_gameFiles, const QString& a_tex
 }
 
 bool ProviderSupplies(const TextureSourceProvider& a_provider, const DataFileSource& a_source) {
+    if (a_source.hidden) {
+        return false;
+    }
+
     switch (a_provider.kind) {
         case TextureSourceProviderKind::kMod:      return a_source.modName == a_provider.sourceName;
         case TextureSourceProviderKind::kGameData: return a_source.modName.isEmpty();
@@ -340,15 +304,14 @@ bool ProviderSupplies(const TextureSourceProvider& a_provider, const DataFileSou
     return false;
 }
 
-qsizetype ChooseTextureFile(const TextureSourceProvider& a_provider, const QVector<DataFileSource>& a_sources) {
-    if (a_sources.isEmpty()) {
-        return -1;
+qsizetype SourceCopyIndex(const TextureSourceProvider& a_provider, const QVector<DataFileSource>& a_copies) {
+    for (qsizetype i = 0; i < a_copies.size(); ++i) {
+        if (ProviderSupplies(a_provider, a_copies[i])) {
+            return i;
+        }
     }
-
-    const auto chosen = std::ranges::find_if(a_sources, [&](const DataFileSource& a_source) {
-        return ProviderSupplies(a_provider, a_source);
-    });
-    return chosen != a_sources.end() ? std::distance(a_sources.begin(), chosen) : 0;
+    // Hidden copies follow the visible ones, so a hidden first copy means the game sees none.
+    return !a_copies.isEmpty() && !a_copies.front().hidden ? 0 : -1;
 }
 
 namespace {
@@ -398,7 +361,7 @@ TextureSourceSet TextureSourceResolver::Resolve(
     sourceSet.references = TextureReferencesFor(a_gameFiles, a_nifFile);
     const auto total = sourceSet.references.size();
     sourceSet.providers.push_back({
-        .displayName = QObject::tr("Auto: winners"),
+        .displayName = QObject::tr("Winning files"),
         .kind = TextureSourceProviderKind::kAuto,
         .sourceName = {},
         .coveredTextureCount = total,
@@ -409,38 +372,4 @@ TextureSourceSet TextureSourceResolver::Resolve(
         AppendSourceProviders(sourceSet, a_organizer, a_gameFiles);
     }
     return sourceSet;
-}
-
-QString MakeTextureSummaryText(const TextureSourceSet& a_sourceSet) {
-    if (a_sourceSet.references.isEmpty()) {
-        return QObject::tr("Textures: none");
-    }
-
-    const auto summaries = TextureSlotSummaries(a_sourceSet);
-
-    QString summary = TextureSlotSummaryList(summaries.mid(0, 3));
-    if (summaries.size() > 3) {
-        summary = QObject::tr("%1 +%2").arg(summary).arg(summaries.size() - 3);
-    }
-
-    return QObject::tr("Textures: %1").arg(summary);
-}
-
-QString MakeTextureToolTipText(const TextureSourceSet& a_sourceSet, const int a_providerIndex) {
-    if (a_sourceSet.references.isEmpty()) {
-        return QObject::tr("No referenced textures");
-    }
-
-    QStringList lines;
-    if (a_providerIndex >= 0 && a_providerIndex < a_sourceSet.providers.size()) {
-        const auto& provider = a_sourceSet.providers[a_providerIndex];
-        lines << QObject::tr("Texture source: %1").arg(provider.displayName);
-    }
-    lines << QObject::tr("Texture slots: %1").arg(TextureSlotSummaryList(TextureSlotSummaries(a_sourceSet)));
-    lines << QObject::tr("Referenced textures:");
-    for (const auto& reference : a_sourceSet.references) {
-        lines << QObject::tr("%1: %2").arg(reference.slotName, reference.path);
-    }
-
-    return lines.join('\n');
 }

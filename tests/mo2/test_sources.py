@@ -69,6 +69,11 @@ EXPECTED_FALLBACKS = {
     ),
 }
 
+LOOSE_HIGH = "preview_nif - fixture loose high"
+LOOSE_LOW = "preview_nif - fixture loose low"
+# Both loose mods and the late archive have it, and the higher priority loose copy wins.
+LOOSE_TEXTURE = "textures/previewnif/loose_vs_archive.dds"
+
 EXPECTED_VERSIONS = [
     ("loose", "preview_nif - fixture loose high"),
     ("loose", "preview_nif - fixture loose low"),
@@ -233,8 +238,22 @@ def fixture_mods(request, devbench_session):
 
 @pytest.fixture
 def preview(devbench, fixture_mods):
+    """Opens the fixture NIF in one pane with its textures listed, once the view has loaded its textures.
+
+    The profile keeps Split Preview and Show Textures as another test or a user left them. The list rebuilds its rows
+    when the view loads, so the tests' clicks wait until then.
+    """
     opened = devbench.call("preview_nif", {"action": "open", "path": NIF})
     try:
+        if opened["split"]:
+            click(devbench, "Split Preview")
+        if not inspect_pane(devbench, opened["id"])["texturesOpen"]:
+            click(devbench, "Show Textures")
+        wait_for(
+            lambda: inspect_pane(devbench, opened["id"]),
+            lambda pane: pane.get("textures"),
+            "The preview did not load its textures",
+        )
         yield opened["id"]
     finally:
         devbench.call("preview_nif", {"action": "close", "id": opened["id"]})
@@ -253,6 +272,54 @@ def cases(devbench, preview):
 
 def used_copy(texture: dict) -> dict:
     return texture["copies"][texture["usedCopy"]]
+
+
+def texture_of(devbench, preview: int, path: str) -> dict | None:
+    """The pane's result for the texture. None while a reload replaces the view, which loads its textures when it
+    first paints."""
+    textures = inspect_pane(devbench, preview).get("textures", [])
+    return next((t for t in textures if t["path"] == path), None)
+
+
+def click(devbench, text: str, parent_class: str = "") -> None:
+    """Clicks the preview's control with this text. A parent class tells the textures' controls from the mesh's."""
+    controls = devbench.call("dialogs", {"action": "describe"})["controls"]
+    classes = {c["id"]: c["class"] for c in controls}
+    control = next(
+        c
+        for c in controls
+        if c.get("text") == text and parent_class in classes.get(c.get("parent"), "")
+    )
+    devbench.call("dialogs", {"action": "click", "id": control["id"]})
+
+
+def show_texture_copy(devbench, preview: int, path: str, mod: str) -> dict:
+    """Picks the mod's copy in the texture's dropdown and returns the texture once the preview shows that copy."""
+    name = PurePosixPath(path).name
+    controls = devbench.call("dialogs", {"action": "describe"})["controls"]
+    dropdown = next(
+        c for c in controls if "options" in c and f"copy of {name}" in c["tooltip"]
+    )
+    index = next(i for i, o in enumerate(dropdown["options"]) if o.startswith(mod))
+    devbench.call("dialogs", {"action": "select", "id": dropdown["id"], "index": index})
+    return wait_for(
+        lambda: texture_of(devbench, preview, path),
+        lambda t: t is not None and used_copy(t)["mod"] == mod,
+        f"The preview did not show the copy of {name} from {mod}",
+    )
+
+
+@pytest.fixture
+def loose_high_texture(devbench, fixture_mods) -> Path:
+    """The higher priority loose copy that Hide Other Copies hides, restored if a test leaves it hidden."""
+    mod = devbench.call("mods", {"action": "get", "name": LOOSE_HIGH})
+    path = Path(mod["path"]) / LOOSE_TEXTURE
+    yield path
+
+    hidden = path.with_name(path.name + ".mohidden")
+    if hidden.exists() and not path.exists():
+        hidden.rename(path)
+        refresh(devbench)
 
 
 def select_texture_source(devbench, preview: int, pane: dict, mod: str) -> dict:
@@ -331,3 +398,48 @@ def test_render(visual, preview, fixture_mods):
         recording="skyrim-se",
         arguments={"id": preview, "pane": "left", "width": 512, "height": 512},
     )
+
+
+@pytest.mark.mo2
+def test_pick_texture_copy(devbench, preview):
+    texture = show_texture_copy(devbench, preview, LOOSE_TEXTURE, LOOSE_LOW)
+    assert texture["picked"]
+
+    texture = show_texture_copy(devbench, preview, LOOSE_TEXTURE, LOOSE_HIGH)
+    assert not texture["picked"]
+
+
+@pytest.mark.mo2
+def test_hide_other_copies_until_undone(devbench, preview, loose_high_texture):
+    show_texture_copy(devbench, preview, LOOSE_TEXTURE, LOOSE_LOW)
+    click(devbench, "Hide Other Copies", "TexturesPanel")
+    texture = wait_for(
+        lambda: texture_of(devbench, preview, LOOSE_TEXTURE),
+        lambda t: (
+            t is not None
+            and not t["copies"][0].get("hidden")
+            and t["copies"][0]["mod"] == LOOSE_LOW
+        ),
+        "The lower priority copy did not become the one the game loads",
+        timeout=60,
+    )
+    assert used_copy(texture)["mod"] == LOOSE_LOW
+    assert not texture["picked"]
+    assert [c for c in texture["copies"] if c.get("mod") == LOOSE_HIGH] == [
+        {
+            "kind": "loose",
+            "mod": LOOSE_HIGH,
+            "path": f"{loose_high_texture.as_posix()}.mohidden",
+            "hidden": True,
+        }
+    ]
+    assert not loose_high_texture.exists()
+
+    click(devbench, "Undo")
+    wait_for(
+        lambda: texture_of(devbench, preview, LOOSE_TEXTURE),
+        lambda t: t is not None and used_copy(t)["mod"] == LOOSE_HIGH,
+        "Undo did not restore the higher priority copy",
+        timeout=60,
+    )
+    assert loose_high_texture.exists()

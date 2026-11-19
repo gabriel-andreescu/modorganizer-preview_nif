@@ -26,11 +26,13 @@ public:
     // Loose copies first, highest mod priority first, then archive copies, last loaded first. The first one is the
     // copy the game loads.
     [[nodiscard]] QVector<DataFileSource> Sources(const QString& a_dataPath) const;
+    // Loose copies MO2 hid by adding the hidden suffix, highest mod priority first. Each path names the hidden file.
+    [[nodiscard]] QVector<DataFileSource> HiddenSources(const QString& a_dataPath) const;
     [[nodiscard]] static QByteArray Read(const DataFileSource& a_source, const QString& a_dataPath);
     [[nodiscard]] QString GameName() const;
 
 private:
-    [[nodiscard]] QVector<DataFileSource> LooseSources(const QString& a_dataPath) const;
+    [[nodiscard]] QVector<DataFileSource> LooseSources(const QString& a_dataPath, bool a_hidden) const;
     [[nodiscard]] QVector<DataFileSource> ArchiveSources(const QString& a_dataPath) const;
 
     const MOBase::IOrganizer* _organizer;

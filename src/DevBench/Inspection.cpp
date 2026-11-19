@@ -93,6 +93,9 @@ QJsonObject CopyDetails(const DataFileSource& a_copy) {
     };
     InsertIfNotEmpty(details, "mod", a_copy.modName);
     InsertIfNotEmpty(details, "plugin", a_copy.plugin);
+    if (a_copy.hidden) {
+        details.insert("hidden", true);
+    }
     return details;
 }
 
@@ -108,6 +111,7 @@ void InsertFileLoad(QJsonObject& a_details, const FileLoad& a_file) {
     if (a_file.usedCopy >= 0) {
         a_details.insert("usedCopy", static_cast<qint64>(a_file.usedCopy));
     }
+    a_details.insert("picked", a_file.picked);
     a_details.insert("chosenSourceLacksFile", a_file.chosenSourceLacksFile);
 }
 
@@ -147,6 +151,11 @@ QJsonObject ProviderDetails(const int a_index, const NifPreviewProvider& a_provi
     };
     InsertIfNotEmpty(details, "file", a_provider.absolutePath);
     InsertIfNotEmpty(details, "archive", a_provider.archivePath);
+    InsertIfNotEmpty(details, "mod", a_provider.modName);
+    details.insert("managed", a_provider.managed);
+    if (a_provider.hidden) {
+        details.insert("hidden", true);
+    }
     return details;
 }
 
@@ -257,6 +266,7 @@ QJsonObject PaneDetails(const PreviewPaneSide a_side, const NifPreviewPane& a_pa
         {"textureSources", textureSources},
         {"currentTextureSource", controller.CurrentTextureSourceIndex()},
         {"textureReferences", textureReferences},
+        {"texturesOpen", a_pane.TexturesOpen()},
     };
     if (const auto nifFile = controller.CurrentNifFile()) {
         details.insert("stats", MakeNifStatsText(nifFile.get()));

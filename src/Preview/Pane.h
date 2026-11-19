@@ -2,19 +2,20 @@
 
 #include "Preview/PaneController.h"
 #include "Render/Camera.h"
+#include "Render/TextureResults.h"
 
 #include <QSharedPointer>
 #include <QWidget>
 
 #include <memory>
+#include <optional>
 
 class GameFiles;
-class QComboBox;
-class QLabel;
-class QResizeEvent;
-class QToolButton;
-class QVBoxLayout;
 class NifWidget;
+class QLabel;
+class QVBoxLayout;
+class TexturesPanel;
+class VersionPicker;
 
 namespace MOBase {
 class IOrganizer;
@@ -31,10 +32,15 @@ public:
     );
 
     void SetProviders(QVector<NifPreviewProvider> a_providers, int a_currentIndex);
+    // Takes the files as MO2 sees them after a refresh, and keeps the shown version, texture source and picks.
+    void Reload(std::shared_ptr<const GameFiles> a_gameFiles, QVector<NifPreviewProvider> a_providers);
     void SetCamera(QSharedPointer<Camera> a_camera);
     void SetShowCollision(bool a_showCollision);
     void SetShowEditorMarkers(bool a_showEditorMarkers);
+    void SetTexturesOpen(bool a_open);
+    void SetComparison(std::optional<QVector<TextureResult>> a_other);
     void ResetCamera();
+
     [[nodiscard]] QSharedPointer<Camera> SharedCamera() const {
         return _camera;
     }
@@ -56,51 +62,49 @@ public:
     [[nodiscard]] bool ShowsEditorMarkers() const noexcept {
         return _showEditorMarkers;
     }
+    // The loaded NIF has no meshes, so the view draws its collision whether or not collision is shown.
+    [[nodiscard]] bool ShowsOnlyCollision() const noexcept {
+        return _onlyCollision;
+    }
+    [[nodiscard]] bool TexturesOpen() const;
+    // Empty until the view loads its textures.
+    [[nodiscard]] QVector<TextureResult> TextureResults() const;
 
 signals:
-    void ProviderChanged(int a_providerIndex);
     void CameraMoved();
-
-protected:
-    void resizeEvent(QResizeEvent* a_event) override;
+    void TexturesLoaded();
+    void HideOtherCopies(const QVector<DataFileSource>& a_copies, qsizetype a_index, const QString& a_label);
+    void UnhideCopy(const DataFileSource& a_copy, const QString& a_label);
 
 private:
-    void CreateControls();
-    void CreateLayout();
     void ConnectControls();
     void SelectProvider(int a_index);
-    void SelectRelativeProvider(int a_offset);
     void SelectTextureSource(int a_index);
-    void SelectRelativeTextureSource(int a_offset);
-    void UpdateControls();
-    void UpdateSourceComboWidth();
-    void UpdateTextureSourceComboItems();
-    void UpdateTextureControls();
-    void UpdateTextureSourceComboWidth();
+    void PreviewTextureCopy(const QString& a_key, const QString& a_path);
+    void HideOtherVersions(int a_index);
+    void UnhideVersion(int a_index);
     void LoadCurrentProvider();
-    void ReloadCurrentNifWidget();
+    void ReloadView();
+    void UpdateTextureSources();
+    void UpdateTexturesVisibility();
+    void HandleTexturesLoaded();
     void SetViewWidget(QWidget* a_widget);
 
     MOBase::IOrganizer* _organizer = nullptr;
     std::shared_ptr<const GameFiles> _gameFiles;
     PreviewPaneController _controller;
-    bool _updatingControls = false;
-    bool _updatingTextureControls = false;
     bool _showCollision = false;
     bool _showEditorMarkers = false;
+    bool _texturesOpen = false;
+    bool _onlyCollision = false;
 
     QSharedPointer<Camera> _camera;
     QMetaObject::Connection _cameraConnection;
-    QLabel* _titleLabel = nullptr;
-    QToolButton* _prevButton = nullptr;
-    QComboBox* _sourceCombo = nullptr;
-    QToolButton* _nextButton = nullptr;
-    QLabel* _textureLabel = nullptr;
-    QToolButton* _prevTextureButton = nullptr;
-    QComboBox* _textureSourceCombo = nullptr;
-    QToolButton* _nextTextureButton = nullptr;
-    QLabel* _statsLabel = nullptr;
+    VersionPicker* _versionPicker = nullptr;
+    QWidget* _viewport = nullptr;
     QVBoxLayout* _viewLayout = nullptr;
+    TexturesPanel* _texturesPanel = nullptr;
+    QLabel* _statusLabel = nullptr;
     QWidget* _viewWidget = nullptr;
     NifWidget* _nifWidget = nullptr;
 };

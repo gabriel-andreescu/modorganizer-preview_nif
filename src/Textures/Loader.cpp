@@ -1,4 +1,5 @@
 #include "Textures/Loader.h"
+#include "Data/FileHiding.h"
 #include "Data/GameFiles.h"
 #include "Textures/Dds.h"
 #include "Textures/PreviewTexture.h"
@@ -11,6 +12,28 @@
 #include <utility>
 
 namespace {
+struct CopyChoice {
+    qsizetype index = -1;
+    bool picked = false;
+};
+
+CopyChoice ChooseCopy(
+    const TextureSelection& a_selection,
+    const QString& a_key,
+    const QVector<DataFileSource>& a_copies
+) {
+    if (const auto picked = a_selection.pickedCopies.constFind(a_key); picked != a_selection.pickedCopies.cend()) {
+        const auto pickedPath = FileHiding::VisiblePath(*picked);
+        for (qsizetype i = 0; i < a_copies.size(); ++i) {
+            if (FileHiding::VisiblePath(a_copies[i].path) == pickedPath) {
+                return {.index = i, .picked = true};
+            }
+        }
+    }
+
+    return {.index = SourceCopyIndex(a_selection.source, a_copies), .picked = false};
+}
+
 std::unique_ptr<PreviewTexture> Decode(const LoadedDataFile& a_file) {
     const auto& dataPath = a_file.file.dataPath;
     const auto& source = a_file.file.copies[a_file.file.usedCopy].path;
@@ -40,13 +63,14 @@ std::unique_ptr<PreviewTexture> Decode(const LoadedDataFile& a_file) {
 }
 } // namespace
 
-TextureLoader::TextureLoader(const GameFiles& a_gameFiles, TextureSourceProvider a_textureSource)
+TextureLoader::TextureLoader(const GameFiles& a_gameFiles, TextureSelection a_selection)
     : _gameFiles {&a_gameFiles}
-    , _textureSource {std::move(a_textureSource)} {}
+    , _selection {std::move(a_selection)} {}
 
 LoadedTexture TextureLoader::Load(const QString& a_texturePath) const {
-    auto [dataPath, sources] = FindTextureFiles(*_gameFiles, a_texturePath);
-    auto file = Read(dataPath, std::move(sources));
+    auto [dataPath, copies] = FindTextureFiles(*_gameFiles, a_texturePath);
+    copies.append(_gameFiles->HiddenSources(dataPath));
+    auto file = Read(dataPath, std::move(copies), TextureDataPathKey(a_texturePath));
     if (file.file.status != FileLoadStatus::kLoaded) {
         return {.texture = nullptr, .file = std::move(file.file)};
     }
@@ -59,20 +83,26 @@ LoadedTexture TextureLoader::Load(const QString& a_texturePath) const {
 }
 
 LoadedDataFile TextureLoader::LoadDataFile(const QString& a_dataPath) const {
-    return Read(a_dataPath, _gameFiles->Sources(a_dataPath));
+    return Read(a_dataPath, _gameFiles->Sources(a_dataPath), {});
 }
 
-LoadedDataFile TextureLoader::Read(const QString& a_dataPath, QVector<DataFileSource> a_sources) const {
+LoadedDataFile TextureLoader::Read(
+    const QString& a_dataPath,
+    QVector<DataFileSource> a_copies,
+    const QString& a_key
+) const {
+    const auto choice = ChooseCopy(_selection, a_key, a_copies);
     LoadedDataFile loaded;
     loaded.file.dataPath = a_dataPath;
-    loaded.file.usedCopy = ChooseTextureFile(_textureSource, a_sources);
-    loaded.file.copies = std::move(a_sources);
-    if (loaded.file.usedCopy < 0) {
+    loaded.file.copies = std::move(a_copies);
+    loaded.file.usedCopy = choice.index;
+    loaded.file.picked = choice.picked;
+    if (choice.index < 0) {
         return loaded;
     }
 
-    const auto& source = loaded.file.copies[loaded.file.usedCopy];
-    loaded.file.chosenSourceLacksFile = !ProviderSupplies(_textureSource, source);
+    const auto& source = loaded.file.copies[choice.index];
+    loaded.file.chosenSourceLacksFile = !choice.picked && !ProviderSupplies(_selection.source, source);
     loaded.data = GameFiles::Read(source, a_dataPath);
     loaded.file.status = loaded.data.isEmpty() ? FileLoadStatus::kFailed : FileLoadStatus::kLoaded;
     return loaded;

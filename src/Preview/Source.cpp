@@ -129,11 +129,10 @@ void AddLooseProvider(
     QVector<NifPreviewProvider>& a_providers,
     const QString& a_displayName,
     const QString& a_virtualPath,
-    const QString& a_absolutePath
+    const DataFileSource& a_copy,
+    const bool a_managed
 ) {
-    if (a_absolutePath.isEmpty()
-        || !QFileInfo::exists(a_absolutePath)
-        || HasProviderPath(a_providers, a_absolutePath)) {
+    if (a_copy.path.isEmpty() || !QFileInfo::exists(a_copy.path) || HasProviderPath(a_providers, a_copy.path)) {
         return;
     }
 
@@ -141,10 +140,14 @@ void AddLooseProvider(
         .displayName = a_displayName,
         .virtualPath = a_virtualPath,
         .kind = NifPreviewProviderKind::kLooseFile,
-        .absolutePath = QDir::fromNativeSeparators(QFileInfo(a_absolutePath).absoluteFilePath()),
+        .absolutePath = QDir::fromNativeSeparators(QFileInfo(a_copy.path).absoluteFilePath()),
         .archivePath = {},
         .archiveName = {},
         .data = {},
+        .modName = a_copy.modName,
+        .plugin = {},
+        .hidden = a_copy.hidden,
+        .managed = a_managed,
     });
 }
 
@@ -152,7 +155,7 @@ void AddArchiveProvider(
     QVector<NifPreviewProvider>& a_providers,
     const QString& a_sourceName,
     const QString& a_virtualPath,
-    const QString& a_archivePath,
+    const DataFileSource& a_copy,
     QByteArray a_data
 ) {
     if (a_data.isEmpty()) {
@@ -160,28 +163,34 @@ void AddArchiveProvider(
     }
 
     a_providers.push_back({
-        .displayName = ProviderDisplayName(a_sourceName, a_archivePath),
+        .displayName = ProviderDisplayName(a_sourceName, a_copy.path),
         .virtualPath = a_virtualPath,
         .kind = NifPreviewProviderKind::kArchive,
         .absolutePath = {},
-        .archivePath = a_archivePath,
-        .archiveName = QFileInfo(a_archivePath).fileName(),
+        .archivePath = a_copy.path,
+        .archiveName = QFileInfo(a_copy.path).fileName(),
         .data = std::move(a_data),
+        .modName = a_copy.modName,
+        .plugin = a_copy.plugin,
+        .hidden = false,
+        .managed = true,
     });
 }
 
 void AddGameProviders(NifPreviewSourceSet& a_sourceSet, const GameFiles& a_gameFiles) {
-    for (const auto& source : a_gameFiles.Sources(a_sourceSet.virtualPath)) {
-        const auto owner = source.modName.isEmpty() ? a_gameFiles.GameName() : source.modName;
-        if (source.kind == DataFileKind::kLoose) {
-            AddLooseProvider(a_sourceSet.providers, owner, a_sourceSet.virtualPath, source.path);
+    auto copies = a_gameFiles.Sources(a_sourceSet.virtualPath);
+    copies.append(a_gameFiles.HiddenSources(a_sourceSet.virtualPath));
+    for (const auto& copy : copies) {
+        const auto owner = copy.modName.isEmpty() ? a_gameFiles.GameName() : copy.modName;
+        if (copy.kind == DataFileKind::kLoose) {
+            AddLooseProvider(a_sourceSet.providers, owner, a_sourceSet.virtualPath, copy, true);
         } else {
             AddArchiveProvider(
                 a_sourceSet.providers,
                 owner,
                 a_sourceSet.virtualPath,
-                source.path,
-                GameFiles::Read(source, a_sourceSet.virtualPath)
+                copy,
+                GameFiles::Read(copy, a_sourceSet.virtualPath)
             );
         }
     }
@@ -237,6 +246,10 @@ void AddInMemoryProvider(
             .archivePath = {},
             .archiveName = {},
             .data = a_fileData,
+            .modName = {},
+            .plugin = {},
+            .hidden = false,
+            .managed = false,
         }
     );
 }
@@ -258,7 +271,13 @@ void SelectInMemoryProvider(NifPreviewSourceSet& a_sourceSet, const QString& a_f
 }
 
 void SelectLooseFileProvider(NifPreviewSourceSet& a_sourceSet, const QString& a_fileName) {
-    AddLooseProvider(a_sourceSet.providers, QFileInfo(a_fileName).fileName(), a_sourceSet.virtualPath, a_fileName);
+    AddLooseProvider(
+        a_sourceSet.providers,
+        QFileInfo(a_fileName).fileName(),
+        a_sourceSet.virtualPath,
+        {.kind = DataFileKind::kLoose, .modName = {}, .path = a_fileName, .plugin = {}, .hidden = false},
+        false
+    );
     if (const auto currentIndex = ProviderIndexForPath(a_sourceSet.providers, a_fileName); currentIndex >= 0) {
         a_sourceSet.currentIndex = currentIndex;
     }
@@ -313,6 +332,34 @@ std::shared_ptr<nifly::NifFile> LoadNifProvider(const NifPreviewProvider& a_prov
     }
 
     return nifFile;
+}
+
+QVector<DataFileSource> ProviderCopies(const QVector<NifPreviewProvider>& a_providers) {
+    QVector<DataFileSource> copies;
+    for (const auto& provider : a_providers) {
+        if (!provider.managed) {
+            continue;
+        }
+
+        const auto loose = provider.kind == NifPreviewProviderKind::kLooseFile;
+        copies.push_back({
+            .kind = loose ? DataFileKind::kLoose : DataFileKind::kArchive,
+            .modName = provider.modName,
+            .path = loose ? provider.absolutePath : provider.archivePath,
+            .plugin = provider.plugin,
+            .hidden = provider.hidden,
+        });
+    }
+    return copies;
+}
+
+qsizetype ProviderCopyIndex(const QVector<NifPreviewProvider>& a_providers, const int a_providerIndex) {
+    if (a_providerIndex < 0 || a_providerIndex >= a_providers.size() || !a_providers[a_providerIndex].managed) {
+        return -1;
+    }
+    return std::count_if(a_providers.begin(), a_providers.begin() + a_providerIndex, [](const auto& a_provider) {
+        return a_provider.managed;
+    });
 }
 
 QString MakeNifStatsText(const nifly::NifFile* a_nifFile) {

@@ -2,6 +2,7 @@
 
 #include "Preview/CameraSynchronizer.h"
 #include "Preview/DialogChromeGuard.h"
+#include "Preview/Preferences.h"
 #include "Preview/Source.h"
 #include "Render/Camera.h"
 
@@ -10,12 +11,12 @@
 
 #include <memory>
 
+class CopyActions;
 class GameFiles;
 class NifPreviewPane;
-class QCheckBox;
-class QFrame;
-class QPushButton;
+class NoticeBar;
 class QSplitter;
+class ViewToolbar;
 
 namespace MOBase {
 class IOrganizer;
@@ -26,9 +27,9 @@ class NifPreviewWidget final : public QWidget {
 
 public:
     NifPreviewWidget(
-        NifPreviewSourceSet a_sourceSet,
-        MOBase::IOrganizer* a_organizer,
-        const std::shared_ptr<const GameFiles>& a_gameFiles,
+        NifPreviewResolution a_resolution,
+        NifPreviewResolver a_resolver,
+        MOBase::IOrganizer& a_organizer,
         QSharedPointer<Camera> a_camera,
         QWidget* a_parent = nullptr
     );
@@ -51,16 +52,21 @@ protected:
     void showEvent(QShowEvent* a_event) override;
 
 private:
-    void SetSplitViewEnabled(bool a_enabled, bool a_persistPreference);
-    void SetShowCollisionEnabled(bool a_enabled);
-    void SetShowEditorMarkersEnabled(bool a_enabled);
+    void ConnectToolbar();
+    void ConnectPane(NifPreviewPane* a_pane);
+    void ConnectCopyActions();
+    void SetSplitEnabled(bool a_enabled);
+    void SetShowCollision(bool a_show);
+    void SetShowEditorMarkers(bool a_show);
+    void SetShowTextures(bool a_show);
     void SetCameraSyncEnabled(bool a_enabled);
     void ResetCameras();
-    void RestoreSplitViewPreference();
-    void SaveSplitViewPreference(bool a_enabled) const;
-    void UpdateGlobalControls();
-    void UpdateHostChrome();
-    void InitializeRightPaneForSplit();
+    void HandleTexturesLoaded();
+    void UpdateComparison();
+    void UpdateCollisionLock();
+    void UpdateSplitAvailability();
+    void Refresh();
+    void InitializeRightPane();
     void HandleCameraMoved(NifPreviewPane* a_pane);
     void SyncCameraDelta(NifPreviewPane* a_sourcePane, const CameraState& a_newState);
     void UpdateCameraSnapshot(NifPreviewPane* a_pane);
@@ -68,18 +74,17 @@ private:
     [[nodiscard]] PreviewPaneSide SideForPane(NifPreviewPane* a_pane) const;
     [[nodiscard]] int SecondaryProviderIndex() const;
 
-    MOBase::IOrganizer* _organizer = nullptr;
+    NifPreviewResolver _resolver;
+    PreviewPreferences _preferences;
+    std::shared_ptr<const GameFiles> _gameFiles;
     NifPreviewSourceSet _sourceSet;
 
-    QFrame* _globalControlsWidget = nullptr;
-    QPushButton* _resetCameraButton = nullptr;
-    QCheckBox* _showCollisionButton = nullptr;
-    QCheckBox* _showEditorMarkersButton = nullptr;
-    QCheckBox* _splitButton = nullptr;
-    QCheckBox* _cameraSyncButton = nullptr;
+    ViewToolbar* _toolbar = nullptr;
+    NoticeBar* _notice = nullptr;
     QSplitter* _splitter = nullptr;
     NifPreviewPane* _leftPane = nullptr;
     NifPreviewPane* _rightPane = nullptr;
+    CopyActions* _copyActions = nullptr;
     CameraSynchronizer _cameraSynchronizer;
     bool _applyingCameraSync = false;
     bool _rightPaneInitialized = false;

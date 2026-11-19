@@ -1,99 +1,47 @@
 #include "Preview/Widget.h"
+#include "Preview/CopyActions.h"
+#include "Preview/NoticeBar.h"
 #include "Preview/Pane.h"
-#include "Render/Camera.h"
+#include "Preview/ViewToolbar.h"
 
-#include <QCheckBox>
-#include <QDir>
-#include <QFrame>
-#include <QHBoxLayout>
-#include <QPushButton>
-#include <QSettings>
-#include <QSharedPointer>
 #include <QShowEvent>
-#include <QSignalBlocker>
 #include <QSplitter>
 #include <QTimer>
 #include <QVBoxLayout>
 
-#include <uibase/imoinfo.h>
 #include <utility>
 
 namespace {
-constexpr auto kProfileSettingsFileName = "preview_nif.ini";
-constexpr auto kProfileSettingsGroup = "Preview";
-constexpr auto kSplitPreviewSettingKey = "splitPreview";
-
 QSharedPointer<Camera> MakePreviewCamera() {
     return {new Camera(), &Camera::deleteLater};
-}
-
-QString ProfileSettingsPath(const MOBase::IOrganizer* a_organizer) {
-    if (!a_organizer || a_organizer->profilePath().isEmpty()) {
-        return {};
-    }
-
-    return QDir(a_organizer->profilePath()).filePath(kProfileSettingsFileName);
-}
-
-bool SplitViewPreference(const MOBase::IOrganizer* a_organizer) {
-    const auto settingsPath = ProfileSettingsPath(a_organizer);
-    if (settingsPath.isEmpty()) {
-        return false;
-    }
-
-    QSettings settings(settingsPath, QSettings::IniFormat);
-    settings.beginGroup(kProfileSettingsGroup);
-    return settings.value(kSplitPreviewSettingKey, false).toBool();
 }
 } // namespace
 
 NifPreviewWidget::NifPreviewWidget(
-    NifPreviewSourceSet a_sourceSet,
-    MOBase::IOrganizer* a_organizer,
-    const std::shared_ptr<const GameFiles>& a_gameFiles,
+    NifPreviewResolution a_resolution,
+    NifPreviewResolver a_resolver,
+    MOBase::IOrganizer& a_organizer,
     QSharedPointer<Camera> a_camera,
     QWidget* a_parent
 )
     : QWidget(a_parent)
-    , _organizer(a_organizer)
-    , _sourceSet(std::move(a_sourceSet)) {
-    _globalControlsWidget = new QFrame(this);
-    _globalControlsWidget->setObjectName("nifPreviewGlobalToolbar");
-    _globalControlsWidget->setFrameShape(QFrame::StyledPanel);
-    _globalControlsWidget->setFrameShadow(QFrame::Raised);
+    , _resolver(std::move(a_resolver))
+    , _preferences(a_organizer)
+    , _gameFiles(std::move(a_resolution.gameFiles))
+    , _sourceSet(std::move(a_resolution.sourceSet)) {
+    _toolbar = new ViewToolbar(this);
+    _notice = new NoticeBar(this);
+    _copyActions = new CopyActions(a_organizer, this);
 
-    _resetCameraButton = new QPushButton(tr("Reset Camera"), _globalControlsWidget);
-    _resetCameraButton->setToolTip(tr("Reset the preview camera"));
-
-    _showCollisionButton = new QCheckBox(tr("Show Collision"), _globalControlsWidget);
-    _showCollisionButton->setToolTip(tr("Show collision preview overlay"));
-
-    _showEditorMarkersButton = new QCheckBox(tr("Show Editor Markers"), _globalControlsWidget);
-    _showEditorMarkersButton->setToolTip(tr("Show the Creation Kit markers the game hides"));
-
-    _splitButton = new QCheckBox(tr("Split Preview"), _globalControlsWidget);
-    _splitButton->setToolTip(tr("Compare two previewable versions of this NIF"));
-
-    _cameraSyncButton = new QCheckBox(tr("Sync Cameras"), _globalControlsWidget);
-    _cameraSyncButton->setToolTip(tr("Synchronize cameras between preview panes"));
-    _cameraSyncButton->setChecked(true);
-
-    auto* const toolbarLayout = new QHBoxLayout(_globalControlsWidget);
-    toolbarLayout->setContentsMargins(8, 4, 8, 4);
-    toolbarLayout->setSpacing(12);
-    toolbarLayout->addWidget(_resetCameraButton);
-    toolbarLayout->addWidget(_showCollisionButton);
-    toolbarLayout->addWidget(_showEditorMarkersButton);
-    toolbarLayout->addWidget(_splitButton);
-    toolbarLayout->addWidget(_cameraSyncButton);
-    toolbarLayout->addStretch(1);
-
-    _leftPane = new NifPreviewPane(a_organizer, a_gameFiles, this);
-    _rightPane = new NifPreviewPane(a_organizer, a_gameFiles, this);
-
+    const auto showTextures = _preferences.ShowTextures();
+    _toolbar->SetShowTextures(showTextures);
+    _leftPane = new NifPreviewPane(&a_organizer, _gameFiles, this);
+    _rightPane = new NifPreviewPane(&a_organizer, _gameFiles, this);
     _leftPane->SetCamera(std::move(a_camera));
     _rightPane->SetCamera(MakePreviewCamera());
     _leftPane->SetProviders(_sourceSet.providers, _sourceSet.currentIndex);
+    _leftPane->SetTexturesOpen(showTextures);
+    _rightPane->SetTexturesOpen(showTextures);
     _rightPane->hide();
 
     _splitter = new QSplitter(Qt::Horizontal, this);
@@ -101,24 +49,22 @@ NifPreviewWidget::NifPreviewWidget(
     _splitter->addWidget(_rightPane);
     _splitter->setChildrenCollapsible(false);
 
-    auto* const rootLayout = new QVBoxLayout(this);
-    rootLayout->setContentsMargins(0, 0, 0, 0);
-    rootLayout->setSpacing(4);
-    rootLayout->addWidget(_globalControlsWidget);
-    rootLayout->addWidget(_splitter, 1);
+    auto* const layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(4);
+    layout->addWidget(_toolbar);
+    layout->addWidget(_notice);
+    layout->addWidget(_splitter, 1);
 
-    connect(_splitButton, &QCheckBox::toggled, this, [this](const bool a_enabled) {
-        SetSplitViewEnabled(a_enabled, true);
-    });
-    connect(_showCollisionButton, &QCheckBox::toggled, this, &NifPreviewWidget::SetShowCollisionEnabled);
-    connect(_showEditorMarkersButton, &QCheckBox::toggled, this, &NifPreviewWidget::SetShowEditorMarkersEnabled);
-    connect(_cameraSyncButton, &QCheckBox::toggled, this, &NifPreviewWidget::SetCameraSyncEnabled);
-    connect(_resetCameraButton, &QPushButton::clicked, this, &NifPreviewWidget::ResetCameras);
-    connect(_leftPane, &NifPreviewPane::CameraMoved, this, [this] { HandleCameraMoved(_leftPane); });
-    connect(_rightPane, &NifPreviewPane::CameraMoved, this, [this] { HandleCameraMoved(_rightPane); });
+    ConnectToolbar();
+    ConnectPane(_leftPane);
+    ConnectPane(_rightPane);
+    ConnectCopyActions();
 
-    RestoreSplitViewPreference();
-    UpdateGlobalControls();
+    UpdateSplitAvailability();
+    if (_preferences.SplitPreview()) {
+        SetSplitEnabled(true);
+    }
 }
 
 NifPreviewWidget::~NifPreviewWidget() {
@@ -127,175 +73,177 @@ NifPreviewWidget::~NifPreviewWidget() {
 
 void NifPreviewWidget::showEvent(QShowEvent* a_event) {
     QWidget::showEvent(a_event);
-    QTimer::singleShot(0, this, &NifPreviewWidget::UpdateHostChrome);
+    QTimer::singleShot(0, this, [this] { _hostChromeGuard.HideFor(this); });
 }
 
-void NifPreviewWidget::SetSplitViewEnabled(const bool a_enabled, const bool a_persistPreference) {
-    if (a_persistPreference) {
-        SaveSplitViewPreference(a_enabled);
-    }
+void NifPreviewWidget::ConnectToolbar() {
+    connect(_toolbar, &ViewToolbar::ResetCameraClicked, this, &NifPreviewWidget::ResetCameras);
+    connect(_toolbar, &ViewToolbar::CollisionToggled, this, &NifPreviewWidget::SetShowCollision);
+    connect(_toolbar, &ViewToolbar::EditorMarkersToggled, this, &NifPreviewWidget::SetShowEditorMarkers);
+    connect(_toolbar, &ViewToolbar::TexturesToggled, this, [this](const bool a_show) {
+        _preferences.SetShowTextures(a_show);
+        SetShowTextures(a_show);
+    });
+    connect(_toolbar, &ViewToolbar::SplitToggled, this, [this](const bool a_enabled) {
+        _preferences.SetSplitPreview(a_enabled);
+        SetSplitEnabled(a_enabled);
+    });
+    connect(_toolbar, &ViewToolbar::CameraSyncToggled, this, &NifPreviewWidget::SetCameraSyncEnabled);
+}
 
+void NifPreviewWidget::ConnectPane(NifPreviewPane* a_pane) {
+    connect(a_pane, &NifPreviewPane::CameraMoved, this, [this, a_pane] { HandleCameraMoved(a_pane); });
+    connect(a_pane, &NifPreviewPane::TexturesLoaded, this, &NifPreviewWidget::HandleTexturesLoaded);
+    connect(a_pane, &NifPreviewPane::HideOtherCopies, _copyActions, &CopyActions::MakeWinner);
+    connect(a_pane, &NifPreviewPane::UnhideCopy, _copyActions, &CopyActions::Restore);
+}
+
+void NifPreviewWidget::ConnectCopyActions() {
+    connect(_copyActions, &CopyActions::Waiting, this, [this](const QString& a_message) {
+        _notice->Show(a_message, false);
+    });
+    connect(_copyActions, &CopyActions::Applied, this, [this](const QString& a_message, const bool a_canUndo) {
+        Refresh();
+        _notice->Show(a_message, a_canUndo);
+    });
+    connect(_copyActions, &CopyActions::Failed, this, [this](const QString& a_message) {
+        _notice->Show(a_message, false);
+    });
+    connect(_notice, &NoticeBar::UndoClicked, _copyActions, &CopyActions::Undo);
+}
+
+void NifPreviewWidget::SetSplitEnabled(const bool a_enabled) {
     if (a_enabled && _sourceSet.providers.size() < 2) {
-        const QSignalBlocker blocker(_splitButton);
-        _splitButton->setChecked(false);
+        _toolbar->SetSplit(false);
         return;
     }
 
+    _toolbar->SetSplit(a_enabled);
     if (a_enabled) {
-        InitializeRightPaneForSplit();
+        InitializeRightPane();
     }
-
     _rightPane->setVisible(a_enabled);
-    _cameraSyncButton->setEnabled(a_enabled);
 
-    if (a_enabled && _cameraSyncButton->isChecked()) {
-        UpdateCameraSnapshots();
-    } else if (!a_enabled) {
-        SetCameraSyncEnabled(false);
-    }
-
-    UpdateGlobalControls();
-    UpdateHostChrome();
-}
-
-void NifPreviewWidget::RestoreSplitViewPreference() {
-    if (!SplitViewPreference(_organizer)) {
-        return;
-    }
-
-    const QSignalBlocker blocker(_splitButton);
-    _splitButton->setChecked(true);
-    SetSplitViewEnabled(true, false);
-    _splitButton->setChecked(IsSplitViewEnabled());
-}
-
-void NifPreviewWidget::SaveSplitViewPreference(const bool a_enabled) const {
-    const auto settingsPath = ProfileSettingsPath(_organizer);
-    if (settingsPath.isEmpty()) {
-        return;
-    }
-
-    QSettings settings(settingsPath, QSettings::IniFormat);
-    settings.beginGroup(kProfileSettingsGroup);
-    settings.setValue(kSplitPreviewSettingKey, a_enabled);
-    settings.sync();
-}
-
-bool NifPreviewWidget::IsSplitViewEnabled() const {
-    return (_rightPane != nullptr) && !_rightPane->isHidden();
-}
-
-bool NifPreviewWidget::IsCameraSyncEnabled() const {
-    return IsSplitViewEnabled() && _cameraSyncButton->isChecked();
-}
-
-void NifPreviewWidget::SetShowCollisionEnabled(const bool a_enabled) {
-    _leftPane->SetShowCollision(a_enabled);
-    _rightPane->SetShowCollision(a_enabled);
-}
-
-void NifPreviewWidget::SetShowEditorMarkersEnabled(const bool a_enabled) {
-    _leftPane->SetShowEditorMarkers(a_enabled);
-    _rightPane->SetShowEditorMarkers(a_enabled);
-}
-
-void NifPreviewWidget::SetCameraSyncEnabled(const bool a_enabled) {
-    if (!IsSplitViewEnabled() && a_enabled) {
-        return;
-    }
-
-    if (a_enabled) {
+    if (a_enabled && _toolbar->SyncsCameras()) {
         UpdateCameraSnapshots();
     }
-
-    UpdateGlobalControls();
-}
-
-void NifPreviewWidget::ResetCameras() {
-    _applyingCameraSync = true;
-    if (!IsSplitViewEnabled()) {
-        _leftPane->ResetCamera();
-        _applyingCameraSync = false;
-        UpdateCameraSnapshot(_leftPane);
-        return;
-    }
-
-    _leftPane->ResetCamera();
-    _rightPane->ResetCamera();
-    _applyingCameraSync = false;
-    UpdateCameraSnapshots();
-}
-
-void NifPreviewWidget::UpdateGlobalControls() {
-    const auto canSplit = _sourceSet.providers.size() > 1;
-    _splitButton->setEnabled(canSplit);
-    _splitButton->setToolTip(
-        canSplit ? tr("Compare two previewable versions of this NIF")
-                 : tr("Split view requires at least two previewable "
-                      "versions of this NIF")
-    );
-
-    const auto splitActive = IsSplitViewEnabled();
-    _cameraSyncButton->setVisible(splitActive);
-    _cameraSyncButton->setEnabled(splitActive);
-
-    _resetCameraButton->setText(splitActive ? tr("Reset Cameras") : tr("Reset Camera"));
-    _resetCameraButton->setToolTip(splitActive ? tr("Reset both preview cameras") : tr("Reset the preview camera"));
-}
-
-void NifPreviewWidget::UpdateHostChrome() {
+    UpdateComparison();
+    UpdateCollisionLock();
     _hostChromeGuard.HideFor(this);
 }
 
-int NifPreviewWidget::SecondaryProviderIndex() const {
-    if (_sourceSet.providers.size() < 2) {
-        return _sourceSet.currentIndex;
-    }
-
-    const auto primaryProviderIndex = _leftPane ? _leftPane->CurrentProviderIndex() : _sourceSet.currentIndex;
-    if (primaryProviderIndex == 0) {
-        return 1;
-    }
-
-    return 0;
+bool NifPreviewWidget::IsSplitViewEnabled() const {
+    return !_rightPane->isHidden();
 }
 
-void NifPreviewWidget::InitializeRightPaneForSplit() {
+bool NifPreviewWidget::IsCameraSyncEnabled() const {
+    return IsSplitViewEnabled() && _toolbar->SyncsCameras();
+}
+
+void NifPreviewWidget::SetShowCollision(const bool a_show) {
+    _leftPane->SetShowCollision(a_show);
+    _rightPane->SetShowCollision(a_show);
+}
+
+void NifPreviewWidget::SetShowEditorMarkers(const bool a_show) {
+    _leftPane->SetShowEditorMarkers(a_show);
+    _rightPane->SetShowEditorMarkers(a_show);
+}
+
+void NifPreviewWidget::SetShowTextures(const bool a_show) {
+    _leftPane->SetTexturesOpen(a_show);
+    _rightPane->SetTexturesOpen(a_show);
+}
+
+void NifPreviewWidget::SetCameraSyncEnabled(const bool a_enabled) {
+    if (a_enabled && IsSplitViewEnabled()) {
+        UpdateCameraSnapshots();
+    }
+}
+
+void NifPreviewWidget::ResetCameras() {
+    _leftPane->ResetCamera();
+    if (IsSplitViewEnabled()) {
+        _rightPane->ResetCamera();
+    }
+}
+
+void NifPreviewWidget::HandleTexturesLoaded() {
+    UpdateComparison();
+    UpdateCollisionLock();
+}
+
+void NifPreviewWidget::UpdateComparison() {
+    if (!IsSplitViewEnabled()) {
+        _leftPane->SetComparison(std::nullopt);
+        return;
+    }
+
+    _leftPane->SetComparison(_rightPane->TextureResults());
+    _rightPane->SetComparison(_leftPane->TextureResults());
+}
+
+void NifPreviewWidget::UpdateCollisionLock() {
+    _toolbar->SetCollisionLocked(
+        _leftPane->ShowsOnlyCollision() && (!IsSplitViewEnabled() || _rightPane->ShowsOnlyCollision())
+    );
+}
+
+void NifPreviewWidget::UpdateSplitAvailability() {
+    _toolbar->SetSplitUnavailableReason(
+        _sourceSet.providers.size() < 2 ? tr("Split Preview needs a second copy of this mesh") : QString()
+    );
+}
+
+// MO2 finished refreshing after the preview hid or restored files, so the versions and textures resolve again.
+void NifPreviewWidget::Refresh() {
+    auto [gameFiles, sourceSet] = _resolver();
+    _gameFiles = std::move(gameFiles);
+    _sourceSet = std::move(sourceSet);
+    _leftPane->Reload(_gameFiles, _sourceSet.providers);
+    if (_rightPaneInitialized) {
+        _rightPane->Reload(_gameFiles, _sourceSet.providers);
+    }
+    UpdateSplitAvailability();
+}
+
+int NifPreviewWidget::SecondaryProviderIndex() const {
+    return _leftPane->CurrentProviderIndex() == 0 ? 1 : 0;
+}
+
+void NifPreviewWidget::InitializeRightPane() {
     if (_rightPaneInitialized) {
         return;
     }
 
-    if (const auto leftCamera = _leftPane->SharedCamera();
-        leftCamera && leftCamera->HasState() && _rightPane->SharedCamera()) {
+    if (const auto leftCamera = _leftPane->SharedCamera(); leftCamera && leftCamera->HasState()) {
         _applyingCameraSync = true;
         _rightPane->SharedCamera()->SetState(leftCamera->State());
         _applyingCameraSync = false;
     }
 
     _rightPane->SetProviders(_sourceSet.providers, SecondaryProviderIndex());
-    _rightPane->SetShowCollision(_showCollisionButton->isChecked());
-    _rightPane->SetShowEditorMarkers(_showEditorMarkersButton->isChecked());
+    _rightPane->SetShowCollision(_leftPane->ShowsCollision());
+    _rightPane->SetShowEditorMarkers(_leftPane->ShowsEditorMarkers());
     _rightPaneInitialized = true;
     UpdateCameraSnapshot(_rightPane);
 }
 
 void NifPreviewWidget::HandleCameraMoved(NifPreviewPane* a_pane) {
-    if (!a_pane || !a_pane->SharedCamera() || !a_pane->SharedCamera()->HasState()) {
+    if (!a_pane->SharedCamera()->HasState()) {
         return;
     }
 
     const auto newState = a_pane->SharedCamera()->State();
-
-    if (!_applyingCameraSync && _cameraSyncButton->isChecked() && IsSplitViewEnabled()) {
+    if (!_applyingCameraSync && IsCameraSyncEnabled()) {
         SyncCameraDelta(a_pane, newState);
     }
-
     UpdateCameraSnapshot(a_pane);
 }
 
 void NifPreviewWidget::SyncCameraDelta(NifPreviewPane* a_sourcePane, const CameraState& a_newState) {
     auto* const targetPane = a_sourcePane == _leftPane ? _rightPane : _leftPane;
-    if (!targetPane || !targetPane->SharedCamera() || !targetPane->SharedCamera()->HasState()) {
+    if (!targetPane->SharedCamera()->HasState()) {
         return;
     }
 
@@ -315,7 +263,7 @@ void NifPreviewWidget::SyncCameraDelta(NifPreviewPane* a_sourcePane, const Camer
 }
 
 void NifPreviewWidget::UpdateCameraSnapshot(NifPreviewPane* a_pane) {
-    if (!a_pane || !a_pane->SharedCamera() || !a_pane->SharedCamera()->HasState()) {
+    if (!a_pane->SharedCamera()->HasState()) {
         return;
     }
 

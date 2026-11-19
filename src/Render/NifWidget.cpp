@@ -32,14 +32,14 @@ NifWidget::NifWidget(
     const QString& a_dataPath,
     std::shared_ptr<const GameFiles> a_gameFiles,
     QSharedPointer<Camera> a_camera,
-    TextureSourceProvider a_textureSource,
+    TextureSelection a_textureSelection,
     QWidget* a_parent
 )
     : QOpenGLWidget(a_parent)
     , _nifFile {std::move(a_nifFile)}
     , _isGrassModel {IsGrassModelPath(a_dataPath)}
     , _gameFiles {std::move(a_gameFiles)}
-    , _textureManager {std::make_unique<TextureManager>(*_gameFiles, std::move(a_textureSource))}
+    , _textureManager {std::make_unique<TextureManager>(*_gameFiles, std::move(a_textureSelection))}
     , _shaderManager {std::make_unique<ShaderManager>()} {
     SetCamera(std::move(a_camera));
 
@@ -177,7 +177,7 @@ void NifWidget::SetShowEditorMarkers(const bool a_showEditorMarkers) {
 }
 
 bool NifWidget::DrawsCollision() const {
-    return _showCollision || _glShapes.empty();
+    return _showCollision || !HasMeshes();
 }
 
 void NifWidget::UpdateSceneBounds() {

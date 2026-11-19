@@ -2,12 +2,13 @@
 
 #include <QString>
 
-enum class DataFileKind {
+#include <cstdint>
+
+enum class DataFileKind : std::uint8_t {
     kLoose,
     kArchive,
 };
 
-// One copy of a data file the game can see, either loose or inside a loaded archive.
 struct DataFileSource {
     DataFileKind kind = DataFileKind::kLoose;
     // The mod that supplies the file or archive. Empty for the game's own Data folder.
@@ -16,4 +17,6 @@ struct DataFileSource {
     QString path;
     // The plugin whose archive this is. Empty for archives the game's INI files load.
     QString plugin;
+    // A loose copy MO2 hid, so the game doesn't see it. The path names the hidden file.
+    bool hidden = false;
 };

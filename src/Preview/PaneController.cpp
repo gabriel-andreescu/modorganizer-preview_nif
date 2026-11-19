@@ -1,29 +1,18 @@
 #include "Preview/PaneController.h"
 
 #include <QDebug>
-#include <QFileInfo>
 
 #include <algorithm>
 #include <exception>
 #include <utility>
 
-namespace {
-QString PreviewTitleFor(const NifPreviewProvider& a_provider) {
-    auto title = QFileInfo(a_provider.virtualPath).fileName();
-    if (title.isEmpty()) {
-        title = QFileInfo(a_provider.absolutePath).fileName();
-    }
-    if (title.isEmpty()) {
-        title = a_provider.displayName;
-    }
-
-    return title;
-}
-} // namespace
-
 PreviewPaneController::PreviewPaneController(const MOBase::IOrganizer* a_organizer, const GameFiles& a_gameFiles)
     : _organizer(a_organizer)
     , _gameFiles(&a_gameFiles) {}
+
+void PreviewPaneController::SetGameFiles(const GameFiles& a_gameFiles) {
+    _gameFiles = &a_gameFiles;
+}
 
 void PreviewPaneController::SetProviders(QVector<NifPreviewProvider> a_providers, const int a_currentIndex) {
     _providers = std::move(a_providers);
@@ -41,34 +30,25 @@ bool PreviewPaneController::SelectProvider(const int a_index) {
     return true;
 }
 
-bool PreviewPaneController::SelectRelativeProvider(const int a_offset) {
-    if (_providers.isEmpty()) {
+bool PreviewPaneController::SelectTextureSource(const int a_index) {
+    if (a_index < 0 || a_index >= _textureSourceSet.providers.size()) {
         return false;
     }
-
-    const auto providerCount = static_cast<int>(_providers.size());
-    return SelectProvider((_currentProviderIndex + a_offset + providerCount) % providerCount);
-}
-
-bool PreviewPaneController::SelectTextureSource(const int a_index) {
-    if (a_index < 0
-        || a_index >= _textureSourceSet.providers.size()
-        || a_index == _currentTextureSourceIndex
-        || _textureSourceSet.providers.size() <= 2) {
+    if (a_index == _currentTextureSourceIndex && _pickedCopies.isEmpty()) {
         return false;
     }
 
     _currentTextureSourceIndex = a_index;
+    _pickedCopies.clear();
     return true;
 }
 
-bool PreviewPaneController::SelectRelativeTextureSource(const int a_offset) {
-    if (_textureSourceSet.providers.size() <= 2) {
-        return false;
-    }
+void PreviewPaneController::PickTextureCopy(const QString& a_key, const QString& a_path) {
+    _pickedCopies.insert(a_key, a_path);
+}
 
-    const auto providerCount = static_cast<int>(_textureSourceSet.providers.size());
-    return SelectTextureSource((_currentTextureSourceIndex + a_offset + providerCount) % providerCount);
+void PreviewPaneController::ClearTexturePick(const QString& a_key) {
+    _pickedCopies.remove(a_key);
 }
 
 PreviewPaneLoadResult PreviewPaneController::LoadCurrentProvider() {
@@ -78,20 +58,19 @@ PreviewPaneLoadResult PreviewPaneController::LoadCurrentProvider() {
     }
 
     const auto& provider = _providers[_currentProviderIndex];
-    const auto title = PreviewTitleFor(provider);
-
     try {
         const auto nifFile = LoadNifProvider(provider);
         if (!nifFile) {
             qWarning("Failed to load NIF preview provider '%s'", qUtf8Printable(provider.displayName));
             ResetLoadedData();
-            return {.status = PreviewPaneLoadStatus::kFailed, .title = title};
+            return {.status = PreviewPaneLoadStatus::kFailed};
         }
 
         _currentNifFile = nifFile;
         _textureSourceSet = TextureSourceResolver::Resolve(_organizer, *_gameFiles, nifFile.get());
         _currentTextureSourceIndex = 0;
-        return {.status = PreviewPaneLoadStatus::kLoaded, .title = title, .statsText = MakeNifStatsText(nifFile.get())};
+        _pickedCopies.clear();
+        return {.status = PreviewPaneLoadStatus::kLoaded, .statsText = MakeNifStatsText(nifFile.get())};
     } catch (const std::exception& e) {
         qWarning("Failed to load NIF preview provider '%s': %s", qUtf8Printable(provider.displayName), e.what());
     } catch (...) {
@@ -99,15 +78,25 @@ PreviewPaneLoadResult PreviewPaneController::LoadCurrentProvider() {
     }
 
     ResetLoadedData();
-    return {.status = PreviewPaneLoadStatus::kFailed, .title = title};
+    return {.status = PreviewPaneLoadStatus::kFailed};
 }
 
-TextureSourceProvider PreviewPaneController::CurrentTextureSourceProvider() const {
-    if (_currentTextureSourceIndex < 0 || _currentTextureSourceIndex >= _textureSourceSet.providers.size()) {
-        return {};
-    }
+void PreviewPaneController::RestoreTextureSelection(const TextureSelection& a_selection) {
+    const auto& sources = _textureSourceSet.providers;
+    const auto source = std::ranges::find_if(sources, [&](const TextureSourceProvider& a_source) {
+        return a_source.kind == a_selection.source.kind && a_source.sourceName == a_selection.source.sourceName;
+    });
+    _currentTextureSourceIndex = source != sources.end() ? static_cast<int>(std::distance(sources.begin(), source)) : 0;
+    _pickedCopies = a_selection.pickedCopies;
+}
 
-    return _textureSourceSet.providers[_currentTextureSourceIndex];
+TextureSelection PreviewPaneController::CurrentTextureSelection() const {
+    TextureSelection selection;
+    selection.pickedCopies = _pickedCopies;
+    if (_currentTextureSourceIndex >= 0 && _currentTextureSourceIndex < _textureSourceSet.providers.size()) {
+        selection.source = _textureSourceSet.providers[_currentTextureSourceIndex];
+    }
+    return selection;
 }
 
 QString PreviewPaneController::CurrentDataPath() const {
@@ -121,5 +110,6 @@ QString PreviewPaneController::CurrentDataPath() const {
 void PreviewPaneController::ResetLoadedData() {
     _textureSourceSet = {};
     _currentTextureSourceIndex = 0;
+    _pickedCopies.clear();
     _currentNifFile.reset();
 }

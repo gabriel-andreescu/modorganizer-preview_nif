@@ -1,50 +1,37 @@
 #include "Preview/Pane.h"
+#include "Data/FileHiding.h"
+#include "Data/GameFiles.h"
+#include "Preview/TexturesPanel.h"
+#include "Preview/VersionPicker.h"
 #include "Render/NifWidget.h"
 
-#include <QComboBox>
-#include <QFontMetrics>
-#include <QFrame>
-#include <QHBoxLayout>
+#include <QFileInfo>
 #include <QLabel>
-#include <QResizeEvent>
-#include <QSizePolicy>
-#include <QToolButton>
+#include <QSplitter>
 #include <QVBoxLayout>
 
 #include <algorithm>
 #include <utility>
 
 namespace {
-constexpr int kMinSourceComboWidth = 180;
-constexpr int kMinSourceComboMaxWidth = 220;
-constexpr int kMaxSourceComboWidth = 360;
-constexpr int kSourceComboChromeWidth = 48;
-
 QSharedPointer<Camera> MakePaneCamera() {
     return {new Camera(), &Camera::deleteLater};
 }
 
-QLabel* MakeSelectableLabel(QWidget* a_parent) {
-    auto* const label = new QLabel(a_parent);
-    label->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    return label;
-}
-
-QToolButton* MakeArrowButton(QWidget* a_parent, const Qt::ArrowType a_arrow, const QString& a_toolTip) {
-    auto* const button = new QToolButton(a_parent);
-    button->setArrowType(a_arrow);
-    button->setToolTip(a_toolTip);
-    return button;
-}
-
-QComboBox* MakeSourceCombo(QWidget* a_parent) {
-    auto* const combo = new QComboBox(a_parent);
-    combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-    combo->setMinimumContentsLength(12);
-    combo->setMinimumWidth(kMinSourceComboWidth);
-    combo->setMaximumWidth(kMinSourceComboMaxWidth);
-    combo->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    return combo;
+bool SameVersion(const NifPreviewProvider& a_lhs, const NifPreviewProvider& a_rhs) {
+    if (a_lhs.kind != a_rhs.kind) {
+        return false;
+    }
+    switch (a_lhs.kind) {
+        case NifPreviewProviderKind::kLooseFile:
+            return FileHiding::VisiblePath(a_lhs.absolutePath)
+                       .compare(FileHiding::VisiblePath(a_rhs.absolutePath), Qt::CaseInsensitive)
+                   == 0;
+        case NifPreviewProviderKind::kArchive:
+            return a_lhs.archivePath.compare(a_rhs.archivePath, Qt::CaseInsensitive) == 0;
+        case NifPreviewProviderKind::kInMemory: return true;
+    }
+    return false;
 }
 } // namespace
 
@@ -58,93 +45,87 @@ NifPreviewPane::NifPreviewPane(
     , _gameFiles(std::move(a_gameFiles))
     , _controller(a_organizer, *_gameFiles)
     , _camera(MakePaneCamera()) {
-    CreateControls();
-    CreateLayout();
-    ConnectControls();
-    UpdateTextureControls();
-}
+    _versionPicker = new VersionPicker(this);
 
-void NifPreviewPane::CreateControls() {
-    _titleLabel = MakeSelectableLabel(this);
-    _prevButton = MakeArrowButton(this, Qt::LeftArrow, tr("Previous version"));
-    _sourceCombo = MakeSourceCombo(this);
-    _nextButton = MakeArrowButton(this, Qt::RightArrow, tr("Next version"));
-
-    _textureLabel = MakeSelectableLabel(this);
-    _prevTextureButton = MakeArrowButton(this, Qt::LeftArrow, tr("Previous texture source"));
-    _textureSourceCombo = MakeSourceCombo(this);
-    _nextTextureButton = MakeArrowButton(this, Qt::RightArrow, tr("Next texture source"));
-
-    _statsLabel = MakeSelectableLabel(this);
-    _statsLabel->setWordWrap(true);
-}
-
-void NifPreviewPane::CreateLayout() {
-    auto* const headerLayout = new QHBoxLayout();
-    headerLayout->setContentsMargins(0, 0, 0, 0);
-    headerLayout->addWidget(_titleLabel, 1);
-    headerLayout->addWidget(_prevButton);
-    headerLayout->addWidget(_sourceCombo);
-    headerLayout->addWidget(_nextButton);
-
-    auto* const textureLayout = new QHBoxLayout();
-    textureLayout->setContentsMargins(0, 0, 0, 0);
-    textureLayout->addWidget(_textureLabel, 1);
-    textureLayout->addWidget(_prevTextureButton);
-    textureLayout->addWidget(_textureSourceCombo);
-    textureLayout->addWidget(_nextTextureButton);
-
-    auto* const viewFrame = new QFrame(this);
-    viewFrame->setFrameShape(QFrame::NoFrame);
-    _viewLayout = new QVBoxLayout(viewFrame);
+    _viewport = new QWidget(this);
+    _viewLayout = new QVBoxLayout(_viewport);
     _viewLayout->setContentsMargins(0, 0, 0, 0);
 
-    auto* const rootLayout = new QVBoxLayout(this);
-    rootLayout->setContentsMargins(0, 0, 0, 0);
-    rootLayout->addLayout(headerLayout);
-    rootLayout->addLayout(textureLayout);
-    rootLayout->addWidget(viewFrame, 1);
-    rootLayout->addWidget(_statsLabel);
+    _texturesPanel = new TexturesPanel(this);
+    _statusLabel = new QLabel(this);
+    _statusLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
+    auto* const splitter = new QSplitter(Qt::Vertical, this);
+    splitter->addWidget(_viewport);
+    splitter->addWidget(_texturesPanel);
+    splitter->setStretchFactor(0, 1);
+    splitter->setStretchFactor(1, 0);
+    splitter->setChildrenCollapsible(false);
+
+    auto* const layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(_versionPicker);
+    layout->addWidget(splitter, 1);
+    layout->addWidget(_statusLabel);
+
+    ConnectControls();
+    UpdateTexturesVisibility();
 }
 
 void NifPreviewPane::ConnectControls() {
-    connect(_prevButton, &QToolButton::clicked, this, [this] { SelectRelativeProvider(1); });
-    connect(_nextButton, &QToolButton::clicked, this, [this] { SelectRelativeProvider(-1); });
-    connect(_sourceCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](const int a_index) {
-        if (!_updatingControls) {
-            SelectProvider(a_index);
-        }
-    });
-    connect(_prevTextureButton, &QToolButton::clicked, this, [this] { SelectRelativeTextureSource(1); });
-    connect(_nextTextureButton, &QToolButton::clicked, this, [this] { SelectRelativeTextureSource(-1); });
-    connect(_textureSourceCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](const int a_index) {
-        if (!_updatingTextureControls) {
-            SelectTextureSource(a_index);
-        }
-    });
-}
+    connect(_versionPicker, &VersionPicker::VersionSelected, this, &NifPreviewPane::SelectProvider);
+    connect(_versionPicker, &VersionPicker::HideOthersClicked, this, &NifPreviewPane::HideOtherVersions);
+    connect(_versionPicker, &VersionPicker::UnhideClicked, this, &NifPreviewPane::UnhideVersion);
 
-void NifPreviewPane::resizeEvent(QResizeEvent* a_event) {
-    QWidget::resizeEvent(a_event);
-    UpdateSourceComboWidth();
-    UpdateTextureSourceComboWidth();
+    connect(_texturesPanel, &TexturesPanel::SourceSelected, this, &NifPreviewPane::SelectTextureSource);
+    connect(_texturesPanel, &TexturesPanel::PreviewCopy, this, &NifPreviewPane::PreviewTextureCopy);
+    connect(
+        _texturesPanel,
+        &TexturesPanel::HideOthers,
+        this,
+        [this](const TextureResult& a_result, const qsizetype a_copy) {
+            // Once the copy wins, the texture source shows it, so a pick for it would only keep the source as Custom.
+            _controller.ClearTexturePick(TextureDataPathKey(a_result.path));
+            emit HideOtherCopies(a_result.file.copies, a_copy, QFileInfo(a_result.path).fileName());
+        }
+    );
+    connect(
+        _texturesPanel,
+        &TexturesPanel::Unhide,
+        this,
+        [this](const TextureResult& a_result, const qsizetype a_copy) {
+            emit UnhideCopy(a_result.file.copies[a_copy], QFileInfo(a_result.path).fileName());
+        }
+    );
 }
 
 void NifPreviewPane::SetProviders(QVector<NifPreviewProvider> a_providers, const int a_currentIndex) {
     _controller.SetProviders(std::move(a_providers), a_currentIndex);
-
-    _updatingControls = true;
-    _sourceCombo->clear();
-    for (const auto& provider : _controller.Providers()) {
-        _sourceCombo->addItem(provider.displayName);
-        _sourceCombo->setItemData(_sourceCombo->count() - 1, provider.displayName, Qt::ToolTipRole);
-    }
-    _sourceCombo->setCurrentIndex(_controller.CurrentProviderIndex());
-    _updatingControls = false;
-
-    UpdateSourceComboWidth();
-    UpdateControls();
     LoadCurrentProvider();
+    ReloadView();
+}
+
+void NifPreviewPane::Reload(std::shared_ptr<const GameFiles> a_gameFiles, QVector<NifPreviewProvider> a_providers) {
+    const auto selection = _controller.CurrentTextureSelection();
+    const auto& providers = _controller.Providers();
+    const auto current = _controller.CurrentProviderIndex();
+    const auto shown = current < providers.size() ? std::optional(providers[current]) : std::nullopt;
+
+    _gameFiles = std::move(a_gameFiles);
+    _controller.SetGameFiles(*_gameFiles);
+    auto index = 0;
+    if (shown) {
+        const auto same = std::ranges::find_if(a_providers, [&](const auto& a_provider) {
+            return SameVersion(a_provider, *shown);
+        });
+        index = same != a_providers.end() ? static_cast<int>(std::distance(a_providers.begin(), same)) : 0;
+    }
+
+    _controller.SetProviders(std::move(a_providers), index);
+    LoadCurrentProvider();
+    _controller.RestoreTextureSelection(selection);
+    UpdateTextureSources();
+    ReloadView();
 }
 
 void NifPreviewPane::SetCamera(QSharedPointer<Camera> a_camera) {
@@ -164,10 +145,6 @@ void NifPreviewPane::SetCamera(QSharedPointer<Camera> a_camera) {
 }
 
 void NifPreviewPane::SetShowCollision(const bool a_showCollision) {
-    if (_showCollision == a_showCollision) {
-        return;
-    }
-
     _showCollision = a_showCollision;
     if (_nifWidget) {
         _nifWidget->SetShowCollision(_showCollision);
@@ -175,14 +152,25 @@ void NifPreviewPane::SetShowCollision(const bool a_showCollision) {
 }
 
 void NifPreviewPane::SetShowEditorMarkers(const bool a_showEditorMarkers) {
-    if (_showEditorMarkers == a_showEditorMarkers) {
-        return;
-    }
-
     _showEditorMarkers = a_showEditorMarkers;
     if (_nifWidget) {
         _nifWidget->SetShowEditorMarkers(_showEditorMarkers);
     }
+}
+
+void NifPreviewPane::SetTexturesOpen(const bool a_open) {
+    _texturesOpen = a_open;
+    UpdateTexturesVisibility();
+}
+
+// A NIF without textures, such as a skeleton, gets no empty list.
+void NifPreviewPane::UpdateTexturesVisibility() {
+    const auto hasTextures = !_controller.TextureSources().references.isEmpty() || !TextureResults().isEmpty();
+    _texturesPanel->setVisible(_texturesOpen && hasTextures);
+}
+
+void NifPreviewPane::SetComparison(std::optional<QVector<TextureResult>> a_other) {
+    _texturesPanel->SetComparison(std::move(a_other));
 }
 
 void NifPreviewPane::ResetCamera() {
@@ -191,24 +179,23 @@ void NifPreviewPane::ResetCamera() {
     }
 }
 
+bool NifPreviewPane::TexturesOpen() const {
+    return _texturesOpen;
+}
+
+QVector<TextureResult> NifPreviewPane::TextureResults() const {
+    return _nifWidget ? _nifWidget->TextureResults() : QVector<TextureResult> {};
+}
+
 void NifPreviewPane::SelectProvider(const int a_index) {
     if (!_controller.SelectProvider(a_index)) {
         return;
     }
 
-    UpdateControls();
     LoadCurrentProvider();
-    emit ProviderChanged(_controller.CurrentProviderIndex());
-}
-
-void NifPreviewPane::SelectRelativeProvider(const int a_offset) {
-    if (!_controller.SelectRelativeProvider(a_offset)) {
-        return;
-    }
-
-    UpdateControls();
-    LoadCurrentProvider();
-    emit ProviderChanged(_controller.CurrentProviderIndex());
+    // The list would show the previous copy's textures until the new view loads its own.
+    _texturesPanel->SetTextures({});
+    ReloadView();
 }
 
 void NifPreviewPane::SelectTextureSource(const int a_index) {
@@ -216,126 +203,63 @@ void NifPreviewPane::SelectTextureSource(const int a_index) {
         return;
     }
 
-    UpdateTextureControls();
-    ReloadCurrentNifWidget();
+    UpdateTextureSources();
+    ReloadView();
 }
 
-void NifPreviewPane::SelectRelativeTextureSource(const int a_offset) {
-    if (!_controller.SelectRelativeTextureSource(a_offset)) {
-        return;
+// Choosing the copy the texture source shows anyway drops the texture's pick, so it follows the source again.
+void NifPreviewPane::PreviewTextureCopy(const QString& a_key, const QString& a_path) {
+    const auto results = TextureResults();
+    const auto texture = std::ranges::find_if(results, [&](const TextureResult& a_result) {
+        return TextureDataPathKey(a_result.path) == a_key;
+    });
+    const auto sourceCopy = texture != results.end()
+                                ? SourceCopyIndex(_controller.CurrentTextureSelection().source, texture->file.copies)
+                                : -1;
+    if (sourceCopy >= 0 && texture->file.copies[sourceCopy].path == a_path) {
+        _controller.ClearTexturePick(a_key);
+    } else {
+        _controller.PickTextureCopy(a_key, a_path);
     }
 
-    UpdateTextureControls();
-    ReloadCurrentNifWidget();
+    UpdateTextureSources();
+    ReloadView();
 }
 
-void NifPreviewPane::UpdateControls() {
-    const auto hasMultipleProviders = _controller.Providers().size() > 1;
-    _prevButton->setEnabled(hasMultipleProviders);
-    _nextButton->setEnabled(hasMultipleProviders);
-    _sourceCombo->setEnabled(hasMultipleProviders);
-
-    _updatingControls = true;
-    _sourceCombo->setCurrentIndex(_controller.CurrentProviderIndex());
-    _updatingControls = false;
+void NifPreviewPane::HideOtherVersions(const int a_index) {
+    const auto& providers = _controller.Providers();
+    if (const auto copy = ProviderCopyIndex(providers, a_index); copy >= 0) {
+        emit HideOtherCopies(ProviderCopies(providers), copy, QFileInfo(providers[a_index].virtualPath).fileName());
+    }
 }
 
-void NifPreviewPane::UpdateSourceComboWidth() {
-    if (!_sourceCombo) {
-        return;
+void NifPreviewPane::UnhideVersion(const int a_index) {
+    const auto& providers = _controller.Providers();
+    if (const auto copy = ProviderCopyIndex(providers, a_index); copy >= 0) {
+        emit UnhideCopy(ProviderCopies(providers)[copy], QFileInfo(providers[a_index].virtualPath).fileName());
     }
-
-    const QFontMetrics metrics(_sourceCombo->font());
-    int widestProvider = 0;
-    for (const auto& provider : _controller.Providers()) {
-        widestProvider = std::max(widestProvider, metrics.horizontalAdvance(provider.displayName));
-    }
-
-    const auto paneLimitedMax = std::clamp(width() / 3, kMinSourceComboMaxWidth, kMaxSourceComboWidth);
-    const auto desiredWidth = std::clamp(
-        widestProvider + kSourceComboChromeWidth,
-        kMinSourceComboWidth,
-        paneLimitedMax
-    );
-
-    _sourceCombo->setMinimumWidth(desiredWidth);
-    _sourceCombo->setMaximumWidth(desiredWidth);
-}
-
-void NifPreviewPane::UpdateTextureSourceComboItems() {
-    _updatingTextureControls = true;
-    _textureSourceCombo->clear();
-    for (const auto& provider : _controller.TextureSources().providers) {
-        _textureSourceCombo->addItem(provider.displayName);
-        _textureSourceCombo->setItemData(_textureSourceCombo->count() - 1, provider.displayName, Qt::ToolTipRole);
-    }
-    _textureSourceCombo->setCurrentIndex(_controller.CurrentTextureSourceIndex());
-    _updatingTextureControls = false;
-
-    UpdateTextureSourceComboWidth();
-    UpdateTextureControls();
-}
-
-void NifPreviewPane::UpdateTextureControls() {
-    const auto& textureSources = _controller.TextureSources();
-    const auto currentTextureSourceIndex = _controller.CurrentTextureSourceIndex();
-    const auto hasMultipleTextureSources = textureSources.providers.size() > 2;
-
-    _prevTextureButton->setEnabled(hasMultipleTextureSources);
-    _nextTextureButton->setEnabled(hasMultipleTextureSources);
-    _textureSourceCombo->setEnabled(hasMultipleTextureSources);
-
-    const auto toolTip = MakeTextureToolTipText(textureSources, currentTextureSourceIndex);
-    _textureLabel->setText(MakeTextureSummaryText(textureSources));
-    _textureLabel->setToolTip(toolTip);
-    _textureSourceCombo->setToolTip(toolTip);
-
-    _updatingTextureControls = true;
-    _textureSourceCombo->setCurrentIndex(currentTextureSourceIndex);
-    _updatingTextureControls = false;
-}
-
-void NifPreviewPane::UpdateTextureSourceComboWidth() {
-    if (!_textureSourceCombo) {
-        return;
-    }
-
-    const QFontMetrics metrics(_textureSourceCombo->font());
-    int widestProvider = 0;
-    for (const auto& provider : _controller.TextureSources().providers) {
-        widestProvider = std::max(widestProvider, metrics.horizontalAdvance(provider.displayName));
-    }
-
-    const auto paneLimitedMax = std::clamp(width() / 3, kMinSourceComboMaxWidth, kMaxSourceComboWidth);
-    const auto desiredWidth = std::clamp(
-        widestProvider + kSourceComboChromeWidth,
-        kMinSourceComboWidth,
-        paneLimitedMax
-    );
-
-    _textureSourceCombo->setMinimumWidth(desiredWidth);
-    _textureSourceCombo->setMaximumWidth(desiredWidth);
 }
 
 void NifPreviewPane::LoadCurrentProvider() {
     const auto result = _controller.LoadCurrentProvider();
-    _titleLabel->setText(result.title);
-    _statsLabel->setText(result.statsText);
-    UpdateTextureSourceComboItems();
+    _versionPicker->SetVersions(_controller.Providers(), _controller.CurrentProviderIndex());
+    _statusLabel->setText(result.statsText);
+    UpdateTextureSources();
+    UpdateTexturesVisibility();
 
     switch (result.status) {
         case PreviewPaneLoadStatus::kNoProvider:
-            _titleLabel->clear();
             SetViewWidget(new QLabel(tr("No previewable NIF version"), this));
             return;
         case PreviewPaneLoadStatus::kFailed: SetViewWidget(new QLabel(tr("Failed to load preview"), this)); return;
-        case PreviewPaneLoadStatus::kLoaded: ReloadCurrentNifWidget(); return;
+        case PreviewPaneLoadStatus::kLoaded: return;
     }
 }
 
-void NifPreviewPane::ReloadCurrentNifWidget() {
+void NifPreviewPane::ReloadView() {
     const auto nifFile = _controller.CurrentNifFile();
     if (!nifFile) {
+        _texturesPanel->SetTextures({});
         return;
     }
 
@@ -344,14 +268,30 @@ void NifPreviewPane::ReloadCurrentNifWidget() {
         _controller.CurrentDataPath(),
         _gameFiles,
         _camera,
-        _controller.CurrentTextureSourceProvider(),
-        this
+        _controller.CurrentTextureSelection(),
+        _viewport
     );
     nifWidget->SetShowCollision(_showCollision);
     nifWidget->SetShowEditorMarkers(_showEditorMarkers);
     nifWidget->setMinimumSize(240, 240);
-    _nifWidget = nifWidget;
+    connect(nifWidget, &NifWidget::TexturesLoaded, this, &NifPreviewPane::HandleTexturesLoaded);
     SetViewWidget(nifWidget);
+}
+
+void NifPreviewPane::UpdateTextureSources() {
+    const auto selection = _controller.CurrentTextureSelection();
+    _texturesPanel->SetSources(
+        _controller.TextureSources(),
+        _controller.CurrentTextureSourceIndex(),
+        !selection.pickedCopies.isEmpty()
+    );
+}
+
+void NifPreviewPane::HandleTexturesLoaded() {
+    _onlyCollision = _nifWidget != nullptr && !_nifWidget->HasMeshes();
+    _texturesPanel->SetTextures(TextureResults());
+    UpdateTexturesVisibility();
+    emit TexturesLoaded();
 }
 
 void NifPreviewPane::SetViewWidget(QWidget* a_widget) {
@@ -362,9 +302,10 @@ void NifPreviewPane::SetViewWidget(QWidget* a_widget) {
 
     _viewWidget = a_widget;
     _nifWidget = qobject_cast<NifWidget*>(a_widget);
-
     if (auto* const label = qobject_cast<QLabel*>(a_widget)) {
         label->setAlignment(Qt::AlignCenter);
+        _onlyCollision = false;
+        _texturesPanel->SetTextures({});
     }
 
     _viewLayout->addWidget(a_widget, 1);

@@ -7,8 +7,8 @@
 #include <exception>
 #include <utility>
 
-TextureManager::TextureManager(const GameFiles& a_gameFiles, TextureSourceProvider a_textureSource)
-    : _loader {std::make_unique<TextureLoader>(a_gameFiles, std::move(a_textureSource))}
+TextureManager::TextureManager(const GameFiles& a_gameFiles, TextureSelection a_selection)
+    : _loader {std::make_unique<TextureLoader>(a_gameFiles, std::move(a_selection))}
     , _cache {std::make_unique<TextureCache>()} {}
 
 TextureManager::~TextureManager() = default;

@@ -6,6 +6,8 @@
 #include <QStringList>
 #include <QVector>
 
+#include <cstdint>
+
 class GameFiles;
 
 namespace nifly {
@@ -16,7 +18,7 @@ namespace MOBase {
 class IOrganizer;
 }
 
-enum class TextureSourceProviderKind {
+enum class TextureSourceProviderKind : std::uint8_t {
     kAuto,
     kMod,
     kGameData,
@@ -59,16 +61,14 @@ public:
     );
 };
 
-QString MakeTextureSummaryText(const TextureSourceSet& a_sourceSet);
-QString MakeTextureToolTipText(const TextureSourceSet& a_sourceSet, int a_providerIndex);
 QString NormalizeTextureDataPath(QString a_path);
 QStringList TextureDataPathVariants(const QString& a_path);
 QString TextureDataPathKey(const QString& a_path);
 TextureFiles FindTextureFiles(const GameFiles& a_gameFiles, const QString& a_texturePath);
 [[nodiscard]] bool ProviderSupplies(const TextureSourceProvider& a_provider, const DataFileSource& a_source);
-// The index of the first copy the provider supplies, or 0 for the copy the game loads when it supplies none. -1 when
-// no copy exists.
-[[nodiscard]] qsizetype ChooseTextureFile(
+// The index of the copy the provider supplies, else of the copy the game loads, or -1 when the game sees none.
+// Takes the copies in game order, hidden ones after the rest.
+[[nodiscard]] qsizetype SourceCopyIndex(
     const TextureSourceProvider& a_provider,
-    const QVector<DataFileSource>& a_sources
+    const QVector<DataFileSource>& a_copies
 );

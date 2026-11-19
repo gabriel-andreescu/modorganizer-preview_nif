@@ -1,6 +1,7 @@
 #include "Data/GameFiles.h"
 #include "Data/ArchiveAccess.h"
 #include "Data/ArchiveIndex.h"
+#include "Data/FileHiding.h"
 
 #include <QDir>
 #include <QFile>
@@ -93,9 +94,14 @@ GameFiles::GameFiles(const MOBase::IOrganizer& a_organizer, ArchiveIndex& a_arch
     , _members(static_cast<std::size_t>(_archives.size())) {}
 
 QVector<DataFileSource> GameFiles::Sources(const QString& a_dataPath) const {
-    auto sources = LooseSources(a_dataPath);
+    auto sources = LooseSources(a_dataPath, false);
     sources.append(ArchiveSources(a_dataPath));
     return sources;
+}
+
+// MO2 indexes hidden files under their full name, suffix included, so their origins are listed like any file's.
+QVector<DataFileSource> GameFiles::HiddenSources(const QString& a_dataPath) const {
+    return LooseSources(FileHiding::HiddenPath(a_dataPath), true);
 }
 
 QByteArray GameFiles::Read(const DataFileSource& a_source, const QString& a_dataPath) {
@@ -110,7 +116,7 @@ QString GameFiles::GameName() const {
 
 // MO2 also lists mods whose archives contain the file when archive parsing is on, so each origin is checked for a
 // loose copy on disk.
-QVector<DataFileSource> GameFiles::LooseSources(const QString& a_dataPath) const {
+QVector<DataFileSource> GameFiles::LooseSources(const QString& a_dataPath, const bool a_hidden) const {
     std::vector<std::pair<int, DataFileSource>> ranked;
     for (const auto& originName : _organizer->getFileOrigins(a_dataPath)) {
         const auto origin = OriginDirectory(*_organizer, originName);
@@ -127,6 +133,7 @@ QVector<DataFileSource> GameFiles::LooseSources(const QString& a_dataPath) const
                     .modName = origin->modName,
                     .path = QDir::fromNativeSeparators(file.absoluteFilePath()),
                     .plugin = {},
+                    .hidden = a_hidden,
                 }
             );
         }
@@ -154,6 +161,7 @@ QVector<DataFileSource> GameFiles::ArchiveSources(const QString& a_dataPath) con
                 .modName = archive.modName,
                 .path = archive.path,
                 .plugin = archive.plugin,
+                .hidden = false,
             });
         }
     }
