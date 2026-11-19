@@ -71,21 +71,19 @@ struct SLSF2 {
         kCloudLOD = 1U << 20U,
         kAnisotropicLighting = 1U << 21U,
         kNoTransparencyMultisampling = 1U << 22U,
-        // Unused01
+        // Vanilla leaves this bit unused. True PBR shaders read it as the PBR switch.
         kPBR = 1U << 23U,
-        // Use Multilayer (inner-layer) Map in non-PBR. Use Two Layer shading in PBR.
+        // The inner-layer map without PBR. Two-layer shading with PBR.
         kMultiLayerParallax = 1U << 24U,
-        // Use Soft Lighting Map in non-PBR. Fuzz model in PBR. Parallax between layers in
-        // Two Layer model in PBR.
+        // The soft lighting map without PBR. The fuzz model, or parallax between the two layers, with PBR.
         kSoftLighting = 1U << 25U,
-        // Use Rim Lighting Map in non-PBR. Use Subsurface shading in PBR.
+        // The rim lighting map without PBR. Subsurface shading with PBR.
         kRimLighting = 1U << 26U,
-        // Use Back Lighting Map in non-PBR. Use Marschner hair shading model in PBR. Use
-        // coat normal map Two Layer model in PBR.
+        // The back lighting map without PBR. Marschner hair shading, or the two-layer coat normal map, with PBR.
         kBackLighting = 1U << 27U,
         kUnused02 = 1U << 28U,
         kTreeAnim = 1U << 29U,
-        // Enables coat diffuse contribution in Two Layer model in PBR.
+        // With PBR, the coat's diffuse contribution in two-layer shading.
         kEffectLighting = 1U << 30U,
         kHDLODObjects = 1U << 31U,
     };
@@ -148,9 +146,8 @@ inline GLenum BlendFactor(const std::uint32_t a_factor) {
 
 struct NiAlphaPropertyFlags {
 public:
-    NiAlphaPropertyFlags(const std::uint16_t flags = 0) // NOLINT
-    {
-        std::memcpy(this, &flags, sizeof(NiAlphaPropertyFlags));
+    NiAlphaPropertyFlags(const std::uint16_t a_flags = 0) {
+        std::memcpy(this, &a_flags, sizeof(NiAlphaPropertyFlags));
     }
 
     [[nodiscard]] bool IsAlphaBlendEnabled() const {
@@ -192,12 +189,12 @@ private:
         }
     };
 
-    std::uint16_t _alphaBlendEnable : 1;
-    std::uint16_t _srcBlendMode : 4;
-    std::uint16_t _dstBlendMode : 4;
-    std::uint16_t _alphaTestEnable : 1;
-    std::uint16_t _alphaTestMode : 3;
-    std::uint16_t _noSort : 1;
+    std::uint16_t _alphaBlendEnable : 1 = 0;
+    std::uint16_t _srcBlendMode : 4 = 0;
+    std::uint16_t _dstBlendMode : 4 = 0;
+    std::uint16_t _alphaTestEnable : 1 = 0;
+    std::uint16_t _alphaTestMode : 3 = 0;
+    std::uint16_t _noSort : 1 = 0;
 };
 
 static_assert(sizeof(NiAlphaPropertyFlags) == 2);

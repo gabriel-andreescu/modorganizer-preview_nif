@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
-enum TextureSlot {
+enum TextureSlot : std::uint8_t {
     kBaseMap = 0,
     kNormalMap = 1,
     kGlowMap = 2,

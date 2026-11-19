@@ -56,6 +56,7 @@ OpenGLCollisionOverlay::OpenGLCollisionOverlay(const CollisionGeometry& a_geomet
         GL_FLOAT,
         GL_FALSE,
         sizeof(CollisionVertex),
+        // OpenGL takes the offset into the bound vertex buffer as a pointer.
         // NOLINTNEXTLINE(performance-no-int-to-ptr)
         reinterpret_cast<const void*>(offsetof(CollisionVertex, r))
     );

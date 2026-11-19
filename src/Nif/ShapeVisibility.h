@@ -1,11 +1,13 @@
 #pragma once
 
+#include <cstdint>
+
 namespace nifly {
 class NifFile;
 class NiShape;
 }
 
-enum class ShapeVisibility {
+enum class ShapeVisibility : std::uint8_t {
     kVisible,
     kHidden,
     kInactiveSwitchChild,

@@ -2,9 +2,10 @@
 
 #include "Render/Camera.h"
 
+#include <cstdint>
 #include <optional>
 
-enum class PreviewPaneSide {
+enum class PreviewPaneSide : std::uint8_t {
     kLeft,
     kRight,
 };

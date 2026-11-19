@@ -7,19 +7,20 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 
 namespace nifly {
 class NiShader;
 }
 
-enum class TextureSlotFamily {
+enum class TextureSlotFamily : std::uint8_t {
     kStandard,
     kEffect,
     kPBR,
     kRefractionProxy,
 };
 
-enum class TextureSlotRole {
+enum class TextureSlotRole : std::uint8_t {
     kBase,
     kNormal,
     kGlow,
@@ -42,7 +43,7 @@ enum class TextureSlotRole {
     kNumbered,
 };
 
-enum class TextureFallback {
+enum class TextureFallback : std::uint8_t {
     kNone,
     kError,
     kFlatNormal,
@@ -54,14 +55,14 @@ struct TextureSamplerUniform {
     const char* name = nullptr;
 };
 
-enum class TextureFeatureCondition {
+enum class TextureFeatureCondition : std::uint8_t {
     kAssignedTexture,
     kLoadedTexture,
     kMaterialFlagAndAssignedTexture,
     kMaterialFlagAndLoadedTexture,
 };
 
-enum class TextureFeatureMaterialFlag {
+enum class TextureFeatureMaterialFlag : std::uint8_t {
     kNone,
     kGlowMap,
     kHeightMap,

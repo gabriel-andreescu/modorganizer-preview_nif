@@ -9,6 +9,7 @@
 #include <QOpenGLFunctions_2_1>
 
 #include <array>
+#include <cstdint>
 
 namespace nifly {
 class NifFile;
@@ -17,7 +18,7 @@ class NiShape;
 }
 
 // What a shape's vertex color alpha means to its shader.
-enum class VertexAlpha {
+enum class VertexAlpha : std::uint8_t {
     kShaderFlags,
     kWind,
     kOpacity,

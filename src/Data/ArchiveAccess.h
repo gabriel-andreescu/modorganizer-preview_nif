@@ -10,7 +10,7 @@
 
 namespace ArchiveAccess {
 
-enum class ExtractStatus {
+enum class ExtractStatus : std::uint8_t {
     kMissing,
     kFound,
     kOversized,

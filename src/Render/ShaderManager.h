@@ -3,8 +3,9 @@
 #include <QOpenGLShaderProgram>
 
 #include <array>
+#include <cstdint>
 
-enum VertexAttrib {
+enum VertexAttrib : std::uint8_t {
     kAttribPosition = 0,
     kAttribNormal,
     kAttribTangent,
@@ -17,7 +18,7 @@ enum VertexAttrib {
 
 class ShaderManager {
 public:
-    enum ShaderType {
+    enum ShaderType : std::int8_t {
         kNone = -1,
         kSKDefault,
         kSKMSN,

@@ -3,8 +3,6 @@ Checks:
   - '-*'
   - 'bugprone-*'
   - 'clang-analyzer-*'
-  # Engine hooks use numerical addresses.
-  - '-clang-analyzer-*FixedAddressDereference'
   # MSVC's filesystem headers combine flags outside the enum's declared range.
   - '-clang-analyzer-optin.core.EnumCastOutOfRange'
   # These platform-specific checkers do not apply to Windows.
@@ -48,8 +46,6 @@ Checks:
   - 'performance-*'
   - 'readability-*'
   - '-modernize-use-trailing-return-type'
-  # Engine enum widths must preserve the game ABI.
-  - '-performance-enum-size'
   - '-readability-magic-numbers'
 
 WarningsAsErrors: '*'
