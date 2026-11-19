@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Nif/BoundingBox.h"
+
 #include <nifly/Geometry.hpp>
 
 #include <vector>
@@ -23,6 +25,8 @@ struct ShapeRenderGeometry {
 
     nifly::MatTransform modelTransform;
     nifly::BoundingSphere bounds;
+    // Around the vertices where they are drawn, after the model transform or skinning.
+    BoundingBox box;
     bool skinned = false;
 
     [[nodiscard]] const std::vector<nifly::Vector3>* Positions() const;

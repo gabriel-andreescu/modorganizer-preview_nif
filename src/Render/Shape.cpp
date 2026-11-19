@@ -150,6 +150,14 @@ const nifly::BoundingSphere& OpenGLShape::Bounds() const noexcept {
     return _geometry->Bounds();
 }
 
+const BoundingBox& OpenGLShape::Box() const noexcept {
+    return _geometry->Box();
+}
+
+bool OpenGLShape::IsSkinned() const noexcept {
+    return _geometry->IsSkinned();
+}
+
 bool OpenGLShape::IsRefractionProxy() const noexcept {
     return _isRefractionProxy;
 }

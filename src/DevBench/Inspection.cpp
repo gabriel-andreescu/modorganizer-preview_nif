@@ -294,6 +294,8 @@ QJsonObject PaneDetails(const PreviewPaneSide a_side, const NifPreviewPane& a_pa
         }
         details.insert("textures", textures);
         details.insert("bounds", BoundsDetails(view->SceneBounds()));
+        const auto size = view->SceneBox().Size();
+        details.insert("size", QJsonArray {size.x, size.y, size.z});
     }
     return details;
 }

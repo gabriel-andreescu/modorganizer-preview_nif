@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Nif/BoundingBox.h"
+
 #include <nifly/Object3d.hpp>
 
 #include <QMatrix4x4>
@@ -27,6 +29,7 @@ struct ClipPlanes {
 );
 
 [[nodiscard]] nifly::BoundingSphere SceneBounds(const std::vector<const OpenGLShape*>& a_shapes);
+[[nodiscard]] BoundingBox SceneBox(const std::vector<OpenGLShape>& a_shapes);
 
 // The camera distance at which a sphere fills the narrower of the two fields of view.
 [[nodiscard]] float FitDistance(float a_radius, float a_aspectRatio);

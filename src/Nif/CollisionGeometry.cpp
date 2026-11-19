@@ -145,6 +145,9 @@ public:
         if (!_bounds.empty()) {
             _geometry.bounds = nifly::BoundingSphere(_bounds);
         }
+        for (const auto& point : _bounds) {
+            _geometry.box.Add(point);
+        }
 
         return std::move(_geometry);
     }

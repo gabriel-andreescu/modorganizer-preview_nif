@@ -49,6 +49,16 @@ nifly::BoundingSphere SceneBounds(const std::vector<const OpenGLShape*>& a_shape
     return bounds;
 }
 
+BoundingBox SceneBox(const std::vector<OpenGLShape>& a_shapes) {
+    BoundingBox box;
+    for (const auto& shape : a_shapes) {
+        if (!shape.IsRefractionProxy()) {
+            box.Add(shape.Box());
+        }
+    }
+    return box;
+}
+
 float FitDistance(const float a_radius, const float a_aspectRatio) {
     const auto halfVertical = kVerticalFieldOfView * std::numbers::pi_v<float> / 360.0F;
     const auto halfHorizontal = std::atan(std::tan(halfVertical) * a_aspectRatio);

@@ -28,8 +28,7 @@ SKYRIM = Game("Skyrim Special Edition", "skyrim-se", ("Skyrim - ",))
 FALLOUT4 = Game("Fallout 4", "fallout4", ("Fallout4 - ", "DLC"))
 
 CASES = [
-    # Blades and the stained glass lie in the view axis at the default yaw.
-    (SKYRIM, Case("iron-longsword", "meshes/weapons/iron/longsword.nif", yaw=90)),
+    (SKYRIM, Case("iron-longsword", "meshes/weapons/iron/longsword.nif")),
     (
         SKYRIM,
         Case(
@@ -62,7 +61,6 @@ CASES = [
             "prison-collision",
             "meshes/architecture/windhelm/whprison02.nif",
             collision=True,
-            pitch=45,
         ),
     ),
     (
@@ -71,7 +69,6 @@ CASES = [
             "sewer-entrance-collision",
             "meshes/architecture/solitude/sewerentrancecollision01.nif",
             collision=True,
-            pitch=30,
         ),
     ),
     (
@@ -80,20 +77,22 @@ CASES = [
             "fish-eggs-collision",
             "meshes/plants/switchnodechildren/slaughterfisheggcluster01_1.nif",
             collision=True,
-            pitch=30,
+            # The cluster opens from above, where its collision plane is out of sight.
+            pitch=-60,
         ),
     ),
     (SKYRIM, Case("skeleton", "meshes/actors/character/character assets/skeleton.nif")),
     (SKYRIM, Case("glass-cuirass", "meshes/armor/glass/m/cuirass_1.nif")),
     (SKYRIM, Case("aspen", "meshes/landscape/trees/treeaspen01.nif")),
     (SKYRIM, Case("field-grass", "meshes/landscape/grass/fieldgrass01.nif")),
-    (SKYRIM, Case("fire-volume", "meshes/effects/bfxfirevol01.nif", pitch=75)),
-    (SKYRIM, Case("snow-drift-tip", "meshes/effects/fxambsnowblowingdrifttip.nif")),
-    (SKYRIM, Case("snow-plane", "meshes/effects/fxambsnowblowingplane.nif")),
+    # The fire's layers add up to white from straight above, where it opens.
     (
         SKYRIM,
-        Case("stained-glass", "meshes/clutter/dbhood/dbstainglass01.nif", yaw=90),
+        Case("fire-volume", "meshes/effects/bfxfirevol01.nif", yaw=-90, pitch=-15),
     ),
+    (SKYRIM, Case("snow-drift-tip", "meshes/effects/fxambsnowblowingdrifttip.nif")),
+    (SKYRIM, Case("snow-plane", "meshes/effects/fxambsnowblowingplane.nif")),
+    (SKYRIM, Case("stained-glass", "meshes/clutter/dbhood/dbstainglass01.nif")),
     (SKYRIM, Case("farmhouse", "meshes/architecture/farmhouse/farmhouse01.nif")),
     (
         SKYRIM,
@@ -115,22 +114,19 @@ CASES = [
             "whiterun-wall", "meshes/architecture/whiterun/wrcitywalls/wrwallstr01.nif"
         ),
     ),
-    # Flat meshes and the cliff's one-sided face need a view from above or from the front.
-    (SKYRIM, Case("road", "meshes/landscape/roads/roadchunkm01.nif", pitch=45)),
-    (SKYRIM, Case("iron-bow", "meshes/weapons/iron/ironbow.nif", yaw=90, pitch=90)),
-    (
-        SKYRIM,
-        Case("iron-arrow-quiver", "meshes/weapons/iron/ironarrow.nif", yaw=90),
-    ),
+    (SKYRIM, Case("road", "meshes/landscape/roads/roadchunkm01.nif")),
+    (SKYRIM, Case("iron-bow", "meshes/weapons/iron/ironbow.nif")),
+    (SKYRIM, Case("iron-arrow-quiver", "meshes/weapons/iron/ironarrow.nif")),
     (SKYRIM, Case("mountain", "meshes/landscape/mountains/mountaincliff01.nif")),
     (SKYRIM, Case("boulder", "meshes/landscape/rocks/rockl01.nif")),
+    # The cliff opens from above, where only its top shows. Its face is one-sided and points backwards.
     (
         SKYRIM,
         Case(
             "dirt-cliff",
             "meshes/landscape/dirtcliffs/dirtcliffs01.nif",
             yaw=180,
-            pitch=20,
+            pitch=-70,
         ),
     ),
     (SKYRIM, Case("fern", "meshes/landscape/plants/swordferncluster01.nif")),
@@ -151,9 +147,9 @@ CASES = [
     ),
     (
         SKYRIM,
-        Case("dragon", "meshes/actors/dragon/character assets/dragon.nif", pitch=60),
+        Case("dragon", "meshes/actors/dragon/character assets/dragon.nif"),
     ),
-    (SKYRIM, Case("horse", "meshes/actors/horse/character assets/horse.nif", yaw=90)),
+    (SKYRIM, Case("horse", "meshes/actors/horse/character assets/horse.nif")),
     (
         SKYRIM,
         Case(
@@ -219,7 +215,6 @@ CASES = [
             "burn-pile-collision",
             "meshes/architecture/diamondcity/stadium_ext/diamondrubbletrashburnpile01.nif",
             collision=True,
-            pitch=30,
         ),
     ),
     (
@@ -245,13 +240,10 @@ CASES = [
         ),
     ),
     (FALLOUT4, Case("cabin", "meshes/architecture/unique/cabins/cabin01nofence.nif")),
+    (FALLOUT4, Case("road", "meshes/landscape/roads/alley/roadalley1way01.nif")),
     (
         FALLOUT4,
-        Case("road", "meshes/landscape/roads/alley/roadalley1way01.nif", pitch=45),
-    ),
-    (
-        FALLOUT4,
-        Case("laser-receiver", "meshes/weapons/laserweapons/laserreceiver.nif", yaw=90),
+        Case("laser-receiver", "meshes/weapons/laserweapons/laserreceiver.nif"),
     ),
     (
         FALLOUT4,
@@ -260,7 +252,8 @@ CASES = [
             "meshes/actors/powerarmor/characterassets/go_t60a_helmet.nif",
         ),
     ),
-    (FALLOUT4, Case("car", "meshes/vehicles/automotive/car01.nif", yaw=45, pitch=20)),
+    # The car opens on its side. Turned back by half a quarter, it shows its front and side at once.
+    (FALLOUT4, Case("car", "meshes/vehicles/automotive/car01.nif", yaw=-45, pitch=20)),
     (FALLOUT4, Case("boulder", "meshes/landscape/rocks/rockboulder01.nif")),
     (FALLOUT4, Case("cliff", "meshes/landscape/rocks/rockcliff01.nif")),
     (FALLOUT4, Case("corn", "meshes/landscape/plants/cornstalk01.nif")),
@@ -274,7 +267,7 @@ CASES = [
     ),
     (
         FALLOUT4,
-        Case("diner-sign", "meshes/setdressing/diner/dinerentrancesign01.nif", yaw=90),
+        Case("diner-sign", "meshes/setdressing/diner/dinerentrancesign01.nif"),
     ),
     (FALLOUT4, Case("nuka-quantum", "meshes/props/nukacolabottlequantum.nif")),
     (

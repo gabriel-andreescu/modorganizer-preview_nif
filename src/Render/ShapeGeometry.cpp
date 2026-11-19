@@ -97,6 +97,8 @@ void OpenGLShapeGeometry::Initialize(
     const auto geometry = PrepareShapeRenderGeometry(a_nifFile, a_niShape);
     _modelMatrix = ConvertTransform(geometry.modelTransform);
     _bounds = geometry.bounds;
+    _box = geometry.box;
+    _skinned = geometry.skinned;
 
     if (const auto* const verts = geometry.Positions()) {
         _vertexBuffers[kAttribPosition] = MakeVertexBuffer(verts, kAttribPosition);

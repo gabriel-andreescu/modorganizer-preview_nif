@@ -33,6 +33,9 @@ public:
     [[nodiscard]] const nifly::BoundingSphere& Bounds() const {
         return _bounds;
     }
+    [[nodiscard]] const BoundingBox& Box() const {
+        return _box;
+    }
 
 private:
     OpenGLVertexArrayResource _vertexArray;
@@ -40,4 +43,5 @@ private:
     std::vector<CollisionLineRange> _lineRanges;
     std::size_t _vertexCount = 0;
     nifly::BoundingSphere _bounds;
+    BoundingBox _box;
 };

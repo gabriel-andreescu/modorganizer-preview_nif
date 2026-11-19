@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Nif/BoundingBox.h"
 #include "Render/Resources.h"
 #include "Render/ShaderManager.h"
 
@@ -42,6 +43,12 @@ public:
     [[nodiscard]] const nifly::BoundingSphere& Bounds() const noexcept {
         return _bounds;
     }
+    [[nodiscard]] const BoundingBox& Box() const noexcept {
+        return _box;
+    }
+    [[nodiscard]] bool IsSkinned() const noexcept {
+        return _skinned;
+    }
 
 private:
     static void SetDefaultVertexAttributes(QOpenGLFunctions_2_1* a_f);
@@ -58,4 +65,6 @@ private:
     GLsizei _elements = 0;
     QMatrix4x4 _modelMatrix;
     nifly::BoundingSphere _bounds;
+    BoundingBox _box;
+    bool _skinned = false;
 };

@@ -485,5 +485,10 @@ ShapeRenderGeometry PrepareShapeRenderGeometry(nifly::NifFile* a_nifFile, nifly:
     geometry.triangles = GetShapeTriangles(a_shape, nullptr);
 
     TryBuildSkinnedGeometry(a_nifFile, a_shape, geometry);
+    if (const auto* const positions = geometry.Positions()) {
+        for (const auto& position : *positions) {
+            geometry.box.Add(geometry.modelTransform.ApplyTransform(position));
+        }
+    }
     return geometry;
 }

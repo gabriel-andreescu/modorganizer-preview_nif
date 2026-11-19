@@ -172,7 +172,8 @@ void NifWidget::SetShowEditorMarkers(const bool a_showEditorMarkers) {
     _showEditorMarkers = a_showEditorMarkers;
     UpdateSceneBounds();
     if (_camera && _camera->IsFramed()) {
-        ResetCamera();
+        // The view keeps its angles and fits the scene with or without the markers.
+        FrameCamera({.yaw = _camera->Yaw(), .pitch = _camera->Pitch()});
     }
     update();
 }
@@ -183,8 +184,14 @@ bool NifWidget::DrawsCollision() const {
 
 void NifWidget::UpdateSceneBounds() {
     _sceneBounds = ::SceneBounds(DrawnShapes());
+    // The mesh's own shapes choose the opening view. Its editor markers and collision do when it has none.
+    _sceneBox = ::SceneBox(_glShapes);
+    if (_glShapes.empty() && _showEditorMarkers) {
+        _sceneBox = ::SceneBox(_editorMarkerShapes);
+    }
     if (_glShapes.empty() && _collisionOverlay) {
         _sceneBounds = Enclose(_sceneBounds, _collisionOverlay->Bounds());
+        _sceneBox.Add(_collisionOverlay->Box());
     }
 }
 
@@ -203,15 +210,18 @@ std::vector<const OpenGLShape*> NifWidget::DrawnShapes() const {
 }
 
 void NifWidget::ResetCamera() {
-    if (!_camera) {
+    FrameCamera(OpeningView(_sceneBox.Size(), std::ranges::any_of(_glShapes, &OpenGLShape::IsSkinned)));
+}
+
+void NifWidget::FrameCamera(const ViewAngles& a_angles) {
+    if (!_camera || _sceneBounds.radius <= 0.0F) {
         return;
     }
 
-    if (_sceneBounds.radius <= 0.0F) {
-        return;
-    }
     _camera->Frame({
         .lookAt = NifToViewSpace().map(ToQVector(_sceneBounds.center)),
+        .pitch = a_angles.pitch,
+        .yaw = a_angles.yaw,
         .distance = FitDistance(_sceneBounds.radius, AspectRatio()),
     });
 }

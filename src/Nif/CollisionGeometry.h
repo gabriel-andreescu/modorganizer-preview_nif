@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Nif/BoundingBox.h"
+
 #include <nifly/Geometry.hpp>
 #include <nifly/NifFile.hpp>
 
@@ -33,6 +35,7 @@ struct CollisionGeometry {
     std::vector<CollisionVertex> vertices;
     std::vector<CollisionLineRange> lineRanges;
     nifly::BoundingSphere bounds;
+    BoundingBox box;
 
     [[nodiscard]] bool Empty() const {
         return vertices.empty();

@@ -14,6 +14,7 @@ class OpenGLShapeTextures;
 class QMatrix4x4;
 class QOpenGLShaderProgram;
 class TextureManager;
+struct BoundingBox;
 
 namespace nifly {
 struct BoundingSphere;
@@ -45,6 +46,8 @@ public:
     [[nodiscard]] ShaderManager::ShaderType ShaderType() const noexcept;
     [[nodiscard]] const QMatrix4x4& ModelMatrix() const noexcept;
     [[nodiscard]] const nifly::BoundingSphere& Bounds() const noexcept;
+    [[nodiscard]] const BoundingBox& Box() const noexcept;
+    [[nodiscard]] bool IsSkinned() const noexcept;
     [[nodiscard]] bool IsRefractionProxy() const noexcept;
     [[nodiscard]] float RefractionStrength() const noexcept;
     [[nodiscard]] bool UsesAlphaPass() const;

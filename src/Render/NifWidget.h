@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Nif/BoundingBox.h"
 #include "Render/Camera.h"
+#include "Render/OpeningView.h"
 #include "Render/Resources.h"
 #include "Render/ShaderManager.h"
 #include "Render/Shape.h"
@@ -59,6 +61,9 @@ public:
     [[nodiscard]] const nifly::BoundingSphere& SceneBounds() const noexcept {
         return _sceneBounds;
     }
+    [[nodiscard]] const BoundingBox& SceneBox() const noexcept {
+        return _sceneBox;
+    }
     [[nodiscard]] const TextureManager& Textures() const noexcept {
         return *_textureManager;
     }
@@ -105,6 +110,8 @@ private:
     void CopySceneColorTexture(QOpenGLFunctions_2_1* a_f);
     void EnsureCollisionOverlay();
     void EnsureSceneColorTexture(QOpenGLFunctions_2_1* a_f);
+    // Centers the scene and fits it in the view at these angles.
+    void FrameCamera(const ViewAngles& a_angles);
     void FrameCameraIfNeeded();
     void ReleaseSceneColorTexture(QOpenGLFunctions_2_1* a_f);
     void RenderCollisionOverlay();
@@ -126,6 +133,7 @@ private:
     std::vector<SkippedShape> _skippedShapes;
     QVector<TextureResult> _textureResults;
     nifly::BoundingSphere _sceneBounds;
+    BoundingBox _sceneBox;
     std::unique_ptr<OpenGLCollisionOverlay> _collisionOverlay;
     bool _collisionOverlayBuildAttempted = false;
     bool _showCollision = false;

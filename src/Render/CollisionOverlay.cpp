@@ -11,7 +11,8 @@
 OpenGLCollisionOverlay::OpenGLCollisionOverlay(const CollisionGeometry& a_geometry)
     : _lineRanges(a_geometry.lineRanges)
     , _vertexCount(a_geometry.vertices.size())
-    , _bounds(a_geometry.bounds) {
+    , _bounds(a_geometry.bounds)
+    , _box(a_geometry.box) {
     if (a_geometry.Empty()) {
         return;
     }
