@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/).
 - Marks overwritten and hidden copies in the mesh and texture dropdowns.
 - Renames the "Auto: MO2 winners" texture source to "Winning files".
 - Wraps the toolbar in narrow windows.
+- Opens meshes facing their largest side instead of always from the front.
 
 ### Removed
 
