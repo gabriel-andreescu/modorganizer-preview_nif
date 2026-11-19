@@ -5,7 +5,7 @@ requires-python = ">=3.11"
 
 [dependency-groups]
 dev = [
-    "modorganizer-plugin-kit[test] @ git+https://github.com/gabriel-andreescu/ModOrganizerPluginKit.git#subdirectory=python",
+    "modorganizer-plugin-kit[test] @ git+https://github.com/gabriel-andreescu/ModOrganizerPluginKit#subdirectory=python",
     "ruff>=0.16.7",
 ]
 

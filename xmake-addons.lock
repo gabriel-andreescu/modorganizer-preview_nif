@@ -4,16 +4,16 @@
     },
     mopk = {
         repo = {
-            commit = "64b85b8c64a78ce2402495d12e6af22eb11af103",
-            url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit.git"
+            commit = "66a8035ceb609e920a425e064452b7d8c91e2619",
+            url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit"
         },
-        version = "0.1.0"
+        version = "0.2.1"
     },
     ["xmake-luals"] = {
         repo = {
-            commit = "87a39443a2ea74a7da726946fcda26b1b435b37d",
+            commit = "5a38f3c10d9674c36f981f28b2326c7de5f0717e",
             url = "https://github.com/gabriel-andreescu/xmake-luals.git"
         },
-        version = "0.1.0"
+        version = "0.1.1"
     }
 }

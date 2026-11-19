@@ -3,5 +3,6 @@
   "runtime.version": "Lua 5.5",
   "runtime.special": { "import": "require" },
   "runtime.plugin": ".xmake/luals/plugin.lua",
-  "workspace.library": [".xmake/luals/library"]
+  "workspace.library": [".xmake/luals/library"],
+  "workspace.ignoreDir": [".git", ".xmake", "build", "dist"]
 }

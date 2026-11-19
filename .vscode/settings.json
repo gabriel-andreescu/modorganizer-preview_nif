@@ -1,4 +1,24 @@
 {
+  "[lua]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua"
+  },
+  "[markdown][json][jsonc][yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "stylua.targetReleaseVersion": "v2.5.2",
+  "stylua.verify": true,
+  "Lua.format.enable": false,
+  "xmake.autoGenerateCompileCommands": "disabled",
+  "files.watcherExclude": {
+    "**/.xmake/**": true,
+    "**/build/**": true,
+    "**/dist/**": true
+  },
+  "search.exclude": {
+    "**/.xmake/**": true,
+    "**/build/**": true,
+    "**/dist/**": true
+  },
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
   "ruff.path": ["${workspaceFolder}/.venv/Scripts/ruff.exe"],
   "python.testing.pytestEnabled": true,
@@ -6,7 +26,6 @@
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
-  "xmake.autoGenerateCompileCommands": "disabled",
   "C_Cpp.intelliSenseEngine": "disabled",
   "[c]": {
     "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"

@@ -187,8 +187,8 @@ wheels = [
 
 [[package]]
 name = "modorganizer-plugin-kit"
-version = "0.1.0"
-source = { git = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit.git?subdirectory=python#64b85b8c64a78ce2402495d12e6af22eb11af103" }
+version = "0.2.1"
+source = { git = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit?subdirectory=python#66a8035ceb609e920a425e064452b7d8c91e2619" }
 dependencies = [
     { name = "requests" },
 ]
@@ -231,7 +231,7 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "modorganizer-plugin-kit", extras = ["test"], git = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit.git?subdirectory=python" },
+    { name = "modorganizer-plugin-kit", extras = ["test"], git = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit?subdirectory=python" },
     { name = "ruff", specifier = ">=0.16.7" },
 ]
 
