@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Nif/BoundingBox.h"
+#include "Render/AxisView.h"
 #include "Render/Camera.h"
 #include "Render/OpeningView.h"
 #include "Render/Resources.h"
@@ -21,6 +22,7 @@
 
 class GameFiles;
 class OpenGLCollisionOverlay;
+class ViewButtons;
 
 struct SkippedShape {
     QString name;
@@ -95,6 +97,8 @@ protected:
     void mouseMoveEvent(QMouseEvent* a_event) override;
     void wheelEvent(QWheelEvent* a_event) override;
 
+    void resizeEvent(QResizeEvent* a_event) override;
+
     void initializeGL() override;
     void paintGL() override;
     void resizeGL(int a_w, int a_h) override;
@@ -116,7 +120,10 @@ private:
     void ReleaseSceneColorTexture(QOpenGLFunctions_2_1* a_f);
     void RenderCollisionOverlay();
     void RenderRefractionProxyPass(QOpenGLFunctions_2_1* a_f);
+    [[nodiscard]] ViewAngles SceneOpeningView() const;
     void SetProjectionMatrix();
+    // Turns to an axis view, or to its opposite when the camera already shows it.
+    void ShowAxisView(ViewAxis a_axis);
     void UpdateCamera();
     void UpdateSceneBounds();
 
@@ -152,4 +159,7 @@ private:
     float _viewportWidth {};
     float _viewportHeight {};
     QPointF _mousePos;
+    // Where the drag in progress has turned the view, before any snapping.
+    ViewAngles _dragAngles;
+    ViewButtons* _viewButtons = nullptr;
 };

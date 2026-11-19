@@ -46,6 +46,8 @@ public:
 
     void Pan(QVector3D a_delta);
     void Rotate(float a_yaw, float a_pitch);
+    // Turns the view to these angles and keeps its distance and the point it looks at.
+    void SetAngles(float a_yaw, float a_pitch);
     void ZoomDistance(float a_distance);
     void ZoomFactor(float a_factor);
 

@@ -7,6 +7,7 @@
 #include "Render/DrawOrder.h"
 #include "Render/Framing.h"
 #include "Render/MeshProblems.h"
+#include "Render/ViewButtons.h"
 
 #include <QDebug>
 #include <QImage>
@@ -17,14 +18,26 @@
 #include <QOpenGLVersionFunctionsFactory>
 #include <QWheelEvent>
 #include <algorithm>
+#include <cmath>
 #include <exception>
 #include <utility>
 
 namespace {
 constexpr int kSceneTextureUnit = 0;
 
+// The step a rotation moves in while Shift is held. It divides the quarter turns between the axis views.
+constexpr float kSnapDegrees = 15.0F;
+constexpr int kViewButtonsMargin = 8;
+
 QSharedPointer<Camera> MakeCamera() {
     return {new Camera(), &Camera::deleteLater};
+}
+
+ViewAngles Snapped(const ViewAngles& a_angles) {
+    return {
+        .yaw = std::round(a_angles.yaw / kSnapDegrees) * kSnapDegrees,
+        .pitch = std::round(a_angles.pitch / kSnapDegrees) * kSnapDegrees,
+    };
 }
 } // namespace
 
@@ -47,6 +60,9 @@ NifWidget::NifWidget(
     QSurfaceFormat format;
     format.setVersion(2, 1);
     setFormat(format);
+
+    _viewButtons = new ViewButtons(this);
+    connect(_viewButtons, &ViewButtons::AxisClicked, this, &NifWidget::ShowAxisView);
 }
 
 NifWidget::~NifWidget() {
@@ -55,6 +71,7 @@ NifWidget::~NifWidget() {
 
 void NifWidget::mousePressEvent(QMouseEvent* a_event) {
     _mousePos = a_event->globalPosition();
+    _dragAngles = {.yaw = _camera->Yaw(), .pitch = _camera->Pitch()};
 }
 
 void NifWidget::mouseMoveEvent(QMouseEvent* a_event) {
@@ -64,7 +81,11 @@ void NifWidget::mouseMoveEvent(QMouseEvent* a_event) {
 
     switch (a_event->buttons()) {
         case Qt::LeftButton: {
-            _camera->Rotate(static_cast<float>(delta.x() * 0.5F), static_cast<float>(delta.y() * 0.5F));
+            // The drag keeps its own angles, so a snapped view follows the pointer and not its last step.
+            _dragAngles.yaw += static_cast<float>(delta.x() * 0.5F);
+            _dragAngles.pitch += static_cast<float>(delta.y() * 0.5F);
+            const auto angles = a_event->modifiers().testFlag(Qt::ShiftModifier) ? Snapped(_dragAngles) : _dragAngles;
+            _camera->SetAngles(angles.yaw, angles.pitch);
         } break;
         case Qt::MiddleButton: {
             const float viewDX = _camera->Distance() / _viewportWidth;
@@ -210,7 +231,17 @@ std::vector<const OpenGLShape*> NifWidget::DrawnShapes() const {
 }
 
 void NifWidget::ResetCamera() {
-    FrameCamera(OpeningView(_sceneBox.Size(), std::ranges::any_of(_glShapes, &OpenGLShape::IsSkinned)));
+    FrameCamera(SceneOpeningView());
+}
+
+ViewAngles NifWidget::SceneOpeningView() const {
+    return OpeningView(_sceneBox.Size(), std::ranges::any_of(_glShapes, &OpenGLShape::IsSkinned));
+}
+
+void NifWidget::ShowAxisView(const ViewAxis a_axis) {
+    const ViewAngles current {.yaw = _camera->Yaw(), .pitch = _camera->Pitch()};
+    const auto view = NextAxisView(a_axis, current, SceneOpeningView().yaw);
+    _camera->SetAngles(view.yaw, view.pitch);
 }
 
 void NifWidget::FrameCamera(const ViewAngles& a_angles) {
@@ -348,6 +379,11 @@ void NifWidget::paintGL() {
     RenderCollisionOverlay();
 
     functions->glDepthMask(GL_TRUE);
+}
+
+void NifWidget::resizeEvent(QResizeEvent* a_event) {
+    QOpenGLWidget::resizeEvent(a_event);
+    _viewButtons->move(width() - _viewButtons->width() - kViewButtonsMargin, kViewButtonsMargin);
 }
 
 void NifWidget::resizeGL(const int a_w, const int a_h) {

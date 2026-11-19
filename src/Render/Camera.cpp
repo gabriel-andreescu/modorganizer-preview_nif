@@ -48,8 +48,12 @@ void Camera::Pan(const QVector3D a_delta) {
 }
 
 void Camera::Rotate(const float a_yaw, const float a_pitch) {
-    _yaw = Repeat(_yaw + a_yaw, 0.0F, 360.0F);
-    _pitch = Repeat(_pitch + a_pitch, 0.0F, 360.0F);
+    SetAngles(_yaw + a_yaw, _pitch + a_pitch);
+}
+
+void Camera::SetAngles(const float a_yaw, const float a_pitch) {
+    _yaw = Repeat(a_yaw, 0.0F, 360.0F);
+    _pitch = Repeat(a_pitch, 0.0F, 360.0F);
     _hasState = true;
 
     CameraMoved();
