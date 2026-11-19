@@ -6,6 +6,7 @@
 #include "Render/CollisionOverlay.h"
 #include "Render/DrawOrder.h"
 #include "Render/Framing.h"
+#include "Render/MeshProblems.h"
 
 #include <QDebug>
 #include <QImage>
@@ -222,6 +223,7 @@ float NifWidget::AspectRatio() const {
 }
 
 void NifWidget::initializeGL() {
+    const MeshProblemScope meshProblems(_nifFile);
     const auto shapes = _nifFile->GetShapes();
     for (const auto& shape : shapes) {
         if (!shape) {
@@ -242,10 +244,13 @@ void NifWidget::initializeGL() {
         try {
             target.emplace_back(_nifFile.get(), shape, _isGrassModel, _textureManager.get());
         } catch (const std::exception& e) {
-            qWarning("Failed to prepare NIF shape '%s' for preview: %s", qUtf8Printable(name), e.what());
+            ReportMeshProblem(QStringLiteral("Failed to prepare NIF shape '%1' for preview: %2")
+                    .arg(name, QString::fromUtf8(e.what())));
             _skippedShapes.push_back({.name = name, .reason = QString::fromUtf8(e.what())});
         } catch (...) {
-            qWarning("Failed to prepare NIF shape '%s' for preview: unknown exception", qUtf8Printable(name));
+            ReportMeshProblem(
+                QStringLiteral("Failed to prepare NIF shape '%1' for preview: unknown exception").arg(name)
+            );
             _skippedShapes.push_back({.name = name, .reason = QStringLiteral("unknown exception")});
         }
     }

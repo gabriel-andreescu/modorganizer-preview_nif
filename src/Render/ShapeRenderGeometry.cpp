@@ -1,6 +1,7 @@
 #include "Render/ShapeRenderGeometry.h"
 #include "Nif/BindPose.h"
 #include "Nif/Transforms.h"
+#include "Render/MeshProblems.h"
 
 #include <QDebug>
 
@@ -347,7 +348,9 @@ void CopyRigidVertices(const SkinTarget& a_target, const nifly::NifFile* a_nifFi
         return;
     }
 
-    qWarning("NIF shape '%s' has %zu vertices without usable skin weights", ShapeName(a_shape).c_str(), rigidVertices);
+    ReportMeshProblem(QStringLiteral("NIF shape '%1' has %2 vertices without usable skin weights")
+            .arg(QString::fromStdString(ShapeName(a_shape)))
+            .arg(rigidVertices));
     const auto rigidTransform = GetShapeTransformToGlobal(a_nifFile, a_shape);
     for (std::size_t vertex = 0; vertex < a_target.weightedVertices.size(); vertex++) {
         if (a_target.weightedVertices[vertex] == 0) {
@@ -383,7 +386,8 @@ bool TryBuildSkinnedGeometry(nifly::NifFile* a_nifFile, nifly::NiShape* a_shape,
     const auto& header = a_nifFile->GetHeader();
     auto* const skinContainer = header.GetBlock<nifly::NiBoneContainer>(a_shape->SkinInstanceRef());
     if (!skinContainer) {
-        qWarning("Skipping skinning for NIF shape '%s': missing skin instance", ShapeName(a_shape).c_str());
+        ReportMeshProblem(QStringLiteral("Skipping skinning for NIF shape '%1': missing skin instance")
+                .arg(QString::fromStdString(ShapeName(a_shape))));
         return false;
     }
 
@@ -403,7 +407,8 @@ bool TryBuildSkinnedGeometry(nifly::NifFile* a_nifFile, nifly::NiShape* a_shape,
     auto boneTransforms = GetBoneTransforms(a_nifFile, a_shape, IsLegacyTriShape(a_shape) && !useLegacyPartition);
     if (boneTransforms.empty()
         || std::ranges::none_of(boneTransforms, [](const BoneTransform& a_transform) { return a_transform.valid; })) {
-        qWarning("Skipping skinning for NIF shape '%s': missing bone transforms", ShapeName(a_shape).c_str());
+        ReportMeshProblem(QStringLiteral("Skipping skinning for NIF shape '%1': missing bone transforms")
+                .arg(QString::fromStdString(ShapeName(a_shape))));
         return false;
     }
 
@@ -413,7 +418,8 @@ bool TryBuildSkinnedGeometry(nifly::NifFile* a_nifFile, nifly::NiShape* a_shape,
     const auto skinnedAnyVertex = useLegacyPartition ? SkinFromPartitions(skinPartition, boneTransforms, target)
                                                      : SkinFromBoneWeights(a_nifFile, a_shape, boneTransforms, target);
     if (!skinnedAnyVertex) {
-        qWarning("Skipping skinning for NIF shape '%s': no usable skin weights", ShapeName(a_shape).c_str());
+        ReportMeshProblem(QStringLiteral("Skipping skinning for NIF shape '%1': no usable skin weights")
+                .arg(QString::fromStdString(ShapeName(a_shape))));
         return false;
     }
 

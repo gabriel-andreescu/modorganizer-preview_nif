@@ -1,5 +1,6 @@
 #include "Render/ShapeTextures.h"
 #include "Nif/Fo4Material.h"
+#include "Render/MeshProblems.h"
 #include "Textures/Manager.h"
 #include "Textures/PreviewTexture.h"
 
@@ -277,13 +278,15 @@ void OpenGLShapeTextures::LoadTextureSetTextures(
     auto* const textureSet = a_nifFile->GetHeader().GetBlock(textureSetRef);
 
     if (!textureSet) {
-        qWarning("Skipping missing shader texture set");
+        ReportMeshProblem(QStringLiteral("Skipping missing shader texture set"));
     }
 
     const auto nifTextureCount = textureSet ? static_cast<std::size_t>(textureSet->textures.size()) : 0;
     const auto textureCount = std::min(nifTextureCount, _textures.size());
     if (textureSet && nifTextureCount > _textures.size()) {
-        qWarning("Skipping %zu unsupported texture slots", nifTextureCount - _textures.size());
+        ReportMeshProblem(
+            QStringLiteral("Skipping %1 unsupported texture slots").arg(nifTextureCount - _textures.size())
+        );
     }
 
     for (std::size_t i = 0; i < textureCount; i++) {
