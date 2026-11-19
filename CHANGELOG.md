@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/).
 
 ### Added
 
+- Adds a NIF Browser to MO2's Tools menu for browsing and previewing all meshes,
+  including the vanilla ones in the game's archives.
 - Adds a Show Editor Markers toggle for the Creation Kit markers the game hides.
 - Adds a textures list showing each texture's slot and the mod or archive it
   comes from, with missing and unreadable textures flagged.
