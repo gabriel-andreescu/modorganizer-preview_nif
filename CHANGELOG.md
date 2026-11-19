@@ -55,6 +55,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/).
   armor and FaceGen hair, rendering white or grey.
 - Fixes palette-colored effects, such as Skyrim forge flames, picking up colors
   from the wrong end of their palette.
+- Fixes Skyrim multilayer meshes, such as the Frost Atronach, showing too much
+  of their inner layer.
 - Fixes Fallout 4 FaceGen heads with gaps around the eyes and hairline, and with
   the eyelashes and eye shadow out of place.
 - Draws transparent parts from back to front, so nearer layers no longer hide
