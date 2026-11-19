@@ -5,8 +5,9 @@
 #include <algorithm>
 #include <utility>
 
-ArchiveMembers::ArchiveMembers(std::vector<std::uint64_t> a_hashes)
-    : _hashes(std::move(a_hashes)) {
+ArchiveMembers::ArchiveMembers(std::vector<std::uint64_t> a_hashes, QStringList a_meshPaths)
+    : _hashes(std::move(a_hashes))
+    , _meshPaths(std::move(a_meshPaths)) {
     std::ranges::sort(_hashes);
 }
 

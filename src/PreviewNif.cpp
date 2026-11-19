@@ -1,6 +1,9 @@
 #include "PreviewNif.h"
+#include "Browser/MeshBrowser.h"
 #include "Data/ArchiveIndex.h"
 #include "Data/GameFiles.h"
+#include "Data/MeshCatalog.h"
+#include "Data/MeshFiles.h"
 #include "DevBench/Tool.h"
 #include "Preview/Source.h"
 #include "Preview/Widget.h"
@@ -15,8 +18,13 @@
 #include <utility>
 
 PreviewNif::PreviewNif()
-    : _archiveIndex(std::make_unique<ArchiveIndex>()) {}
-PreviewNif::~PreviewNif() = default;
+    : _archiveIndex(std::make_unique<ArchiveIndex>()) {
+    _instance = this;
+}
+
+PreviewNif::~PreviewNif() {
+    _instance = nullptr;
+}
 
 bool PreviewNif::init(MOBase::IOrganizer* a_moInfo) {
     _moInfo = a_moInfo;
@@ -56,7 +64,7 @@ bool PreviewNif::enabledByDefault() const {
 }
 
 std::set<QString> PreviewNif::supportedExtensions() const {
-    return {"bto", "btr", "nif"};
+    return MeshFiles::Extensions();
 }
 
 bool PreviewNif::supportsArchives() const {
@@ -79,9 +87,13 @@ QWidget* PreviewNif::genDataPreview(
     return CreatePreview(a_fileName, a_fileData);
 }
 
-NifPreviewWidget* PreviewNif::CreatePreview(const QString& a_fileName, const QByteArray& a_fileData) const {
-    NifPreviewResolver resolver = [organizer = _moInfo, archiveIndex = _archiveIndex.get(), a_fileName, a_fileData] {
-        auto gameFiles = std::make_shared<const GameFiles>(*organizer, *archiveIndex);
+NifPreviewWidget* PreviewNif::CreatePreview(
+    const QString& a_fileName,
+    const QByteArray& a_fileData,
+    QSharedPointer<Camera> a_camera
+) const {
+    NifPreviewResolver resolver = [this, organizer = _moInfo, a_fileName, a_fileData] {
+        auto gameFiles = SnapshotGameFiles();
         auto sourceSet = NifPreviewSourceResolver::Resolve(organizer, *gameFiles, a_fileName, a_fileData);
         return NifPreviewResolution {.gameFiles = std::move(gameFiles), .sourceSet = std::move(sourceSet)};
     };
@@ -91,7 +103,35 @@ NifPreviewWidget* PreviewNif::CreatePreview(const QString& a_fileName, const QBy
         qWarning("Failed to find previewable NIF provider for '%s'", qUtf8Printable(a_fileName));
         return nullptr;
     }
-    return new NifPreviewWidget(std::move(resolution), std::move(resolver), *_moInfo, SharedCamera());
+    return new NifPreviewWidget(
+        std::move(resolution),
+        std::move(resolver),
+        *_moInfo,
+        a_camera ? std::move(a_camera) : SharedCamera()
+    );
+}
+
+std::shared_ptr<const GameFiles> PreviewNif::SnapshotGameFiles() const {
+    return std::make_shared<const GameFiles>(*_moInfo, *_archiveIndex);
+}
+
+MeshBrowser* PreviewNif::Browser() const {
+    return _browser;
+}
+
+MeshBrowser* PreviewNif::ShowBrowser(QWidget* a_parent) const {
+    if (_browser) {
+        _browser->raise();
+        _browser->activateWindow();
+        return _browser;
+    }
+
+    if (!_meshCatalog) {
+        _meshCatalog = std::make_unique<MeshCatalog>(*_moInfo, *_archiveIndex);
+    }
+    _browser = new MeshBrowser(*this, *_meshCatalog, *_moInfo, a_parent);
+    _browser->show();
+    return _browser;
 }
 
 QSharedPointer<Camera> PreviewNif::SharedCamera() const {

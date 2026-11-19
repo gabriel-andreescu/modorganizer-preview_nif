@@ -37,11 +37,21 @@ target("Plugin", function()
     add_rules("@devbench-api/integration")
 end)
 
+-- MO2 allows one plugin type per DLL, so the Tools menu entry is a plugin of its own.
+target("BrowserTool", function()
+    set_default(false)
+    set_basename("preview_nif_browser")
+    set_version(version)
+    add_rules("@addon/mopk/plugin")
+    add_files("$(projectdir)/browser_tool/**.cpp", "$(projectdir)/browser_tool/**.h")
+    add_packages("qt6base", "mo2-uibase")
+end)
+
 -- Packages
 target("preview_nif", function()
     set_version(version)
     add_rules("@addon/mopk/package", {
-        targets = { "Plugin" },
+        targets = { "Plugin", "BrowserTool" },
         nexus = {
             game = "skyrimspecialedition",
             mod_id = "7318624410125",

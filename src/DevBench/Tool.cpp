@@ -1,9 +1,11 @@
 #include "DevBench/Tool.h"
+#include "Browser/MeshBrowser.h"
 #include "DevBench/CameraControl.h"
 #include "DevBench/Capture.h"
 #include "DevBench/Inspection.h"
 #include "DevBench/Opener.h"
 #include "Preview/Widget.h"
+#include "PreviewNif.h"
 
 #include <DevBenchQt.h>
 
@@ -19,10 +21,14 @@ QJsonObject Descriptor() {
     const QJsonObject properties {
         {
             "action",
-            QJsonObject {{"type", "string"}, {"enum", QJsonArray {"list", "inspect", "open", "close", "camera"}}},
+            QJsonObject {
+                {"type", "string"},
+                {"enum", QJsonArray {"list", "inspect", "open", "close", "camera", "browse", "closeBrowser"}},
+            },
         },
         {"id", QJsonObject {{"type", "integer"}, {"minimum", 1}}},
         {"path", QJsonObject {{"type", "string"}}},
+        {"filter", QJsonObject {{"type", "string"}}},
         {"pane", QJsonObject {{"type", "string"}, {"enum", QJsonArray {"left", "right"}}}},
         {"yaw", QJsonObject {{"type", "number"}}},
         {"pitch", QJsonObject {{"type", "number"}}},
@@ -39,7 +45,10 @@ QJsonObject Descriptor() {
             "open previews a data path such as meshes/foo.nif in a standalone dialog. close closes the window showing "
             "the preview. camera rotates a pane by yaw and pitch "
             "degrees and multiplies its distance by zoom, as mouse input does. Use dialogs for the preview's own "
-            "controls, and capture kind=preview_nif for a fixed-size render of a pane.",
+            "controls, and capture kind=preview_nif for a fixed-size render of a pane. "
+            "browse opens the NIF Browser, or uses the open one, and returns whether its mesh list is ready, the mesh "
+            "count, the filter text and the shown mesh with its preview id. filter sets the filter text. path selects "
+            "and previews that mesh once the list is ready. closeBrowser closes it.",
         },
         {"readOnly", false},
         {
@@ -164,7 +173,46 @@ QJsonObject Tool::Handle(const QJsonObject& a_arguments) {
     if (action == "camera") {
         return ControlCamera(a_arguments);
     }
+    if (action == "browse") {
+        return Browse(a_arguments);
+    }
+    if (action == "closeBrowser") {
+        return CloseBrowser();
+    }
     throw std::runtime_error(QStringLiteral("Unknown action '%1'").arg(action).toStdString());
+}
+
+QJsonObject Tool::Browse(const QJsonObject& a_arguments) {
+    auto* const browser = _plugin->ShowBrowser(_mainWindow);
+    if (a_arguments.contains("filter")) {
+        browser->SetFilterText(a_arguments["filter"].toString());
+    }
+    if (const auto path = a_arguments["path"].toString(); !path.isEmpty()) {
+        if (!browser->IsReady()) {
+            throw std::runtime_error("The NIF Browser is still reading archives");
+        }
+        if (!browser->ShowMesh(path)) {
+            throw std::runtime_error(
+                QStringLiteral("The NIF Browser lists no mesh at '%1' with its current filter").arg(path).toStdString()
+            );
+        }
+    }
+
+    QJsonObject state {
+        {"ready", browser->IsReady()},
+        {"meshes", static_cast<qint64>(browser->MeshCount())},
+        {"filter", browser->FilterText()},
+        {"shown", browser->ShownPath()},
+    };
+    if (auto* const preview = browser->Preview()) {
+        state.insert("preview", _previews.Track(preview));
+    }
+    return state;
+}
+
+QJsonObject Tool::CloseBrowser() {
+    auto* const browser = _plugin->Browser();
+    return {{"closed", browser != nullptr && browser->close()}};
 }
 
 QJsonObject Tool::List() {

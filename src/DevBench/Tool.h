@@ -35,6 +35,8 @@ private:
     [[nodiscard]] QJsonObject Open(const QJsonObject& a_arguments);
     [[nodiscard]] QJsonObject Close(const QJsonObject& a_arguments);
     [[nodiscard]] QJsonObject ControlCamera(const QJsonObject& a_arguments);
+    [[nodiscard]] QJsonObject Browse(const QJsonObject& a_arguments);
+    [[nodiscard]] QJsonObject CloseBrowser();
     [[nodiscard]] QJsonObject Capture(const QJsonObject& a_arguments);
 
     DevBenchAPI::IDevBenchInterface001* _api;

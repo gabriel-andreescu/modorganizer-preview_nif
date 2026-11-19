@@ -51,6 +51,16 @@ ViewToolbar::ViewToolbar(QWidget* a_parent)
     SetSplitUnavailableReason({});
 }
 
+void ViewToolbar::SetShowCollision(const bool a_show) {
+    _showCollision = a_show;
+    UpdateCollisionBox();
+}
+
+void ViewToolbar::SetShowEditorMarkers(const bool a_show) {
+    const QSignalBlocker blocker(_editorMarkersBox);
+    _editorMarkersBox->setChecked(a_show);
+}
+
 void ViewToolbar::SetShowTextures(const bool a_show) {
     const QSignalBlocker blocker(_texturesBox);
     _texturesBox->setChecked(a_show);

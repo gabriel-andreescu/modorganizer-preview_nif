@@ -48,6 +48,14 @@ public:
     [[nodiscard]] bool IsSplitViewEnabled() const;
     [[nodiscard]] bool IsCameraSyncEnabled() const;
 
+    // The view options a profile doesn't keep, so a window that shows one preview after another can carry them over.
+    struct ViewOptions {
+        bool collision = false;
+        bool editorMarkers = false;
+    };
+    [[nodiscard]] ViewOptions Options() const;
+    void SetOptions(const ViewOptions& a_options);
+
 protected:
     void showEvent(QShowEvent* a_event) override;
 

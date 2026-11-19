@@ -12,6 +12,8 @@ class ViewToolbar final : public QWidget {
 public:
     explicit ViewToolbar(QWidget* a_parent = nullptr);
 
+    void SetShowCollision(bool a_show);
+    void SetShowEditorMarkers(bool a_show);
     void SetShowTextures(bool a_show);
     void SetSplit(bool a_enabled);
     // Disables Split Preview and gives the reason as its tooltip. Empty when it can be used.

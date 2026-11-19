@@ -1,5 +1,8 @@
 #pragma once
 
+#include <QByteArray>
+#include <QVariant>
+
 namespace MOBase {
 class IOrganizer;
 }
@@ -13,10 +16,15 @@ public:
     void SetSplitPreview(bool a_enabled) const;
     [[nodiscard]] bool ShowTextures() const;
     void SetShowTextures(bool a_show) const;
+    // The NIF Browser window's saved geometry and the state of its splitter. Empty until first saved.
+    [[nodiscard]] QByteArray BrowserGeometry() const;
+    void SetBrowserGeometry(const QByteArray& a_geometry) const;
+    [[nodiscard]] QByteArray BrowserSplitter() const;
+    void SetBrowserSplitter(const QByteArray& a_state) const;
 
 private:
-    [[nodiscard]] bool Value(const char* a_key, bool a_default) const;
-    void SetValue(const char* a_key, bool a_value) const;
+    [[nodiscard]] QVariant Value(const char* a_key, const QVariant& a_default) const;
+    void SetValue(const char* a_key, const QVariant& a_value) const;
 
     const MOBase::IOrganizer* _organizer;
 };

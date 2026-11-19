@@ -140,6 +140,17 @@ bool NifPreviewWidget::IsCameraSyncEnabled() const {
     return IsSplitViewEnabled() && _toolbar->SyncsCameras();
 }
 
+NifPreviewWidget::ViewOptions NifPreviewWidget::Options() const {
+    return {.collision = _leftPane->ShowsCollision(), .editorMarkers = _leftPane->ShowsEditorMarkers()};
+}
+
+void NifPreviewWidget::SetOptions(const ViewOptions& a_options) {
+    _toolbar->SetShowCollision(a_options.collision);
+    _toolbar->SetShowEditorMarkers(a_options.editorMarkers);
+    SetShowCollision(a_options.collision);
+    SetShowEditorMarkers(a_options.editorMarkers);
+}
+
 void NifPreviewWidget::SetShowCollision(const bool a_show) {
     _leftPane->SetShowCollision(a_show);
     _rightPane->SetShowCollision(a_show);
