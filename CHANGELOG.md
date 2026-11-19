@@ -7,10 +7,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/).
 ### Added
 
 - Adds a Show Editor Markers toggle for the Creation Kit markers the game hides.
+- Adds a textures list showing each texture's slot and the mod or archive it
+  comes from, with missing and unreadable textures flagged.
+- Adds a Show Textures toggle.
+- Adds a dropdown per texture for previewing any of its copies.
+- Adds Hide Other Copies, which makes the shown copy of the mesh or a texture
+  the winner by hiding the other loose copies, with Undo.
+- Adds Unhide for hidden copies of the mesh and its textures.
+- Adds Open in Explorer and Copy Path for textures.
+- Marks the textures that differ between the two sides of Split Preview.
 
 ### Changed
 
 - Support MO2 2.5.3beta12 instead of 2.5.3beta11
+- Marks overwritten and hidden copies in the mesh and texture dropdowns.
+- Renames the "Auto: MO2 winners" texture source to "Winning files".
+- Wraps the toolbar in narrow windows.
+
+### Removed
+
+- Removes the arrow buttons beside the dropdowns.
+- Removes the texture summary line. The textures list replaces it.
 
 ### Fixed
 
@@ -61,6 +78,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/).
   parsing.
 - Picks between archives by plugin load order, as the game does, and ignores
   archives the game never loads, such as those of disabled plugins.
+- Logs a mesh's warnings once instead of on every texture change.
 
 ## [0.5.1] - 2026-05-14
 
