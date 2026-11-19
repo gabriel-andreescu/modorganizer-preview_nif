@@ -67,7 +67,7 @@ const float EPSILON_DIVISION = 0.000001;
 const float EPSILON_DOT_CLAMP = 0.00001;
 const float PBR_LIGHTING_COMPENSATION = PI;
 
-// Match Community Shaders' non-linear True PBR lighting scale.
+// Brings PBR meshes to the brightness of Community Shaders' non-linear True PBR lighting.
 const float PBR_LIGHTING_SCALE = 0.65;
 
 float saturate(float value)

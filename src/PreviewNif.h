@@ -27,8 +27,6 @@ public:
     PreviewNif& operator=(const PreviewNif&) = delete;
     PreviewNif& operator=(PreviewNif&&) = delete;
 
-    // IPlugin Interface
-
     bool init(MOBase::IOrganizer* a_moInfo) override;
     [[nodiscard]] QString name() const override;
     [[nodiscard]] QString author() const override;
@@ -36,8 +34,6 @@ public:
     [[nodiscard]] MOBase::VersionInfo version() const override;
     [[nodiscard]] QList<MOBase::PluginSetting> settings() const override;
     [[nodiscard]] bool enabledByDefault() const override;
-
-    // IPluginPreview interface
 
     [[nodiscard]] std::set<QString> supportedExtensions() const override;
     [[nodiscard]] bool supportsArchives() const override;

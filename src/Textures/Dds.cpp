@@ -18,7 +18,7 @@ using DdsHeader = gli::detail::dds_header;
 using DdsHeader10 = gli::detail::dds_header10;
 using DdsPixelFormat = gli::detail::dds_pixel_format;
 
-// gli declares its DDS flags as signed enumerators.
+// gli declares its DDS flags as signed enumerators, so bit tests convert them to unsigned first.
 template <typename Flag>
 constexpr std::uint32_t FlagBits(const Flag a_flag) {
     return static_cast<std::uint32_t>(a_flag);

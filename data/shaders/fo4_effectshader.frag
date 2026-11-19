@@ -93,7 +93,7 @@ void main( void )
     vec4 normalMap = texture2D( NormalMap, offset );
 
     vec3 normal = normalize(normalMap.rgb * 2.0 - 1.0);
-    // Calculate missing blue channel
+    // Fallout 4 normal maps store only red and green, so blue is rebuilt from them.
     normal.b = sqrt(1.0 - dot(normal.rg, normal.rg));
     if ( !gl_FrontFacing && doubleSided ) {
         normal *= -1.0;
@@ -144,7 +144,6 @@ void main( void )
     vec3 diffuse = A.rgb + (D.rgb * NdotL);
     color.rgb = mix( color.rgb, color.rgb * D.rgb, lightingInfluence );
 
-    // Specular
     float g = 1.0;
     float s = 1.0;
     if ( hasEnvMask ) {
@@ -153,7 +152,6 @@ void main( void )
         s = specMap.g;
     }
 
-    // Environment
     if ( hasCubeMap ) {
         vec4 cube = textureCube( CubeMap, reflectedWS );
         cube.rgb *= envReflection * s;

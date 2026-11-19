@@ -118,14 +118,8 @@ void main( void )
 
     vec3 normal = normalMap.rgb * 2.0 - 1.0;
 
-    // Convert model space to view space
-    //    Swizzled G/B values!
+    // Model-space normal maps swap green and blue, so they are swapped back before the view transform.
     normal = normalize( vec3( viewMatrix * vec4( normal.rbg, 0.0 )));
-
-    // Face Normals
-    //vec3 X = dFdx(v);
-    //vec3 Y = dFdy(v);
-    //vec3 constructedNormal = normalize(cross(X,Y));
 
 
     vec3 L = normalize(LightDir);
@@ -144,13 +138,11 @@ void main( void )
     vec3 diffuse = A.rgb + (D.rgb * NdotL);
 
 
-    // Emissive
     vec3 emissive = vec3(0.0);
     if ( hasEmit ) {
         emissive += glowColor * glowMult;
     }
 
-    // Specular
 
     float s = texture2D( SpecularMap, offset ).r;
     if ( !hasSpecularMap || hasBacklight ) {

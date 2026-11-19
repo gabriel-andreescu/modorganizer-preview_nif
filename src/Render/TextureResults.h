@@ -21,7 +21,6 @@ struct TextureUse {
     bool editorMarker = false;
 };
 
-// One texture the NIF uses: every slot that uses it and how the preview resolved it.
 struct TextureResult {
     QString path;
     QVector<TextureUse> uses;

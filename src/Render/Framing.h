@@ -26,7 +26,6 @@ struct ClipPlanes {
     const nifly::BoundingSphere& a_second
 );
 
-// A sphere enclosing the bounds of every drawn shape.
 [[nodiscard]] nifly::BoundingSphere SceneBounds(const std::vector<const OpenGLShape*>& a_shapes);
 
 // The camera distance at which a sphere fills the narrower of the two fields of view.

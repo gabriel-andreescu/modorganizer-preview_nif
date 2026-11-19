@@ -133,7 +133,6 @@ void main(void)
     vec3 albedo = baseMap.rgb * C.rgb;
     vec3 diffuse = A.rgb + (D.rgb * NdotL);
 
-    // Environment
     if (hasCubeMap) {
         vec4 cube = textureCube(CubeMap, reflectedWS);
         cube.rgb *= envReflection;
@@ -148,7 +147,6 @@ void main(void)
         albedo += cube.rgb;
     }
 
-    // Emissive & Glow
     vec3 emissive = vec3(0.0);
     if (hasEmit) {
         emissive += glowColor * glowMult;
@@ -158,7 +156,6 @@ void main(void)
         }
     }
 
-    // Specular
     vec3 spec = clamp(specColor * specStrength * normalMap.a * pow(NdotH, specGlossiness), 0.0, 1.0);
     spec *= D.rgb;
 

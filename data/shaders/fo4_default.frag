@@ -12,7 +12,8 @@ uniform samplerCube CubeMap;
 
 uniform vec3 specColor;
 uniform float specStrength;
-uniform float specGlossiness; // "Smoothness" in FO4; 0-1
+// Fallout 4 calls it smoothness. It ranges from 0 to 1.
+uniform float specGlossiness;
 uniform float fresnelPower;
 
 uniform float paletteScale;
@@ -63,11 +64,10 @@ varying vec3 b;
     #define M_PI 3.1415926535897932384626433832795
 #endif
 
-#define FLT_EPSILON 1.192092896e-07F // smallest such that 1.0 + FLT_EPSILON != 1.0
+#define FLT_EPSILON 1.192092896e-07F
 
 float OrenNayar( vec3 L, vec3 V, vec3 N, float roughness, float NdotL )
 {
-    //float NdotL = dot(N, L);
     float NdotV = dot(N, V);
     float LdotV = dot(L, V);
 
@@ -78,7 +78,8 @@ float OrenNayar( vec3 L, vec3 V, vec3 N, float roughness, float NdotL )
 
     float a = min( NdotV, NdotL );
     float b = max( NdotV, NdotL );
-    b = (sign(b) == 0.0) ? FLT_EPSILON : sign(b) * max( 0.01, abs(b) ); // For fudging the smoothness of C
+    // Keeps C finite as b nears zero.
+    b = (sign(b) == 0.0) ? FLT_EPSILON : sign(b) * max( 0.01, abs(b) );
     float C = sqrt( (1.0 - a * a) * (1.0 - b * b) ) / b;
 
     float gamma = LdotV - NdotL * NdotV;
@@ -89,7 +90,6 @@ float OrenNayar( vec3 L, vec3 V, vec3 N, float roughness, float NdotL )
 
 float OrenNayarFull( vec3 L, vec3 V, vec3 N, float roughness, float NdotL )
 {
-    //float NdotL = dot(N, L);
     float NdotV = dot(N, V);
     float LdotV = dot(L, V);
 
@@ -103,7 +103,6 @@ float OrenNayarFull( vec3 L, vec3 V, vec3 N, float roughness, float NdotL )
     float roughnessSquared = roughness * roughness;
     float roughnessSquared9 = (roughnessSquared / (roughnessSquared + 0.09));
 
-    // C1, C2, and C3
     float C1 = 1.0 - 0.5 * (roughnessSquared / (roughnessSquared + 0.33));
     float C2 = 0.45 * roughnessSquared9;
 
@@ -116,7 +115,7 @@ float OrenNayarFull( vec3 L, vec3 V, vec3 N, float roughness, float NdotL )
     float powValue = (4.0 * alpha * beta) / (M_PI * M_PI);
     float C3 = 0.125 * roughnessSquared9 * powValue * powValue;
 
-    // Avoid asymptote at pi/2
+    // tan() diverges at pi/2, so beta and the mean angle keep 0.01 away from it.
     float asym = M_PI / 2.0;
     float lim1 = asym + 0.01;
     float lim2 = asym - 0.01;
@@ -133,20 +132,18 @@ float OrenNayarFull( vec3 L, vec3 V, vec3 N, float roughness, float NdotL )
     else if ( ab2 < asym && ab2 >= lim2 )
         ab2 = lim2;
 
-    // Reflection
+    // L1 is the direct reflection and L2 the interreflection of Oren and Nayar's full model.
     float A = gamma * C2 * tan(beta);
     float B = (1.0 - abs(gamma)) * C3 * tan(ab2);
 
     float L1 = max(FLT_EPSILON, NdotL) * (C1 + A + B);
 
-    // Interreflection
     float twoBetaPi = 2.0 * beta / M_PI;
     float L2 = 0.17 * max(FLT_EPSILON, NdotL) * (roughnessSquared / (roughnessSquared + 0.13)) * (1.0 - gamma * twoBetaPi * twoBetaPi);
 
     return L1 + L2;
 }
 
-// Schlick's Fresnel approximation
 float fresnelSchlick( float VdotH, float F0 )
 {
     float base = 1.0 - VdotH;
@@ -154,7 +151,7 @@ float fresnelSchlick( float VdotH, float F0 )
     return clamp( exp + F0 * (1.0 - exp), 0.0, 1.0 );
 }
 
-// The Torrance-Sparrow visibility factor, G
+// The Torrance-Sparrow visibility term G, divided by NdotV.
 float VisibDiv( float NdotL, float NdotV, float VdotH, float NdotH )
 {
     float denom = max( VdotH, FLT_EPSILON );
@@ -167,24 +164,17 @@ float VisibDiv( float NdotL, float NdotV, float VdotH, float NdotH )
     return 1.0 / NdotV;
 }
 
-// this is a normalized Phong model used in the Torrance-Sparrow model
+// Torrance-Sparrow specular with a normalized Phong distribution.
 vec3 TorranceSparrow(float NdotL, float NdotH, float NdotV, float VdotH, vec3 color, float power, float F0)
 {
-    // D: Normalized phong model
     float D = ((power + 2.0) / (2.0 * M_PI)) * pow( NdotH, power );
 
-    // G: Torrance-Sparrow visibility term divided by NdotV
     float G_NdotV = VisibDiv( NdotL, NdotV, VdotH, NdotH );
 
-    // F: Schlick's approximation
     float F = fresnelSchlick( VdotH, F0 );
 
-    // Torrance-Sparrow:
-    // (F * G * D) / (4 * NdotL * NdotV)
-    // Division by NdotV is done in VisibDiv()
-    // and division by NdotL is removed since
-    // outgoing radiance is determined by:
-    // BRDF * NdotL * L()
+    // Torrance-Sparrow divides F * G * D by 4 * NdotL * NdotV. VisibDiv already divides by NdotV, and NdotL cancels
+    // against the NdotL the outgoing radiance multiplies by.
     float spec = (F * G_NdotV * D) / 4.0;
 
     return color * spec * M_PI;
@@ -245,13 +235,11 @@ void main( void )
     vec4 glowMap = texture2D( GlowMap, offset );
 
     vec3 normal = normalize(normalMap.rgb * 2.0 - 1.0);
-    // Calculate missing blue channel
+    // Fallout 4 normal maps store only red and green, so blue is rebuilt from them.
     normal.b = sqrt(1.0 - dot(normal.rg, normal.rg));
     if ( !gl_FrontFacing && doubleSided ) {
         normal *= -1.0;
     }
-    // For _msn (Test with FSF1_Face)
-    //normal.z = sqrt( 1.0 - dot( normal.xy, normal.xy ) );
 
     vec3 L = normalize(LightDir);
     vec3 V = normalize(ViewDir);
@@ -278,7 +266,6 @@ void main( void )
         albedo = luG.rgb;
     }
 
-    // Emissive
     vec3 emissive = vec3(0.0);
     if ( hasEmit ) {
         emissive += glowColor * glowMult;
@@ -288,7 +275,6 @@ void main( void )
         }
     }
 
-    // Specular
     float g = 1.0;
     float s = 1.0;
     float smoothness = clamp( specGlossiness, 0.0, 1.0 );
@@ -304,7 +290,6 @@ void main( void )
         spec = TorranceSparrow( NdotL0, NdotH, NdotV, VdotH, vec3(specMask), fSpecularPower, 0.2 ) * NdotL0 * D.rgb * specColor;
     }
 
-    // Environment
     vec4 cube = textureCubeLod( CubeMap, reflectedWS, 8.0 - smoothness * 8.0 );
     vec4 env = texture2D( EnvironmentMap, offset );
     if ( hasCubeMap ) {
@@ -329,11 +314,8 @@ void main( void )
     if ( hasRimlight ) {
         rim = vec3(pow((1.0 - NdotV), rimPower));
         rim *= smoothstep( -0.2, 1.0, dot(-L, V) );
-
-        //emissive += rim * D.rgb * specMask;
     }
 
-    // Diffuse
     float diff = OrenNayarFull( L, V, normal, 1.0 - smoothness, NdotL );
     diffuse = vec3(diff);
 
@@ -346,14 +328,10 @@ void main( void )
         diffuse += soft;
     }
 
-    // Diffuse
     color.rgb = diffuse * albedo * D.rgb;
-    // Ambient
     color.rgb += A.rgb * albedo;
-    // Specular
     color.rgb += spec;
     color.rgb += A.rgb * specMask * fresnelSchlick( VdotH, 0.2 ) * (1.0 - NdotV) * D.rgb;
-    // Emissive
     color.rgb += emissive;
 
     color.rgb = tonemap( color.rgb ) / tonemap( vec3(1.0) );

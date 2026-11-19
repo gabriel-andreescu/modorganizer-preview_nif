@@ -80,14 +80,7 @@ void main( void )
 
     vec3 normal = N;
 
-    // Reconstructed normal
-    //normal = normalize(cross(dFdy(v.xyz), dFdx(v.xyz)));
-
-    //if ( !doubleSided && !gl_FrontFacing ) { return; }
-
     vec3 E = normalize(ViewDir);
-
-    float tmp2 = falloffDepth; // Unused right now
 
     // Skyrim computes falloff this way rather than with smoothstep, so a start angle above the stop angle stays
     // defined, and it leaves the opacities unclamped.
