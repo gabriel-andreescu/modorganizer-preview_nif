@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/).
 
 - Adds a NIF Browser to MO2's Tools menu for browsing and previewing all meshes,
   including the vanilla ones in the game's archives.
+- Plays mesh animations: effect fades and scrolling textures, moving parts such
+  as doors, lids and levers, parts that appear and disappear, and skinned meshes
+  such as banners and books. Collision follows moving parts.
+- Adds a Play Animation toggle for animated meshes, kept per profile.
+- Adds an Animation dropdown for meshes with several animations, such as Open
+  and Close.
 - Adds buttons in the preview for the front, side and top views. A second click
   shows the opposite side.
 - Adds rotating the camera in 15° steps while Shift is held.
