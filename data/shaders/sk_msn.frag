@@ -16,6 +16,8 @@ uniform vec3 glowColor;
 uniform float glowMult;
 
 uniform float alpha;
+uniform float alphaThreshold;
+uniform int alphaTestMode;
 
 uniform vec3 tintColor;
 
@@ -80,6 +82,33 @@ vec3 overlay( vec3 ba, vec3 bl )
     return vec3( overlay(ba.r, bl.r), overlay(ba.g, bl.g), overlay( ba.b, bl.b ) );
 }
 
+bool passesAlphaTest(float value)
+{
+    if (alphaTestMode == 512) {
+        return false;
+    }
+    if (alphaTestMode == 513) {
+        return value < alphaThreshold;
+    }
+    if (alphaTestMode == 514) {
+        return value == alphaThreshold;
+    }
+    if (alphaTestMode == 515) {
+        return value <= alphaThreshold;
+    }
+    if (alphaTestMode == 516) {
+        return value > alphaThreshold;
+    }
+    if (alphaTestMode == 517) {
+        return value != alphaThreshold;
+    }
+    if (alphaTestMode == 518) {
+        return value >= alphaThreshold;
+    }
+
+    return true;
+}
+
 void main( void )
 {
     vec2 offset = TexCoord.st * uvScale + uvOffset;
@@ -89,14 +118,8 @@ void main( void )
 
     vec3 normal = normalMap.rgb * 2.0 - 1.0;
 
-    // Convert model space to view space
-    //    Swizzled G/B values!
+    // Model-space normal maps swap green and blue, so they are swapped back before the view transform.
     normal = normalize( vec3( viewMatrix * vec4( normal.rbg, 0.0 )));
-
-    // Face Normals
-    //vec3 X = dFdx(v);
-    //vec3 Y = dFdy(v);
-    //vec3 constructedNormal = normalize(cross(X,Y));
 
 
     vec3 L = normalize(LightDir);
@@ -115,13 +138,11 @@ void main( void )
     vec3 diffuse = A.rgb + (D.rgb * NdotL);
 
 
-    // Emissive
     vec3 emissive = vec3(0.0);
     if ( hasEmit ) {
         emissive += glowColor * glowMult;
     }
 
-    // Specular
 
     float s = texture2D( SpecularMap, offset ).r;
     if ( !hasSpecularMap || hasBacklight ) {
@@ -188,6 +209,10 @@ void main( void )
     color.rgb = albedo * (diffuse + emissive) + spec;
     color.rgb = tonemap( color.rgb ) / tonemap( vec3(1.0) );
     color.a = C.a * baseMap.a;
+
+    if (!passesAlphaTest(color.a)) {
+        discard;
+    }
 
     gl_FragColor = color;
     gl_FragColor.a *= alpha;

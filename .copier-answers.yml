@@ -1,0 +1,9 @@
+_commit: v0.2.1
+_src_path: https://github.com/gabriel-andreescu/ModOrganizerPluginKit.git
+author: Parapets - GabonZ
+description: Supports previewing NIF files
+devbench_api: true
+devbench_tests: true
+pre_commit: true
+project_name: preview_nif
+tooling_only: false

@@ -1,9 +1,7 @@
-#file: noinspection YAMLSchemaValidation
 ---
 Language: Cpp
 BasedOnStyle: WebKit
 
-# Basics
 ColumnLimit: 120
 IndentWidth: 4
 ContinuationIndentWidth: 4
@@ -16,8 +14,7 @@ SpaceInEmptyBraces: Never
 SpaceInEmptyBlock: false
 SpacesInParens: Never
 
-# Short constructs on a single line
-AllowShortLambdasOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: All
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortBlocksOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: false
@@ -26,7 +23,6 @@ AllowShortEnumsOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortCaseExpressionOnASingleLine: true
 
-# Alignment
 AlignTrailingComments:
   Kind: Always
 AlignConsecutiveShortCaseStatements:
@@ -37,36 +33,30 @@ AlignConsecutiveShortCaseStatements:
   AlignCaseColons: false
 AlignOperands: Align
 
-# Operators / expressions breaking
-BreakBinaryOperations: OnePerLine
+BreakBinaryOperations: RespectPrecedence
 BreakBeforeBinaryOperators: All
 BreakBeforeTernaryOperators: true
 PenaltyBreakAssignment: 1000
 PenaltyBreakBeforeFirstCallParameter: 2
 
-# Return types
 BreakAfterReturnType: ExceptShortType
 PenaltyReturnTypeOnItsOwnLine: 1000
 
-# Parameters / arguments
 AllowAllParametersOfDeclarationOnNextLine: false
 AllowAllArgumentsOnNextLine: false
 BinPackParameters: OnePerLine
 BinPackArguments: false
 
-# Braces & inheritance
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterFunction: false
 BreakInheritanceList: AfterColon
 
-# Braced lists & templates
 Cpp11BracedListStyle: FunctionCall
 BreakTemplateDeclarations: Yes
 BreakAfterOpenBracketBracedList: true
 BreakBeforeCloseBracketBracedList: true
 
-# Control statements and function calls
 BreakAfterOpenBracketFunction: true
 BreakAfterOpenBracketIf: true
 BreakAfterOpenBracketLoop: true
@@ -76,6 +66,5 @@ BreakBeforeCloseBracketIf: true
 BreakBeforeCloseBracketLoop: true
 BreakBeforeCloseBracketSwitch: true
 
-# Concepts
 BreakBeforeConceptDeclarations: Always
 ...

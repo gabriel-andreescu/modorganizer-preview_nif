@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "EditorConfig.EditorConfig",
+    "tboox.xmake-vscode",
+    "esbenp.prettier-vscode",
+    "JohnnyMorganz.stylua",
+    "sumneko.lua",
+    "gabriel-andreescu.bbcode-editor",
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "llvm-vs-code-extensions.vscode-clangd"
+  ]
+}

@@ -1,0 +1,7 @@
+.xmake/
+build/
+dist/
+scratch/
+.copier-answers.yml
+data/shaders/NIFSKOPE LICENSE.md
+data/icons/TABLER ICONS LICENSE.md

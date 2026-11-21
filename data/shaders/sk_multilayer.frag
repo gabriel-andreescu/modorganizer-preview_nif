@@ -16,6 +16,8 @@ uniform vec3 glowColor;
 uniform float glowMult;
 
 uniform float alpha;
+uniform float alphaThreshold;
+uniform int alphaTestMode;
 
 uniform vec2 uvScale;
 uniform vec2 uvOffset;
@@ -68,32 +70,50 @@ vec3 toGrayscale(vec3 color)
     return vec3(dot(vec3(0.3, 0.59, 0.11), color));
 }
 
-// Compute inner layer�s texture coordinate and transmission depth
-// vTexCoord: Outer layer�s texture coordinate
-// vInnerScale: Tiling of inner texture
-// vViewTS: View vector in tangent space
-// vNormalTS: Normal in tangent space (sampled normal map)
-// fLayerThickness: Distance from outer layer to inner layer
+bool passesAlphaTest(float value)
+{
+    if (alphaTestMode == 512) {
+        return false;
+    }
+    if (alphaTestMode == 513) {
+        return value < alphaThreshold;
+    }
+    if (alphaTestMode == 514) {
+        return value == alphaThreshold;
+    }
+    if (alphaTestMode == 515) {
+        return value <= alphaThreshold;
+    }
+    if (alphaTestMode == 516) {
+        return value > alphaThreshold;
+    }
+    if (alphaTestMode == 517) {
+        return value != alphaThreshold;
+    }
+    if (alphaTestMode == 518) {
+        return value >= alphaThreshold;
+    }
+
+    return true;
+}
+
+// The inner layer's texture coordinate in xy and the transmission depth in z. The inner scale is the inner texture's
+// tiling, and the thickness is the distance between the layers.
 vec3 ParallaxOffsetAndDepth( vec2 vTexCoord, vec2 vInnerScale, vec3 vViewTS, vec3 vNormalTS, float fLayerThickness )
 {
-    // Tangent space reflection vector
     vec3 vReflectionTS = reflect( -vViewTS, vNormalTS );
-    // Tangent space transmission vector (reflect about surface plane)
+    // Mirroring the reflection about the surface plane gives the transmission direction.
     vec3 vTransTS = vec3( vReflectionTS.xy, -vReflectionTS.z );
 
-    // Distance along transmission vector to intersect inner layer
+    // The distance along the transmission direction to the inner layer.
     float fTransDist = fLayerThickness / abs(vTransTS.z);
 
-    // Texel size
-    //     Bethesda's version does indeed seem to assume 1024, which is why they
-    //    introduced the additional parameter.
+    // Bethesda's shader assumes a 1024-pixel inner texture, and the inner scale corrects for other sizes.
     vec2 vTexelSize = vec2( 1.0/(1024.0 * vInnerScale.x), 1.0/(1024.0 * vInnerScale.y) );
 
-    // Inner layer�s texture coordinate due to parallax
     vec2 vOffset = vTexelSize * fTransDist * vTransTS.xy;
     vec2 vOffsetTexCoord = vTexCoord + vOffset;
 
-    // Return offset texture coordinate in xy and transmission dist in z
     return vec3( vOffsetTexCoord, fTransDist );
 }
 
@@ -106,8 +126,7 @@ void main( void )
 
     vec3 normal = normalize(normalMap.rgb * 2.0 - 1.0);
 
-    // Sample the non-parallax offset alpha channel of the inner map
-    //    Used to modulate the innerThickness
+    // The inner map's alpha, read without the parallax offset, scales the layer thickness.
     float innerMapAlpha = texture2D( InnerMap, offset ).a;
 
 
@@ -122,11 +141,10 @@ void main( void )
     float NdotNegL = max( dot(normal, -L), 0.0 );
 
 
-    // Mix between the face normal and the normal map based on the refraction scale
+    // The refraction scale blends from the flat face normal to the normal map.
     vec3 mixedNormal = mix( vec3(0.0, 0.0, 1.0), normal, clamp( outerRefraction, 0.0, 1.0 ) );
     vec3 parallax = ParallaxOffsetAndDepth( offset, innerScale, E, mixedNormal, innerThickness * innerMapAlpha );
 
-    // Sample the inner map at the offset coords
     vec4 innerMap = texture2D( InnerMap, parallax.xy * innerScale );
 
     vec3 reflected = reflect( -E, normal );
@@ -141,12 +159,11 @@ void main( void )
     vec3 outer = baseMap.rgb * C.rgb;
 
 
-    // Mix inner/outer layer based on fresnel
-    float outerMix = max( 1.0 - EdotN, baseMap.a );
-    albedo = mix( inner, outer, outerMix );
+    // The inner layer shows through where the view faces the surface and the outer map's alpha is low.
+    float innerMix = EdotN * (1.0 - baseMap.a);
+    albedo = mix( outer, inner, innerMix );
 
 
-    // Environment
     if ( hasCubeMap ) {
         vec4 cube = textureCube( CubeMap, reflectedWS );
         cube.rgb *= outerReflection;
@@ -161,19 +178,14 @@ void main( void )
         albedo += cube.rgb;
     }
 
-    // Specular
     vec3 spec = clamp( specColor * specStrength * normalMap.a * pow(NdotH, specGlossiness), 0.0, 1.0 );
     spec *= D.rgb;
 
-    // Emissive
-    //    Mixed with outer map
     vec3 emissive = vec3(0.0);
     if ( hasEmit ) {
         emissive += glowColor * glowMult;
     }
 
-    // Backlight
-    //     Mixed with inner and outer map
     vec3 backlight = vec3(0.0);
     if ( hasBacklight ) {
         backlight = texture2D( BacklightMap, offset ).rgb;
@@ -181,8 +193,6 @@ void main( void )
 
         emissive += backlight * D.rgb;
     }
-
-    // TODO: Test rim and soft light mixing with inner/outer layer
 
     vec4 mask = vec4(0.0);
     if ( hasRimlight || hasSoftlight ) {
@@ -210,6 +220,10 @@ void main( void )
     color.rgb = albedo * (diffuse + emissive) + spec;
     color.rgb = tonemap( color.rgb ) / tonemap( vec3(1.0) );
     color.a = C.a * baseMap.a;
+
+    if (!passesAlphaTest(color.a)) {
+        discard;
+    }
 
     gl_FragColor = color;
     gl_FragColor.a *= alpha;

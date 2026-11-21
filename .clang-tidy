@@ -1,23 +1,84 @@
-Checks: >
-  -*,
-  bugprone-*,
-  clang-analyzer-*,
-  modernize-*,
-  performance-*,
-  readability-*,
-  -modernize-use-trailing-return-type,
-  -modernize-pass-by-value,
-  -performance-enum-size,
-  -readability-magic-numbers,
-  -readability-identifier-naming,
-  -readability-identifier-length,
-  -readability-implicit-bool-conversion,
-  -readability-uppercase-literal-suffix,
-  -readability-math-missing-parentheses
+InheritParentConfig: false
+Checks:
+  - '-*'
+  - 'bugprone-*'
+  - 'clang-analyzer-*'
+  # MSVC's filesystem headers combine flags outside the enum's declared range.
+  - '-clang-analyzer-optin.core.EnumCastOutOfRange'
+  # These platform-specific checkers do not apply to Windows.
+  - '-clang-analyzer-fuchsia.*'
+  - '-clang-analyzer-optin.mpi.*'
+  - '-clang-analyzer-optin.osx.*'
+  - '-clang-analyzer-osx.*'
+  - '-clang-analyzer-webkit.*'
+  - 'concurrency-*'
+  - 'cppcoreguidelines-avoid-non-const-global-variables'
+  - 'cppcoreguidelines-init-variables'
+  - 'cppcoreguidelines-pro-bounds-pointer-arithmetic'
+  - 'cppcoreguidelines-pro-type-member-init'
+  - 'cppcoreguidelines-pro-type-vararg'
+  - 'cppcoreguidelines-special-member-functions'
+  - 'misc-const-correctness'
+  - 'misc-misplaced-const'
+  - 'misc-non-private-member-variables-in-classes'
+  - 'misc-anonymous-namespace-in-header'
+  - 'misc-confusable-identifiers'
+  - 'misc-coroutine-hostile-raii'
+  - 'misc-definitions-in-headers'
+  - 'misc-header-include-cycle'
+  - 'misc-misleading-bidirectional'
+  - 'misc-misleading-identifier'
+  - 'misc-new-delete-overloads'
+  - 'misc-non-copyable-objects'
+  - 'misc-predictable-rand'
+  - 'misc-redundant-expression'
+  - 'misc-static-assert'
+  - 'misc-static-initialization-cycle'
+  - 'misc-throw-by-value-catch-by-reference'
+  - 'misc-unconventional-assign-operator'
+  - 'misc-uniqueptr-reset-release'
+  - 'misc-unused-using-decls'
+  - 'misc-use-anonymous-namespace'
+  - 'misc-use-internal-linkage'
+  - 'portability-std-allocator-const'
+  - 'portability-template-virtual-member-function'
+  - 'modernize-*'
+  - 'performance-*'
+  - 'readability-*'
+  - '-modernize-use-trailing-return-type'
+  - '-readability-magic-numbers'
 
-WarningsAsErrors: ''
-HeaderFilterRegex: '^(src)/'
+WarningsAsErrors: '*'
+ExtraArgs: ['/Y-', '-Wno-unused-command-line-argument']
+HeaderFilterRegex: '(^|[/\\])src[/\\]'
 FormatStyle: none
 
 CheckOptions:
   - { key: bugprone-easily-swappable-parameters.MinimumLength, value: 3 }
+  - { key: cppcoreguidelines-avoid-non-const-global-variables.AllowInternalLinkage, value: true }
+  - { key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic, value: true }
+  - { key: readability-function-size.LineThreshold, value: 80 }
+  - { key: readability-function-size.NestingThreshold, value: 4 }
+  - { key: readability-function-size.ParameterThreshold, value: 6 }
+  - { key: readability-identifier-naming.ClassCase, value: CamelCase }
+  - { key: readability-identifier-naming.ConstexprVariableCase, value: CamelCase }
+  - { key: readability-identifier-naming.ConstexprVariablePrefix, value: k }
+  - { key: readability-identifier-naming.EnumCase, value: CamelCase }
+  - { key: readability-identifier-naming.EnumConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.EnumConstantPrefix, value: k }
+  - { key: readability-identifier-naming.FunctionCase, value: CamelCase }
+  - { key: readability-identifier-naming.GlobalConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.GlobalConstantPrefix, value: k }
+  - { key: readability-identifier-naming.LocalConstantCase, value: camelBack }
+  - { key: readability-identifier-naming.LocalVariableCase, value: camelBack }
+  - { key: readability-identifier-naming.NamespaceCase, value: CamelCase }
+  - { key: readability-identifier-naming.ParameterCase, value: camelBack }
+  - { key: readability-identifier-naming.ParameterPrefix, value: a_ }
+  - { key: readability-identifier-naming.PrivateMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.PrivateMemberPrefix, value: _ }
+  - { key: readability-identifier-naming.ProtectedMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.ProtectedMemberPrefix, value: _ }
+  - { key: readability-identifier-naming.StructCase, value: CamelCase }
+  - { key: readability-identifier-naming.TypeAliasCase, value: CamelCase }
+  - { key: readability-identifier-naming.TypeAliasIgnoredRegexp, value: '^is_transparent$' }
+  - { key: readability-implicit-bool-conversion.AllowPointerConditions, value: true }

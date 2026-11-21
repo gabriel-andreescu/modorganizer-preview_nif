@@ -1,0 +1,19 @@
+{
+    __meta__ = {
+        version = "1.0"
+    },
+    mopk = {
+        repo = {
+            commit = "66a8035ceb609e920a425e064452b7d8c91e2619",
+            url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit"
+        },
+        version = "0.2.1"
+    },
+    ["xmake-luals"] = {
+        repo = {
+            commit = "5a38f3c10d9674c36f981f28b2326c7de5f0717e",
+            url = "https://github.com/gabriel-andreescu/xmake-luals.git"
+        },
+        version = "0.1.1"
+    }
+}
