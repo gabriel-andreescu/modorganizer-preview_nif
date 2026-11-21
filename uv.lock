@@ -187,8 +187,8 @@ wheels = [
 
 [[package]]
 name = "modorganizer-plugin-kit"
-version = "0.2.1"
-source = { git = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit?subdirectory=python#66a8035ceb609e920a425e064452b7d8c91e2619" }
+version = "0.2.2"
+source = { git = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit?subdirectory=python#a9eef3d0425723f99f9fc7da8a93c67ede57ec89" }
 dependencies = [
     { name = "requests" },
 ]

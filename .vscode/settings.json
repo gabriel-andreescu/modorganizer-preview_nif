@@ -19,6 +19,13 @@
     "**/build/**": true,
     "**/dist/**": true
   },
+  "python.analysis.exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "**/build",
+    "**/dist"
+  ],
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
   "ruff.path": ["${workspaceFolder}/.venv/Scripts/ruff.exe"],
   "python.testing.pytestEnabled": true,

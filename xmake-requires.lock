@@ -6,7 +6,7 @@
         ["aqt#f56260b5"] = {
             repo = {
                 branch = "master",
-                commit = "c2300b7696cbb3e14b61721537fdd427bc619af7",
+                commit = "635956946b104aa1108d43267dd8878e13d3891a",
                 url = "https://github.com/xmake-io/xmake-repo.git"
             },
             version = "3.3.0"
@@ -17,14 +17,14 @@
         ["cmake#f56260b5"] = {
             repo = {
                 branch = "master",
-                commit = "c2300b7696cbb3e14b61721537fdd427bc619af7",
+                commit = "635956946b104aa1108d43267dd8878e13d3891a",
                 url = "https://github.com/xmake-io/xmake-repo.git"
             },
             version = "4.3.4"
         },
         ["devbench-api 0.1.0#f56260b5"] = {
             repo = {
-                commit = "66a8035ceb609e920a425e064452b7d8c91e2619",
+                commit = "a9eef3d0425723f99f9fc7da8a93c67ede57ec89",
                 url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit"
             },
             version = "0.1.0"
@@ -32,7 +32,7 @@
         ["eigen 3.4.0#f56260b5"] = {
             repo = {
                 branch = "master",
-                commit = "c2300b7696cbb3e14b61721537fdd427bc619af7",
+                commit = "635956946b104aa1108d43267dd8878e13d3891a",
                 url = "https://github.com/xmake-io/xmake-repo.git"
             },
             version = "3.4.0"
@@ -43,7 +43,7 @@
         ["glm#f56260b5"] = {
             repo = {
                 branch = "master",
-                commit = "c2300b7696cbb3e14b61721537fdd427bc619af7",
+                commit = "635956946b104aa1108d43267dd8878e13d3891a",
                 url = "https://github.com/xmake-io/xmake-repo.git"
             },
             version = "1.0.3"
@@ -51,7 +51,7 @@
         ["half#f56260b5"] = {
             repo = {
                 branch = "master",
-                commit = "c2300b7696cbb3e14b61721537fdd427bc619af7",
+                commit = "635956946b104aa1108d43267dd8878e13d3891a",
                 url = "https://github.com/xmake-io/xmake-repo.git"
             },
             version = "2.2.1"
@@ -59,35 +59,35 @@
         ["miniball#f56260b5"] = {
             repo = {
                 branch = "master",
-                commit = "c2300b7696cbb3e14b61721537fdd427bc619af7",
+                commit = "635956946b104aa1108d43267dd8878e13d3891a",
                 url = "https://github.com/xmake-io/xmake-repo.git"
             },
             version = "v3.0"
         },
         ["mo2-dds-header#f56260b5"] = {
             repo = {
-                commit = "66a8035ceb609e920a425e064452b7d8c91e2619",
+                commit = "a9eef3d0425723f99f9fc7da8a93c67ede57ec89",
                 url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit"
             },
             version = "2024.06"
         },
         ["mo2-libbsarch 0.1.2#f56260b5"] = {
             repo = {
-                commit = "66a8035ceb609e920a425e064452b7d8c91e2619",
+                commit = "a9eef3d0425723f99f9fc7da8a93c67ede57ec89",
                 url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit"
             },
             version = "0.1.2"
         },
         ["mo2-uibase 2.5.2#f56260b5"] = {
             repo = {
-                commit = "66a8035ceb609e920a425e064452b7d8c91e2619",
+                commit = "a9eef3d0425723f99f9fc7da8a93c67ede57ec89",
                 url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit"
             },
             version = "2.5.2"
         },
         ["mo2-uibase 2.5.3beta12#f56260b5"] = {
             repo = {
-                commit = "66a8035ceb609e920a425e064452b7d8c91e2619",
+                commit = "a9eef3d0425723f99f9fc7da8a93c67ede57ec89",
                 url = "https://github.com/gabriel-andreescu/ModOrganizerPluginKit"
             },
             version = "2.5.3beta12"
@@ -98,7 +98,7 @@
         ["ninja#f56260b5"] = {
             repo = {
                 branch = "master",
-                commit = "c2300b7696cbb3e14b61721537fdd427bc619af7",
+                commit = "635956946b104aa1108d43267dd8878e13d3891a",
                 url = "https://github.com/xmake-io/xmake-repo.git"
             },
             version = "v1.13.2"
@@ -106,7 +106,7 @@
         ["qt6base 6.7.1#f56260b5"] = {
             repo = {
                 branch = "master",
-                commit = "c2300b7696cbb3e14b61721537fdd427bc619af7",
+                commit = "635956946b104aa1108d43267dd8878e13d3891a",
                 url = "https://github.com/xmake-io/xmake-repo.git"
             },
             version = "6.7.1"
