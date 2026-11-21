@@ -10,6 +10,7 @@ constexpr auto kFileName = "preview_nif.ini";
 constexpr auto kGroup = "Preview";
 constexpr auto kSplitPreviewKey = "splitPreview";
 constexpr auto kShowTexturesKey = "showTextures";
+constexpr auto kPlayAnimationKey = "playAnimation";
 constexpr auto kBrowserGeometryKey = "browserGeometry";
 constexpr auto kBrowserSplitterKey = "browserSplitter";
 } // namespace
@@ -31,6 +32,14 @@ bool PreviewPreferences::ShowTextures() const {
 
 void PreviewPreferences::SetShowTextures(const bool a_show) const {
     SetValue(kShowTexturesKey, a_show);
+}
+
+bool PreviewPreferences::PlayAnimation() const {
+    return Value(kPlayAnimationKey, true).toBool();
+}
+
+void PreviewPreferences::SetPlayAnimation(const bool a_play) const {
+    SetValue(kPlayAnimationKey, a_play);
 }
 
 QByteArray PreviewPreferences::BrowserGeometry() const {

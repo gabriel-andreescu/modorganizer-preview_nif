@@ -51,6 +51,7 @@ NifWidget::NifWidget(
 )
     : QOpenGLWidget(a_parent)
     , _nifFile {std::move(a_nifFile)}
+    , _animation {*_nifFile}
     , _isGrassModel {IsGrassModelPath(a_dataPath)}
     , _gameFiles {std::move(a_gameFiles)}
     , _textureManager {std::make_unique<TextureManager>(*_gameFiles, std::move(a_textureSelection))}
@@ -199,6 +200,50 @@ void NifWidget::SetShowEditorMarkers(const bool a_showEditorMarkers) {
     update();
 }
 
+void NifWidget::SetAnimationTime(const std::optional<float> a_time) {
+    if (!_animation.IsAnimated() || _animationTime == a_time) {
+        return;
+    }
+
+    _animationTime = a_time;
+    ApplyAnimation();
+    update();
+}
+
+QStringList NifWidget::SequenceNames() const {
+    QStringList names;
+    for (const auto& sequence : _animation.Sequences()) {
+        names.append(QString::fromStdString(sequence.name));
+    }
+    return names;
+}
+
+QString NifWidget::PlayingSequence() const {
+    const auto* const sequence = _animation.PlayingSequence();
+    return sequence != nullptr ? QString::fromStdString(sequence->name) : QString();
+}
+
+void NifWidget::PlaySequence(const QString& a_name) {
+    _animation.PlaySequence(a_name.toStdString());
+    if (_animationTime) {
+        ApplyAnimation();
+        update();
+    }
+}
+
+Animation::Pose NifWidget::AnimationPose() const {
+    return _animationTime ? _animation.At(*_animationTime) : Animation::Pose {};
+}
+
+void NifWidget::ApplyAnimation() {
+    const auto pose = AnimationPose();
+    for (auto* const shapes : {&_glShapes, &_editorMarkerShapes}) {
+        for (auto& shape : *shapes) {
+            shape.Animate(pose.Shader(shape.ShaderBlock()));
+        }
+    }
+}
+
 bool NifWidget::DrawsCollision() const {
     return _showCollision || !HasMeshes();
 }
@@ -295,6 +340,11 @@ void NifWidget::initializeGL() {
             );
             _skippedShapes.push_back({.name = name, .reason = QStringLiteral("unknown exception")});
         }
+    }
+
+    // A time set before the shapes existed applies now.
+    if (_animationTime) {
+        ApplyAnimation();
     }
 
     _textureResults = CollectTextureResults(_glShapes, _editorMarkerShapes, *_textureManager);

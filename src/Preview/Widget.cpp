@@ -1,4 +1,5 @@
 #include "Preview/Widget.h"
+#include "Preview/AnimationClock.h"
 #include "Preview/CopyActions.h"
 #include "Preview/NoticeBar.h"
 #include "Preview/Pane.h"
@@ -32,9 +33,11 @@ NifPreviewWidget::NifPreviewWidget(
     _toolbar = new ViewToolbar(this);
     _notice = new NoticeBar(this);
     _copyActions = new CopyActions(a_organizer, this);
+    _animationClock = new AnimationClock(this);
 
     const auto showTextures = _preferences.ShowTextures();
     _toolbar->SetShowTextures(showTextures);
+    _toolbar->SetPlaysAnimation(_preferences.PlayAnimation());
     _leftPane = new NifPreviewPane(&a_organizer, _gameFiles, this);
     _rightPane = new NifPreviewPane(&a_organizer, _gameFiles, this);
     _leftPane->SetCamera(std::move(a_camera));
@@ -61,10 +64,13 @@ NifPreviewWidget::NifPreviewWidget(
     ConnectPane(_rightPane);
     ConnectCopyActions();
 
+    connect(_animationClock, &AnimationClock::Ticked, this, &NifPreviewWidget::ShowAnimationTime);
+
     UpdateSplitAvailability();
     if (_preferences.SplitPreview()) {
         SetSplitEnabled(true);
     }
+    UpdateAnimation();
 }
 
 NifPreviewWidget::~NifPreviewWidget() {
@@ -74,6 +80,12 @@ NifPreviewWidget::~NifPreviewWidget() {
 void NifPreviewWidget::showEvent(QShowEvent* a_event) {
     QWidget::showEvent(a_event);
     QTimer::singleShot(0, this, [this] { _hostChromeGuard.HideFor(this); });
+    UpdateAnimation();
+}
+
+void NifPreviewWidget::hideEvent(QHideEvent* a_event) {
+    QWidget::hideEvent(a_event);
+    UpdateAnimation();
 }
 
 void NifPreviewWidget::ConnectToolbar() {
@@ -83,6 +95,16 @@ void NifPreviewWidget::ConnectToolbar() {
     connect(_toolbar, &ViewToolbar::TexturesToggled, this, [this](const bool a_show) {
         _preferences.SetShowTextures(a_show);
         SetShowTextures(a_show);
+    });
+    connect(_toolbar, &ViewToolbar::AnimationToggled, this, [this](const bool a_plays) {
+        _preferences.SetPlayAnimation(a_plays);
+        UpdateAnimation();
+    });
+    connect(_toolbar, &ViewToolbar::SequenceChosen, this, [this](const QString& a_name) {
+        _leftPane->PlaySequence(a_name);
+        _rightPane->PlaySequence(a_name);
+        _animationClock->Restart();
+        UpdateAnimation();
     });
     connect(_toolbar, &ViewToolbar::SplitToggled, this, [this](const bool a_enabled) {
         _preferences.SetSplitPreview(a_enabled);
@@ -94,6 +116,7 @@ void NifPreviewWidget::ConnectToolbar() {
 void NifPreviewWidget::ConnectPane(NifPreviewPane* a_pane) {
     connect(a_pane, &NifPreviewPane::CameraMoved, this, [this, a_pane] { HandleCameraMoved(a_pane); });
     connect(a_pane, &NifPreviewPane::AxisViewShown, this, [this, a_pane] { MatchAxisView(a_pane); });
+    connect(a_pane, &NifPreviewPane::ViewChanged, this, &NifPreviewWidget::UpdateAnimation);
     connect(a_pane, &NifPreviewPane::TexturesLoaded, this, &NifPreviewWidget::HandleTexturesLoaded);
     connect(a_pane, &NifPreviewPane::HideOtherCopies, _copyActions, &CopyActions::MakeWinner);
     connect(a_pane, &NifPreviewPane::UnhideCopy, _copyActions, &CopyActions::Restore);
@@ -130,6 +153,7 @@ void NifPreviewWidget::SetSplitEnabled(const bool a_enabled) {
     }
     UpdateComparison();
     UpdateCollisionLock();
+    UpdateAnimation();
     _hostChromeGuard.HideFor(this);
 }
 
@@ -171,6 +195,23 @@ void NifPreviewWidget::SetCameraSyncEnabled(const bool a_enabled) {
     if (a_enabled && IsSplitViewEnabled()) {
         UpdateCameraSnapshots();
     }
+}
+
+void NifPreviewWidget::ShowAnimationTime(const std::optional<float> a_time) {
+    _leftPane->SetAnimationTime(a_time);
+    _rightPane->SetAnimationTime(a_time);
+}
+
+// The clock runs only while the preview is on screen, a shown mesh has animation and Play Animation is on. With
+// Play Animation off the meshes show at rest.
+void NifPreviewWidget::UpdateAnimation() {
+    const auto animated = _leftPane->IsAnimated() || (IsSplitViewEnabled() && _rightPane->IsAnimated());
+    _toolbar->SetAnimationAvailable(animated);
+    _toolbar->SetSequences(_leftPane->SequenceNames(), _leftPane->PlayingSequence());
+
+    const auto plays = animated && _toolbar->PlaysAnimation();
+    _animationClock->SetRunning(plays && isVisible());
+    ShowAnimationTime(plays ? std::optional(_animationClock->Seconds()) : std::nullopt);
 }
 
 void NifPreviewWidget::ResetCameras() {

@@ -1,4 +1,5 @@
 #include "DevBench/Inspection.h"
+#include "DevBench/AnimationDetails.h"
 #include "Preview/Pane.h"
 #include "Preview/Widget.h"
 #include "Render/Camera.h"
@@ -203,7 +204,7 @@ QJsonObject ProgramDetails(const QOpenGLShaderProgram* a_program) {
     return details;
 }
 
-QJsonObject ShapeDetails(const OpenGLShape& a_shape, const NifWidget& a_view) {
+QJsonObject ShapeDetails(const OpenGLShape& a_shape, const NifWidget& a_view, const Animation::Pose& a_pose) {
     QJsonArray textures;
     for (const auto& state : a_shape.Textures().SlotStates()) {
         textures.append(SlotDetails(state));
@@ -227,6 +228,10 @@ QJsonObject ShapeDetails(const OpenGLShape& a_shape, const NifWidget& a_view) {
         }
         details.insert("material", material);
     }
+    if (const auto* const animated = a_pose.Shader(a_shape.ShaderBlock())) {
+        details.insert("shaderBlock", static_cast<qint64>(a_shape.ShaderBlock()));
+        details.insert("animated", DevBench::ShaderValuesDetails(*animated));
+    }
     return details;
 }
 
@@ -237,7 +242,7 @@ QString PaneStatus(const PreviewPaneController& a_controller) {
     return a_controller.Providers().isEmpty() ? QStringLiteral("noProvider") : QStringLiteral("failed");
 }
 
-QJsonObject PaneDetails(const PreviewPaneSide a_side, const NifPreviewPane& a_pane) {
+QJsonObject PaneDetails(const PreviewPaneSide a_side, const NifPreviewPane& a_pane, const std::optional<float> a_time) {
     const auto& controller = a_pane.Controller();
 
     QJsonArray providers;
@@ -278,12 +283,22 @@ QJsonObject PaneDetails(const PreviewPaneSide a_side, const NifPreviewPane& a_pa
     const auto* const view = a_pane.View();
     details.insert("rendered", view != nullptr && view->isValid());
     if (view != nullptr) {
+        details.insert("animated", view->IsAnimated());
+        if (const auto sequences = view->SequenceNames(); !sequences.isEmpty()) {
+            details.insert("sequences", QJsonArray::fromStringList(sequences));
+            details.insert("sequence", view->PlayingSequence());
+        }
+        if (const auto shown = view->AnimationTime()) {
+            details.insert("animationTime", *shown);
+        }
+        const auto pose = a_time ? view->MeshAnimation().At(*a_time) : view->AnimationPose();
+
         QJsonArray shapes;
         for (const auto& shape : view->Shapes()) {
-            shapes.append(ShapeDetails(shape, *view));
+            shapes.append(ShapeDetails(shape, *view, pose));
         }
         for (const auto& shape : view->EditorMarkerShapes()) {
-            auto markerDetails = ShapeDetails(shape, *view);
+            auto markerDetails = ShapeDetails(shape, *view, pose);
             markerDetails.insert("editorMarker", true);
             shapes.append(markerDetails);
         }
@@ -313,13 +328,13 @@ QJsonObject PreviewSummary(const int a_id, const NifPreviewWidget& a_preview) {
     };
 }
 
-QJsonObject PreviewDetails(const int a_id, const NifPreviewWidget& a_preview) {
+QJsonObject PreviewDetails(const int a_id, const NifPreviewWidget& a_preview, const std::optional<float> a_time) {
     auto details = PreviewSummary(a_id, a_preview);
     details.insert("cameraSync", a_preview.IsCameraSyncEnabled());
 
-    QJsonArray panes {PaneDetails(PreviewPaneSide::kLeft, *a_preview.Pane(PreviewPaneSide::kLeft))};
+    QJsonArray panes {PaneDetails(PreviewPaneSide::kLeft, *a_preview.Pane(PreviewPaneSide::kLeft), a_time)};
     if (a_preview.IsSplitViewEnabled()) {
-        panes.append(PaneDetails(PreviewPaneSide::kRight, *a_preview.Pane(PreviewPaneSide::kRight)));
+        panes.append(PaneDetails(PreviewPaneSide::kRight, *a_preview.Pane(PreviewPaneSide::kRight), a_time));
     }
     details.insert("panes", panes);
     return details;

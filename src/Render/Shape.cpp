@@ -50,6 +50,7 @@ OpenGLShape::OpenGLShape(
     : _name {QString::fromStdString(a_niShape->name.get())}
     , _geometry {std::make_unique<OpenGLShapeGeometry>()}
     , _material {std::make_unique<OpenGLShapeMaterial>()}
+    , _restMaterial {std::make_unique<OpenGLShapeMaterial>()}
     , _textures {std::make_unique<OpenGLShapeTextures>()}
     , _drawState {std::make_unique<OpenGLShapeDrawState>()} {
     const auto* const functions = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
@@ -61,6 +62,7 @@ OpenGLShape::OpenGLShape(
     }
 
     auto* const shader = a_nifFile->GetShader(a_niShape);
+    _shaderBlock = a_nifFile->GetBlockID(shader);
     _isRefractionProxy = IsRefractionDistortionProxy(a_nifFile, a_niShape);
     _shaderType = ClassifyShaderType(a_nifFile, shader);
     const bool isPBR = _shaderType == ShaderManager::kSKPBR;
@@ -95,6 +97,7 @@ OpenGLShape::OpenGLShape(
     } else {
         _textures->UseDefaultTextures(a_textureManager);
     }
+    *_restMaterial = *_material;
 }
 
 OpenGLShape::~OpenGLShape() = default;
@@ -105,6 +108,10 @@ void OpenGLShape::Destroy() {
     if (_geometry) {
         _geometry->DestroyWithCurrentContext();
     }
+}
+
+void OpenGLShape::Animate(const Animation::ShaderValues* const a_values) {
+    *_material = a_values != nullptr ? _restMaterial->Animated(*a_values) : *_restMaterial;
 }
 
 void OpenGLShape::SetupShaders(QOpenGLShaderProgram* a_program) const {
@@ -140,6 +147,10 @@ const QString& OpenGLShape::MaterialPath() const noexcept {
 
 ShaderManager::ShaderType OpenGLShape::ShaderType() const noexcept {
     return _shaderType;
+}
+
+std::uint32_t OpenGLShape::ShaderBlock() const noexcept {
+    return _shaderBlock;
 }
 
 const QMatrix4x4& OpenGLShape::ModelMatrix() const noexcept {

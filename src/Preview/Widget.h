@@ -10,7 +10,9 @@
 #include <QWidget>
 
 #include <memory>
+#include <optional>
 
+class AnimationClock;
 class CopyActions;
 class GameFiles;
 class NifPreviewPane;
@@ -58,6 +60,7 @@ public:
 
 protected:
     void showEvent(QShowEvent* a_event) override;
+    void hideEvent(QHideEvent* a_event) override;
 
 private:
     void ConnectToolbar();
@@ -68,6 +71,8 @@ private:
     void SetShowEditorMarkers(bool a_show);
     void SetShowTextures(bool a_show);
     void SetCameraSyncEnabled(bool a_enabled);
+    void ShowAnimationTime(std::optional<float> a_time);
+    void UpdateAnimation();
     void ResetCameras();
     void HandleTexturesLoaded();
     void UpdateComparison();
@@ -94,6 +99,8 @@ private:
     NifPreviewPane* _leftPane = nullptr;
     NifPreviewPane* _rightPane = nullptr;
     CopyActions* _copyActions = nullptr;
+    // Both panes play on it, so they stay in step.
+    AnimationClock* _animationClock = nullptr;
     CameraSynchronizer _cameraSynchronizer;
     bool _applyingCameraSync = false;
     bool _rightPaneInitialized = false;

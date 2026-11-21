@@ -5,7 +5,12 @@
 #include <QOpenGLFunctions_2_1>
 #include <QString>
 
+#include <cstdint>
 #include <memory>
+
+namespace Animation {
+struct ShaderValues;
+}
 
 class OpenGLShapeDrawState;
 class OpenGLShapeGeometry;
@@ -37,6 +42,8 @@ public:
     OpenGLShape& operator=(OpenGLShape&&) noexcept;
 
     void Destroy();
+    // Draws with these animated shader values from now on. Null goes back to the shader's own values.
+    void Animate(const Animation::ShaderValues* a_values);
     void SetupShaders(QOpenGLShaderProgram* a_program) const;
     void Draw(QOpenGLFunctions_2_1* a_f) const;
 
@@ -44,6 +51,8 @@ public:
     [[nodiscard]] const OpenGLShapeTextures& Textures() const noexcept;
     [[nodiscard]] const QString& MaterialPath() const noexcept;
     [[nodiscard]] ShaderManager::ShaderType ShaderType() const noexcept;
+    // The shader's block in the NIF, which its controllers name as their target.
+    [[nodiscard]] std::uint32_t ShaderBlock() const noexcept;
     [[nodiscard]] const QMatrix4x4& ModelMatrix() const noexcept;
     [[nodiscard]] const nifly::BoundingSphere& Bounds() const noexcept;
     [[nodiscard]] const BoundingBox& Box() const noexcept;
@@ -58,6 +67,9 @@ private:
     QString _materialPath;
     std::unique_ptr<OpenGLShapeGeometry> _geometry;
     std::unique_ptr<OpenGLShapeMaterial> _material;
+    // The material as the shader stores it, which animation starts from.
+    std::unique_ptr<OpenGLShapeMaterial> _restMaterial;
+    std::uint32_t _shaderBlock = UINT32_MAX;
     std::unique_ptr<OpenGLShapeTextures> _textures;
     std::unique_ptr<OpenGLShapeDrawState> _drawState;
     ShaderManager::ShaderType _shaderType = ShaderManager::kSKDefault;

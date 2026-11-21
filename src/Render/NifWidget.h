@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Animation/SceneAnimation.h"
 #include "Nif/BoundingBox.h"
 #include "Render/AxisView.h"
 #include "Render/Camera.h"
@@ -19,6 +20,7 @@
 #include <nifly/NifFile.hpp>
 
 #include <memory>
+#include <optional>
 
 class GameFiles;
 class OpenGLCollisionOverlay;
@@ -89,6 +91,24 @@ public:
     void SetShowEditorMarkers(bool a_showEditorMarkers);
     void ResetCamera();
 
+    [[nodiscard]] bool IsAnimated() const noexcept {
+        return _animation.IsAnimated();
+    }
+    [[nodiscard]] const Animation::SceneAnimation& MeshAnimation() const noexcept {
+        return _animation;
+    }
+    // The moment of the animation the view shows, in seconds. Empty shows the mesh at rest.
+    [[nodiscard]] std::optional<float> AnimationTime() const noexcept {
+        return _animationTime;
+    }
+    void SetAnimationTime(std::optional<float> a_time);
+    // The mesh's named animations, such as Open and Close, and the one that plays. Empty when it has none.
+    [[nodiscard]] QStringList SequenceNames() const;
+    [[nodiscard]] QString PlayingSequence() const;
+    void PlaySequence(const QString& a_name);
+    // The animated values at the shown moment. Empty at rest.
+    [[nodiscard]] Animation::Pose AnimationPose() const;
+
 signals:
     void TexturesLoaded(const QVector<TextureResult>& a_results);
     // A view button turned the camera to its view.
@@ -106,6 +126,7 @@ protected:
     void resizeGL(int a_w, int a_h) override;
 
 private:
+    void ApplyAnimation();
     [[nodiscard]] float AspectRatio() const;
     // A NIF without meshes, such as a skeleton, has nothing to show but its collision, so the collision is drawn
     // whatever the collision toggle says. The toggle keeps the user's choice: both panes share it and it carries over
@@ -130,6 +151,9 @@ private:
     void UpdateSceneBounds();
 
     std::shared_ptr<nifly::NifFile> _nifFile;
+    // It reads the file's keys, so it's declared after the file.
+    Animation::SceneAnimation _animation;
+    std::optional<float> _animationTime;
     bool _isGrassModel = false;
 
     // The texture manager reads through it, so it's declared first and outlives the manager.

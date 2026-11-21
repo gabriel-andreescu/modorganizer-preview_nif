@@ -40,6 +40,10 @@ public:
     void SetShowEditorMarkers(bool a_showEditorMarkers);
     void SetTexturesOpen(bool a_open);
     void SetComparison(std::optional<QVector<TextureResult>> a_other);
+    // The moment of the animation the view shows, in seconds. Empty shows the mesh at rest.
+    void SetAnimationTime(std::optional<float> a_time);
+    // Plays the named animation, in this mesh and in the ones the pane shows after it.
+    void PlaySequence(const QString& a_name);
     void ResetCamera();
 
     [[nodiscard]] QSharedPointer<Camera> SharedCamera() const {
@@ -67,6 +71,9 @@ public:
     [[nodiscard]] bool ShowsOnlyCollision() const noexcept {
         return _onlyCollision;
     }
+    [[nodiscard]] bool IsAnimated() const;
+    [[nodiscard]] QStringList SequenceNames() const;
+    [[nodiscard]] QString PlayingSequence() const;
     [[nodiscard]] bool TexturesOpen() const;
     // Empty until the view loads its textures.
     [[nodiscard]] QVector<TextureResult> TextureResults() const;
@@ -75,6 +82,8 @@ signals:
     void CameraMoved();
     // A view button turned this pane's camera to its view.
     void AxisViewShown();
+    // The pane shows another mesh, or none.
+    void ViewChanged();
     void TexturesLoaded();
     void HideOtherCopies(const QVector<DataFileSource>& a_copies, qsizetype a_index, const QString& a_label);
     void UnhideCopy(const DataFileSource& a_copy, const QString& a_label);
@@ -100,6 +109,8 @@ private:
     bool _showEditorMarkers = false;
     bool _texturesOpen = false;
     bool _onlyCollision = false;
+    std::optional<float> _animationTime;
+    QString _sequence;
 
     QSharedPointer<Camera> _camera;
     QMetaObject::Connection _cameraConnection;

@@ -10,6 +10,10 @@
 
 class QOpenGLShaderProgram;
 
+namespace Animation {
+struct ShaderValues;
+}
+
 namespace nifly {
 class BSEffectShaderProperty;
 class BSLightingShaderProperty;
@@ -24,6 +28,8 @@ struct OpenGLShapeTextureFeatureFlags {
 class OpenGLShapeMaterial {
 public:
     void Apply(nifly::NiShader* a_shader, bool a_isPBR, const Fo4Material::Material& a_material);
+    // A copy with the animated values in place of the shader's own.
+    [[nodiscard]] OpenGLShapeMaterial Animated(const Animation::ShaderValues& a_values) const;
     void SetupUniforms(QOpenGLShaderProgram* a_program, ShaderManager::ShaderType a_shaderType) const;
 
     [[nodiscard]] OpenGLShapeTextureFeatureFlags TextureFeatureFlags() const noexcept {
@@ -40,6 +46,9 @@ public:
     }
 
 private:
+    void AnimateSurface(const Animation::ShaderValues& a_values);
+    void AnimateFalloff(const Animation::ShaderValues& a_values);
+    void AnimateSpecular(const Animation::ShaderValues& a_values);
     void ApplyCommonShaderMaterial(nifly::NiShader* a_shader);
     void ApplyLightingShaderMaterial(nifly::BSLightingShaderProperty* a_shader);
     void ApplyEffectShaderMaterial(nifly::BSEffectShaderProperty* a_shader);
@@ -50,6 +59,7 @@ private:
     void SetupMultilayerUniforms(QOpenGLShaderProgram* a_program, ShaderManager::ShaderType a_shaderType) const;
 
     bool _isPBR = false;
+    bool _isEffectShader = false;
 
     QVector3D _specColor {1.0F, 1.0F, 1.0F};
     float _specStrength = 1.0F;

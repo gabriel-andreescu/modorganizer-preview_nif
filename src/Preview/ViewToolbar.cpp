@@ -2,6 +2,9 @@
 #include "Preview/FlowLayout.h"
 
 #include <QCheckBox>
+#include <QComboBox>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QPushButton>
 #include <QSignalBlocker>
 
@@ -20,6 +23,18 @@ ViewToolbar::ViewToolbar(QWidget* a_parent)
     _editorMarkersBox->setToolTip(tr("Show the Creation Kit markers the game hides"));
     _texturesBox = new QCheckBox(tr("Show Textures"), this);
     _texturesBox->setToolTip(tr("List the textures and the mod each one comes from"));
+    _animationBox = new QCheckBox(tr("Play Animation"), this);
+    _animationBox->setToolTip(tr("Play the mesh's own animation"));
+    _sequenceRow = new QWidget(this);
+    _sequenceBox = new QComboBox(_sequenceRow);
+    _sequenceBox->setToolTip(tr("The animation that plays, of the ones this mesh has"));
+    _sequenceBox->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    auto* const sequenceLabel = new QLabel(tr("Animation:"), _sequenceRow);
+    sequenceLabel->setBuddy(_sequenceBox);
+    auto* const sequenceLayout = new QHBoxLayout(_sequenceRow);
+    sequenceLayout->setContentsMargins(0, 0, 0, 0);
+    sequenceLayout->addWidget(sequenceLabel);
+    sequenceLayout->addWidget(_sequenceBox);
     _splitBox = new QCheckBox(tr("Split Preview"), this);
     _cameraSyncBox = new QCheckBox(tr("Sync Cameras"), this);
     _cameraSyncBox->setToolTip(tr("Move both cameras together"));
@@ -30,6 +45,8 @@ ViewToolbar::ViewToolbar(QWidget* a_parent)
     layout->addWidget(_collisionBox);
     layout->addWidget(_editorMarkersBox);
     layout->addWidget(_texturesBox);
+    layout->addWidget(_animationBox);
+    layout->addWidget(_sequenceRow);
     layout->addWidget(_splitBox);
     layout->addWidget(_cameraSyncBox);
 
@@ -40,6 +57,8 @@ ViewToolbar::ViewToolbar(QWidget* a_parent)
     });
     connect(_editorMarkersBox, &QCheckBox::toggled, this, &ViewToolbar::EditorMarkersToggled);
     connect(_texturesBox, &QCheckBox::toggled, this, &ViewToolbar::TexturesToggled);
+    connect(_animationBox, &QCheckBox::toggled, this, &ViewToolbar::AnimationToggled);
+    connect(_sequenceBox, &QComboBox::currentTextChanged, this, &ViewToolbar::SequenceChosen);
     connect(_splitBox, &QCheckBox::toggled, this, [this](const bool a_enabled) {
         UpdateSplitControls();
         emit SplitToggled(a_enabled);
@@ -49,6 +68,34 @@ ViewToolbar::ViewToolbar(QWidget* a_parent)
     UpdateCollisionBox();
     UpdateSplitControls();
     SetSplitUnavailableReason({});
+    SetAnimationAvailable(false);
+    SetSequences({}, {});
+}
+
+void ViewToolbar::SetPlaysAnimation(const bool a_plays) {
+    const QSignalBlocker blocker(_animationBox);
+    _animationBox->setChecked(a_plays);
+}
+
+void ViewToolbar::SetAnimationAvailable(const bool a_available) {
+    _animationBox->setVisible(a_available);
+}
+
+void ViewToolbar::SetSequences(const QStringList& a_names, const QString& a_playing) {
+    const QSignalBlocker blocker(_sequenceBox);
+    // Choosing an animation ends up here while the list is still handling the choice, so it's only rebuilt for
+    // other names.
+    if (a_names != _sequenceNames) {
+        _sequenceNames = a_names;
+        _sequenceBox->clear();
+        _sequenceBox->addItems(a_names);
+    }
+    _sequenceBox->setCurrentText(a_playing);
+    _sequenceRow->setVisible(a_names.size() > 1);
+}
+
+bool ViewToolbar::PlaysAnimation() const {
+    return _animationBox->isChecked();
 }
 
 void ViewToolbar::SetShowCollision(const bool a_show) {

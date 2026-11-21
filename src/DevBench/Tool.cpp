@@ -33,6 +33,7 @@ QJsonObject Descriptor() {
         {"yaw", QJsonObject {{"type", "number"}}},
         {"pitch", QJsonObject {{"type", "number"}}},
         {"zoom", QJsonObject {{"type", "number"}, {"minimum", 0}}},
+        {"time", QJsonObject {{"type", "number"}, {"minimum", 0}}},
     };
 
     return {
@@ -42,6 +43,9 @@ QJsonObject Descriptor() {
             "and program link state, each texture slot's path and fallback, and per texture the slots that use it, "
             "every copy in game order, the copy the preview read and its load status. "
             "list returns live previews with ids. inspect, close and camera take an id, or use the only visible preview. "
+            "inspect reports whether each pane's mesh is animated and each shape's animated shader values, at time "
+            "seconds into the animation when given and as shown otherwise. alphaPass and blendedPass always describe "
+            "the shown moment. "
             "open previews a data path such as meshes/foo.nif in a standalone dialog. close closes the window showing "
             "the preview. camera rotates a pane by yaw and pitch "
             "degrees and multiplies its distance by zoom, as mouse input does. Use dialogs for the preview's own "
@@ -72,13 +76,15 @@ QJsonObject CaptureDescriptor() {
         {"camera", QJsonObject {{"type", "string"}, {"enum", QJsonArray {"reset", "current"}}}},
         {"yaw", QJsonObject {{"type", "number"}}},
         {"pitch", QJsonObject {{"type", "number"}}},
+        {"time", QJsonObject {{"type", "number"}, {"minimum", 0}}},
     };
     return {
         {
             "description",
             "Renders a NIF preview pane offscreen without UI. id selects a preview from preview_nif list, or the only "
             "visible one. width and height default to 512. camera=reset (default) frames the mesh first, then yaw and "
-            "pitch rotate it in degrees.",
+            "pitch rotate it in degrees. time renders that many seconds into the mesh's animation. Without it the "
+            "mesh renders at rest.",
         },
         {"inputSchema", QJsonObject {{"type", "object"}, {"properties", properties}}},
     };
@@ -86,6 +92,11 @@ QJsonObject CaptureDescriptor() {
 
 std::optional<int> OptionalId(const QJsonObject& a_arguments) {
     return a_arguments.contains("id") ? std::optional(a_arguments["id"].toInt()) : std::nullopt;
+}
+
+std::optional<float> OptionalTime(const QJsonObject& a_arguments) {
+    return a_arguments.contains("time") ? std::optional(static_cast<float>(a_arguments["time"].toDouble()))
+                                        : std::nullopt;
 }
 }
 
@@ -141,6 +152,7 @@ QJsonObject Tool::Capture(const QJsonObject& a_arguments) {
         .resetCamera = a_arguments["camera"].toString("reset") == "reset",
         .yaw = static_cast<float>(a_arguments["yaw"].toDouble()),
         .pitch = static_cast<float>(a_arguments["pitch"].toDouble()),
+        .time = OptionalTime(a_arguments),
         .outputPath = a_arguments["outputPath"].toString(),
     };
     const auto size = CapturePane(*entry.widget, request);
@@ -225,7 +237,7 @@ QJsonObject Tool::List() {
 
 QJsonObject Tool::Inspect(const QJsonObject& a_arguments) {
     const auto entry = _previews.Find(OptionalId(a_arguments));
-    return PreviewDetails(entry.id, *entry.widget);
+    return PreviewDetails(entry.id, *entry.widget, OptionalTime(a_arguments));
 }
 
 QJsonObject Tool::Open(const QJsonObject& a_arguments) {

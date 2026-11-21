@@ -169,6 +169,32 @@ void NifPreviewPane::SetComparison(std::optional<QVector<TextureResult>> a_other
     _texturesPanel->SetComparison(std::move(a_other));
 }
 
+void NifPreviewPane::SetAnimationTime(const std::optional<float> a_time) {
+    _animationTime = a_time;
+    if (_nifWidget) {
+        _nifWidget->SetAnimationTime(a_time);
+    }
+}
+
+void NifPreviewPane::PlaySequence(const QString& a_name) {
+    _sequence = a_name;
+    if (_nifWidget) {
+        _nifWidget->PlaySequence(a_name);
+    }
+}
+
+bool NifPreviewPane::IsAnimated() const {
+    return _nifWidget != nullptr && _nifWidget->IsAnimated();
+}
+
+QStringList NifPreviewPane::SequenceNames() const {
+    return _nifWidget != nullptr ? _nifWidget->SequenceNames() : QStringList {};
+}
+
+QString NifPreviewPane::PlayingSequence() const {
+    return _nifWidget != nullptr ? _nifWidget->PlayingSequence() : QString();
+}
+
 void NifPreviewPane::ResetCamera() {
     if (_nifWidget) {
         _nifWidget->ResetCamera();
@@ -269,6 +295,8 @@ void NifPreviewPane::ReloadView() {
     );
     nifWidget->SetShowCollision(_showCollision);
     nifWidget->SetShowEditorMarkers(_showEditorMarkers);
+    nifWidget->PlaySequence(_sequence);
+    nifWidget->SetAnimationTime(_animationTime);
     nifWidget->setMinimumSize(240, 240);
     connect(nifWidget, &NifWidget::TexturesLoaded, this, &NifPreviewPane::HandleTexturesLoaded);
     connect(nifWidget, &NifWidget::AxisViewShown, this, &NifPreviewPane::AxisViewShown);
@@ -307,4 +335,5 @@ void NifPreviewPane::SetViewWidget(QWidget* a_widget) {
     }
 
     _viewLayout->addWidget(a_widget, 1);
+    emit ViewChanged();
 }

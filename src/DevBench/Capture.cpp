@@ -27,7 +27,10 @@ QSize CapturePane(const NifPreviewWidget& a_preview, const CaptureRequest& a_req
         view->SharedCamera()->Rotate(a_request.yaw, a_request.pitch);
     }
 
+    const auto shownTime = view->AnimationTime();
+    view->SetAnimationTime(a_request.time);
     const auto image = view->RenderImage(a_request.size);
+    view->SetAnimationTime(shownTime);
     if (image.isNull() || !image.save(a_request.outputPath, "PNG")) {
         throw std::runtime_error(
             QStringLiteral("Could not write the preview capture to %1").arg(a_request.outputPath).toStdString()

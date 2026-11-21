@@ -16,6 +16,8 @@ public:
     void SetSplitPreview(bool a_enabled) const;
     [[nodiscard]] bool ShowTextures() const;
     void SetShowTextures(bool a_show) const;
+    [[nodiscard]] bool PlayAnimation() const;
+    void SetPlayAnimation(bool a_play) const;
     // The NIF Browser window's saved geometry and the state of its splitter. Empty until first saved.
     [[nodiscard]] QByteArray BrowserGeometry() const;
     void SetBrowserGeometry(const QByteArray& a_geometry) const;

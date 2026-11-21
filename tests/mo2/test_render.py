@@ -22,6 +22,8 @@ class Case:
     split: bool = False
     yaw: float = 0
     pitch: float = 0
+    # Seconds into the mesh's animation. Without it the mesh renders at rest.
+    time: float | None = None
 
 
 SKYRIM = Game("Skyrim Special Edition", "skyrim-se", ("Skyrim - ",))
@@ -96,6 +98,15 @@ CASES = [
     (
         SKYRIM,
         Case("fire-volume", "meshes/effects/bfxfirevol01.nif", yaw=-90, pitch=-15),
+    ),
+    # Its flames scroll and flicker by themselves.
+    (
+        SKYRIM,
+        Case(
+            "giant-flame-playing",
+            "meshes/clutter/blackreach/blackreachgiantflame01.nif",
+            time=1.0,
+        ),
     ),
     (SKYRIM, Case("snow-drift-tip", "meshes/effects/fxambsnowblowingdrifttip.nif")),
     (SKYRIM, Case("snow-plane", "meshes/effects/fxambsnowblowingplane.nif")),
@@ -276,6 +287,16 @@ CASES = [
         FALLOUT4,
         Case("diner-sign", "meshes/setdressing/diner/dinerentrancesign01.nif"),
     ),
+    # At rest the shield is all but invisible. Its looping animation fades the fire in.
+    (FALLOUT4, Case("fire-shield-hit", "meshes/effects/fireshieldhiteffect.nif")),
+    (
+        FALLOUT4,
+        Case(
+            "fire-shield-hit-playing",
+            "meshes/effects/fireshieldhiteffect.nif",
+            time=0.8,
+        ),
+    ),
     (FALLOUT4, Case("nuka-quantum", "meshes/props/nukacolabottlequantum.nif")),
     (
         FALLOUT4,
@@ -384,6 +405,7 @@ def test_render(devbench, visual, managed_game, game, case):
                 "height": 1024,
                 "yaw": case.yaw,
                 "pitch": case.pitch,
+                **({} if case.time is None else {"time": case.time}),
             },
         )
     finally:

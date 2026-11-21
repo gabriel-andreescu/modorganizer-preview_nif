@@ -1,4 +1,5 @@
 #include "Render/ShapeMaterial.h"
+#include "Animation/ShaderValues.h"
 #include "Nif/ShaderFlags.h"
 
 #include <QOpenGLShaderProgram>
@@ -6,6 +7,7 @@
 #include <nifly/NifFile.hpp>
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
 bool UsesEffectShader(const ShaderManager::ShaderType a_shaderType) {
@@ -47,7 +49,81 @@ void OpenGLShapeMaterial::Apply(
     }
 
     if (auto* const effectShader = dynamic_cast<nifly::BSEffectShaderProperty*>(a_shader)) {
+        _isEffectShader = true;
         ApplyEffectShaderMaterial(effectShader);
+    }
+}
+
+OpenGLShapeMaterial OpenGLShapeMaterial::Animated(const Animation::ShaderValues& a_values) const {
+    using Animation::ShaderColor;
+    using Animation::ShaderFloat;
+
+    auto material = *this;
+    material.AnimateSurface(a_values);
+    material.AnimateFalloff(a_values);
+    material.AnimateSpecular(a_values);
+
+    if (const auto& color = a_values[ShaderColor::kEmissive]) {
+        material._glowColor.setRgbF(color->x, color->y, color->z, material._glowColor.alphaF());
+    }
+    if (const auto& alpha = a_values[ShaderFloat::kAlpha]) {
+        // An effect shader's opacity is the alpha of its base color.
+        if (_isEffectShader) {
+            material._glowColor.setAlphaF(qBound(0.0F, *alpha, 1.0F));
+        } else {
+            material._alpha = *alpha;
+        }
+    }
+    return material;
+}
+
+void OpenGLShapeMaterial::AnimateSurface(const Animation::ShaderValues& a_values) {
+    using Animation::ShaderFloat;
+
+    _glowMult = a_values[ShaderFloat::kEmissiveMultiple].value_or(_glowMult);
+    _uvOffset = {
+        a_values[ShaderFloat::kUOffset].value_or(_uvOffset.x()),
+        a_values[ShaderFloat::kVOffset].value_or(_uvOffset.y()),
+    };
+    _uvScale = {
+        a_values[ShaderFloat::kUScale].value_or(_uvScale.x()),
+        a_values[ShaderFloat::kVScale].value_or(_uvScale.y()),
+    };
+    _refractionStrength = a_values[ShaderFloat::kRefractionStrength].value_or(_refractionStrength);
+    _envReflection = a_values[ShaderFloat::kReflectionStrength].value_or(_envReflection);
+}
+
+void OpenGLShapeMaterial::AnimateFalloff(const Animation::ShaderValues& a_values) {
+    using Animation::ShaderFloat;
+
+    // Keys give the falloff angles in degrees. The shader block and the shaders hold their cosines, and the games
+    // convert the same way.
+    if (const auto& degrees = a_values[ShaderFloat::kFalloffStartAngle]) {
+        _falloffParams.setX(std::cos(qDegreesToRadians(*degrees)));
+    }
+    if (const auto& degrees = a_values[ShaderFloat::kFalloffStopAngle]) {
+        _falloffParams.setY(std::cos(qDegreesToRadians(*degrees)));
+    }
+    _falloffParams.setZ(a_values[ShaderFloat::kFalloffStartOpacity].value_or(_falloffParams.z()));
+    _falloffParams.setW(a_values[ShaderFloat::kFalloffStopOpacity].value_or(_falloffParams.w()));
+}
+
+// The PBR shader reads its specular values from its own parameters, so those follow too.
+void OpenGLShapeMaterial::AnimateSpecular(const Animation::ShaderValues& a_values) {
+    using Animation::ShaderColor;
+    using Animation::ShaderFloat;
+
+    if (const auto& strength = a_values[ShaderFloat::kSpecularStrength]) {
+        _specStrength = *strength;
+        _pbrParams1.setX(std::max(*strength, 0.0F));
+    }
+    if (const auto& glossiness = a_values[ShaderFloat::kGlossiness]) {
+        _specGlossiness = qBound(0.0F, *glossiness, 128.0F);
+        _pbrParams1.setZ(std::max(*glossiness, 0.0F));
+    }
+    if (const auto& color = a_values[ShaderColor::kSpecular]) {
+        _specColor = ConvertVector3(*color);
+        _pbrParams2 = QVector4D(_specColor, _pbrParams2.w());
     }
 }
 
