@@ -2,7 +2,7 @@ set_xmakever("3.1.1")
 set_project("preview_nif")
 set_policy("package.requires_lock", true)
 
-local version = "0.5.1"
+local version = "0.6.0"
 
 add_repositories("mopk https://github.com/gabriel-andreescu/ModOrganizerPluginKit")
 add_repositories("xmake-luals https://github.com/gabriel-andreescu/xmake-luals.git")

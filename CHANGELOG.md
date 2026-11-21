@@ -4,6 +4,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-21
+
 ### Added
 
 - Adds a NIF Browser to MO2's Tools menu for browsing and previewing all meshes,

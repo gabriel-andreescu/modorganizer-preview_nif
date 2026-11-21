@@ -7,6 +7,42 @@
   "NexusUrl": "https://www.nexusmods.com/skyrimspecialedition/mods/137741",
   "Versions": [
     {
+      "Version": "0.6.0.0b",
+      "Released": "2026-11-21",
+      "MinSupport": "2.5.3",
+      "MaxSupport": "2.5.3",
+      "MinWorking": "2.5.3",
+      "MaxWorking": "",
+      "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.6.0/preview_nif-0.6.0-MO2-2.5.3beta12.zip",
+      "PluginPath": [
+        "preview_nif.dll",
+        "preview_nif_browser.dll",
+        "data/shaders",
+        "data/icons"
+      ],
+      "LocalePath": [],
+      "DataPath": [],
+      "ReleaseNotes": []
+    },
+    {
+      "Version": "0.6.0.0b",
+      "Released": "2026-11-21",
+      "MinSupport": "2.5.2",
+      "MaxSupport": "2.5.2",
+      "MinWorking": "2.5.2",
+      "MaxWorking": "",
+      "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-preview_nif/releases/download/0.6.0/preview_nif-0.6.0-MO2-2.5.2.zip",
+      "PluginPath": [
+        "preview_nif.dll",
+        "preview_nif_browser.dll",
+        "data/shaders",
+        "data/icons"
+      ],
+      "LocalePath": [],
+      "DataPath": [],
+      "ReleaseNotes": []
+    },
+    {
       "Version": "0.5.1.0b",
       "Released": "2026-05-14",
       "MinSupport": "2.5.3",
