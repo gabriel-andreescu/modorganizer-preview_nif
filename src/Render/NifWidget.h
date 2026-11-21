@@ -91,6 +91,8 @@ public:
 
 signals:
     void TexturesLoaded(const QVector<TextureResult>& a_results);
+    // A view button turned the camera to its view.
+    void AxisViewShown();
 
 protected:
     void mousePressEvent(QMouseEvent* a_event) override;

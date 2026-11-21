@@ -242,6 +242,7 @@ void NifWidget::ShowAxisView(const ViewAxis a_axis) {
     const ViewAngles current {.yaw = _camera->Yaw(), .pitch = _camera->Pitch()};
     const auto view = NextAxisView(a_axis, current, SceneOpeningView().yaw);
     _camera->SetAngles(view.yaw, view.pitch);
+    emit AxisViewShown();
 }
 
 void NifWidget::FrameCamera(const ViewAngles& a_angles) {

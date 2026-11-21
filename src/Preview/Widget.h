@@ -77,6 +77,7 @@ private:
     void InitializeRightPane();
     void HandleCameraMoved(NifPreviewPane* a_pane);
     void SyncCameraDelta(NifPreviewPane* a_sourcePane, const CameraState& a_newState);
+    void MatchAxisView(NifPreviewPane* a_sourcePane);
     void UpdateCameraSnapshot(NifPreviewPane* a_pane);
     void UpdateCameraSnapshots();
     [[nodiscard]] PreviewPaneSide SideForPane(NifPreviewPane* a_pane) const;

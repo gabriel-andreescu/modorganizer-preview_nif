@@ -93,6 +93,7 @@ void NifPreviewWidget::ConnectToolbar() {
 
 void NifPreviewWidget::ConnectPane(NifPreviewPane* a_pane) {
     connect(a_pane, &NifPreviewPane::CameraMoved, this, [this, a_pane] { HandleCameraMoved(a_pane); });
+    connect(a_pane, &NifPreviewPane::AxisViewShown, this, [this, a_pane] { MatchAxisView(a_pane); });
     connect(a_pane, &NifPreviewPane::TexturesLoaded, this, &NifPreviewWidget::HandleTexturesLoaded);
     connect(a_pane, &NifPreviewPane::HideOtherCopies, _copyActions, &CopyActions::MakeWinner);
     connect(a_pane, &NifPreviewPane::UnhideCopy, _copyActions, &CopyActions::Restore);
@@ -269,6 +270,22 @@ void NifPreviewWidget::SyncCameraDelta(NifPreviewPane* a_sourcePane, const Camer
 
     _applyingCameraSync = true;
     targetPane->SharedCamera()->SetState(*targetState);
+    _applyingCameraSync = false;
+    UpdateCameraSnapshot(targetPane);
+}
+
+// Camera sync carries a pane's turn over to the other, so panes that were apart end on different views. A view button
+// puts both on its view.
+void NifPreviewWidget::MatchAxisView(NifPreviewPane* a_sourcePane) {
+    auto* const targetPane = a_sourcePane == _leftPane ? _rightPane : _leftPane;
+    const auto target = targetPane->SharedCamera();
+    if (!IsCameraSyncEnabled() || !target->HasState()) {
+        return;
+    }
+
+    const auto source = a_sourcePane->SharedCamera();
+    _applyingCameraSync = true;
+    target->SetAngles(source->Yaw(), source->Pitch());
     _applyingCameraSync = false;
     UpdateCameraSnapshot(targetPane);
 }

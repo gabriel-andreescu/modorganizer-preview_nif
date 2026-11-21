@@ -271,6 +271,7 @@ void NifPreviewPane::ReloadView() {
     nifWidget->SetShowEditorMarkers(_showEditorMarkers);
     nifWidget->setMinimumSize(240, 240);
     connect(nifWidget, &NifWidget::TexturesLoaded, this, &NifPreviewPane::HandleTexturesLoaded);
+    connect(nifWidget, &NifWidget::AxisViewShown, this, &NifPreviewPane::AxisViewShown);
     SetViewWidget(nifWidget);
 }
 

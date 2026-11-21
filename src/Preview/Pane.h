@@ -73,6 +73,8 @@ public:
 
 signals:
     void CameraMoved();
+    // A view button turned this pane's camera to its view.
+    void AxisViewShown();
     void TexturesLoaded();
     void HideOtherCopies(const QVector<DataFileSource>& a_copies, qsizetype a_index, const QString& a_label);
     void UnhideCopy(const DataFileSource& a_copy, const QString& a_label);
