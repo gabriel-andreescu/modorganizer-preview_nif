@@ -14,14 +14,6 @@
         ["bodyslide-material-file 2026.09.29#f56260b5"] = {
             version = "2026.09.29"
         },
-        ["cmake#f56260b5"] = {
-            repo = {
-                branch = "master",
-                commit = "635956946b104aa1108d43267dd8878e13d3891a",
-                url = "https://github.com/xmake-io/xmake-repo.git"
-            },
-            version = "4.3.4"
-        },
         ["devbench-api 0.1.0#f56260b5"] = {
             repo = {
                 commit = "a9eef3d0425723f99f9fc7da8a93c67ede57ec89",
@@ -30,11 +22,6 @@
             version = "0.1.0"
         },
         ["eigen 3.4.0#f56260b5"] = {
-            repo = {
-                branch = "master",
-                commit = "635956946b104aa1108d43267dd8878e13d3891a",
-                url = "https://github.com/xmake-io/xmake-repo.git"
-            },
             version = "3.4.0"
         },
         ["gli 2026.04.05#f56260b5"] = {
@@ -94,14 +81,6 @@
         },
         ["nifly 2026.09.14#f56260b5"] = {
             version = "2026.09.14"
-        },
-        ["ninja#f56260b5"] = {
-            repo = {
-                branch = "master",
-                commit = "635956946b104aa1108d43267dd8878e13d3891a",
-                url = "https://github.com/xmake-io/xmake-repo.git"
-            },
-            version = "v1.13.2"
         },
         ["qt6base 6.7.1#f56260b5"] = {
             repo = {
