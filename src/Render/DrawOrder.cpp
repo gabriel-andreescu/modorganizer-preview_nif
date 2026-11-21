@@ -10,10 +10,10 @@ namespace {
 // float rounding. Depths in 0.01-unit steps make them tie, so they keep the file's order.
 constexpr float kDepthStep = 0.01F;
 
-// OpenGL view space looks down -Z, so a smaller depth is farther away.
+// OpenGL view space looks down -Z, so a smaller depth is farther away. A shape's bounds are in world space already.
 float ViewDepth(const OpenGLShape& a_shape, const QMatrix4x4& a_viewMatrix) {
     const auto& center = a_shape.Bounds().center;
-    const float depth = (a_viewMatrix * a_shape.ModelMatrix()).map(QVector3D(center.x, center.y, center.z)).z();
+    const float depth = a_viewMatrix.map(QVector3D(center.x, center.y, center.z)).z();
     return std::round(depth / kDepthStep);
 }
 } // namespace
