@@ -108,6 +108,51 @@ CASES = [
             time=1.0,
         ),
     ),
+    # Its Open animation swings the door on its hinge.
+    (
+        SKYRIM,
+        Case(
+            "farmhouse-door-opening",
+            "meshes/architecture/farmhouse/farmhouseanimdoor01.nif",
+            yaw=30,
+            pitch=20,
+            time=0.7,
+        ),
+    ),
+    # The handle tilts and its collision goes with it, while the base and its collision stay.
+    (
+        SKYRIM,
+        Case(
+            "lever-pulled-collision",
+            "meshes/dungeons/nordic/levers/ruinslever01/metallever01.nif",
+            collision=True,
+            yaw=30,
+            pitch=20,
+            time=0.5,
+        ),
+    ),
+    # A skinned mesh. Its bones lift the cover and fan the pages.
+    (
+        SKYRIM,
+        Case(
+            "book-opening",
+            "meshes/clutter/books/book02/character assets/book02large01.nif",
+            yaw=30,
+            pitch=30,
+            time=0.2,
+        ),
+    ),
+    # The mask shows at rest, and its animation starts with it gone.
+    (
+        SKYRIM,
+        Case(
+            "dragon-priest-bust-without-mask",
+            "meshes/clutter/dragonpriestmaskaltar/bust/dragonpriestmaskbronze01.nif",
+            yaw=20,
+            pitch=10,
+            time=0.0,
+        ),
+    ),
     (SKYRIM, Case("snow-drift-tip", "meshes/effects/fxambsnowblowingdrifttip.nif")),
     (SKYRIM, Case("snow-plane", "meshes/effects/fxambsnowblowingplane.nif")),
     (SKYRIM, Case("stained-glass", "meshes/clutter/dbhood/dbstainglass01.nif")),
@@ -295,6 +340,17 @@ CASES = [
             "fire-shield-hit-playing",
             "meshes/effects/fireshieldhiteffect.nif",
             time=0.8,
+        ),
+    ),
+    # A skinned mesh that loads in its bind pose. Its Open animation lifts the lid and swings the latches.
+    (
+        FALLOUT4,
+        Case(
+            "first-aid-kit-opening",
+            "meshes/setdressing/firstaidkit/firstaidkitwhite.nif",
+            yaw=30,
+            pitch=25,
+            time=2.9,
         ),
     ),
     (FALLOUT4, Case("nuka-quantum", "meshes/props/nukacolabottlequantum.nif")),

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <ranges>
+#include <unordered_set>
 
 namespace {
 constexpr unsigned kCycleMask = 0x0006U;
@@ -49,6 +50,55 @@ std::unordered_set<std::uint32_t> SequencedControllers(const nifly::NiHeader& a_
     }
     return controllers;
 }
+
+bool MovesObjects(nifly::NiTimeController* const a_controller) {
+    return dynamic_cast<nifly::NiTransformController*>(a_controller) != nullptr
+           || dynamic_cast<nifly::NiMultiTargetTransformController*>(a_controller) != nullptr;
+}
+
+void AddShaderTrack(
+    Animation::TrackSet& a_tracks,
+    const nifly::NiHeader& a_header,
+    nifly::NiTimeController* const a_controller,
+    const std::uint32_t a_shader,
+    nifly::NiInterpolator* const a_interpolator,
+    const Animation::ControllerTiming& a_timing
+) {
+    if (const auto value = Animation::ShaderFloatOf(a_controller)) {
+        if (const auto curve = Animation::FloatCurveOf(a_header, a_interpolator)) {
+            a_tracks.floats.push_back({.shader = a_shader, .value = *value, .curve = *curve, .timing = a_timing});
+        }
+    } else if (const auto color = Animation::ShaderColorOf(a_controller)) {
+        if (const auto curve = Animation::PointCurveOf(a_header, a_interpolator)) {
+            a_tracks.colors.push_back({.shader = a_shader, .value = *color, .curve = *curve, .timing = a_timing});
+        }
+    }
+}
+
+void AddObjectTrack(
+    Animation::TrackSet& a_tracks,
+    const nifly::NiHeader& a_header,
+    nifly::NiTimeController* const a_controller,
+    const std::uint32_t a_object,
+    nifly::NiInterpolator* const a_interpolator,
+    const Animation::ControllerTiming& a_timing
+) {
+    if (MovesObjects(a_controller)) {
+        const auto* const object = a_header.GetBlock<nifly::NiAVObject>(a_object);
+        if (const auto curve = Animation::TransformCurveOf(a_header, a_interpolator)) {
+            a_tracks.transforms.push_back({
+                .object = a_object,
+                .stored = object->GetTransformToParent(),
+                .curve = *curve,
+                .timing = a_timing,
+            });
+        }
+    } else if (dynamic_cast<nifly::NiVisController*>(a_controller) != nullptr) {
+        if (const auto curve = Animation::BoolCurveOf(a_header, a_interpolator)) {
+            a_tracks.visibilities.push_back({.object = a_object, .curve = *curve, .timing = a_timing});
+        }
+    }
+}
 } // namespace
 
 namespace Animation {
@@ -57,27 +107,20 @@ void AddTrack(
     TrackSet& a_tracks,
     const TrackSource& a_source,
     nifly::NiTimeController* const a_controller,
+    const std::uint32_t a_target,
     nifly::NiInterpolator* const a_interpolator,
     const ControllerTiming& a_timing
 ) {
-    const auto shader = a_controller->targetRef.index;
-    if (!a_source.drawnShaders.contains(shader)) {
-        return;
-    }
-
-    if (const auto value = ShaderFloatOf(a_controller)) {
-        if (const auto curve = FloatCurveOf(a_source.header, a_interpolator)) {
-            a_tracks.floats.push_back({.shader = shader, .value = *value, .curve = *curve, .timing = a_timing});
-        }
-    } else if (const auto color = ShaderColorOf(a_controller)) {
-        if (const auto curve = ColorCurveOf(a_source.header, a_interpolator)) {
-            a_tracks.colors.push_back({.shader = shader, .value = *color, .curve = *curve, .timing = a_timing});
-        }
+    const auto& header = a_source.file.GetHeader();
+    if (a_source.drawn.HasShader(a_target)) {
+        AddShaderTrack(a_tracks, header, a_controller, a_target, a_interpolator, a_timing);
+    } else if (a_source.drawn.HasObject(a_target)) {
+        AddObjectTrack(a_tracks, header, a_controller, a_target, a_interpolator, a_timing);
     }
 }
 
 TrackSet SelfRunningTracks(const TrackSource& a_source) {
-    const auto& header = a_source.header;
+    const auto& header = a_source.file.GetHeader();
     const auto sequenced = SequencedControllers(header);
 
     TrackSet tracks;
@@ -89,19 +132,22 @@ TrackSet SelfRunningTracks(const TrackSource& a_source) {
 
         // The library types this reference as a controller, so it is resolved by its index.
         auto* const interpolator = header.GetBlock<nifly::NiInterpolator>(controller->interpolatorRef.index);
-        AddTrack(tracks, a_source, controller, interpolator, TimingOf(*controller));
+        AddTrack(tracks, a_source, controller, controller->targetRef.index, interpolator, TimingOf(*controller));
     }
     return tracks;
 }
 
 float PlayOnceLength(const TrackSet& a_tracks) {
     auto length = 0.0F;
-    for (const auto& track : a_tracks.floats) {
-        length = std::max(length, PlayOnceEnd(track.timing));
-    }
-    for (const auto& track : a_tracks.colors) {
-        length = std::max(length, PlayOnceEnd(track.timing));
-    }
+    const auto extend = [&](const auto& a_list) {
+        for (const auto& track : a_list) {
+            length = std::max(length, PlayOnceEnd(track.timing));
+        }
+    };
+    extend(a_tracks.floats);
+    extend(a_tracks.colors);
+    extend(a_tracks.transforms);
+    extend(a_tracks.visibilities);
     return length;
 }
 

@@ -17,6 +17,8 @@ namespace Animation {
 // must outlive it, since the tracks read the file's keys.
 class SceneAnimation {
 public:
+    // No animation, for a NIF whose controllers are not played.
+    SceneAnimation() = default;
     explicit SceneAnimation(nifly::NifFile& a_nifFile);
 
     [[nodiscard]] bool IsAnimated() const noexcept {
@@ -39,8 +41,8 @@ private:
     TrackSet _selfRunning;
     std::vector<Sequence> _sequences;
     std::size_t _playing = 0;
-    // How long the tracks that play once take together. They start over after it, so the preview keeps showing
-    // them. Zero when there are none.
+    // How long the tracks that play once take together, and hold their last pose. They start over after it, so the
+    // preview keeps showing them. Zero when there are none.
     float _replayPeriod = 0.0F;
 };
 

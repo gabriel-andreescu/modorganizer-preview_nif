@@ -21,6 +21,7 @@ struct ClipPlanes {
 // NIF space is Z-up. The preview's view space is Y-up with X mirrored.
 [[nodiscard]] QMatrix4x4 NifToViewSpace();
 [[nodiscard]] QVector3D ToQVector(const nifly::Vector3& a_vector);
+[[nodiscard]] QMatrix4x4 ToQMatrix(const nifly::MatTransform& a_transform);
 
 // A sphere enclosing both spheres. An empty sphere, one with no radius, adds nothing.
 [[nodiscard]] nifly::BoundingSphere Enclose(
@@ -28,7 +29,10 @@ struct ClipPlanes {
     const nifly::BoundingSphere& a_second
 );
 
+// Around the shapes where they are now.
 [[nodiscard]] nifly::BoundingSphere SceneBounds(const std::vector<const OpenGLShape*>& a_shapes);
+// Around the shapes as they were loaded, leaving out those that are hidden then.
+[[nodiscard]] nifly::BoundingSphere RestSceneBounds(const std::vector<const OpenGLShape*>& a_shapes);
 [[nodiscard]] BoundingBox SceneBox(const std::vector<OpenGLShape>& a_shapes);
 
 // The camera distance at which a sphere fills the narrower of the two fields of view.

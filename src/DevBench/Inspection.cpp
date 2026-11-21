@@ -232,6 +232,10 @@ QJsonObject ShapeDetails(const OpenGLShape& a_shape, const NifWidget& a_view, co
         details.insert("shaderBlock", static_cast<qint64>(a_shape.ShaderBlock()));
         details.insert("animated", DevBench::ShaderValuesDetails(*animated));
     }
+    if (!a_pose.Nodes().Empty()) {
+        details.insert("block", static_cast<qint64>(a_shape.Block()));
+        details.insert("placed", DevBench::ObjectStateDetails(a_view.ObjectStates(a_pose)[a_shape.Block()]));
+    }
     return details;
 }
 

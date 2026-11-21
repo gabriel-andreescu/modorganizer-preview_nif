@@ -304,6 +304,7 @@ private:
         }
 
         const auto world = a_parent.ComposeTransforms(a_object->GetTransformToParent());
+        _currentObject = blockId;
         AddLegacyCollision(a_object, world);
         AddBhkCollision(a_object, world);
         AddBounds(a_object, world);
@@ -1016,13 +1017,20 @@ private:
     void AddLineRange(const std::size_t a_firstVertex, const std::size_t a_vertexCount, const CollisionColor& a_color) {
         if (!_geometry.lineRanges.empty()) {
             auto& range = _geometry.lineRanges.back();
-            if (SameColor(range.color, a_color) && range.firstVertex + range.vertexCount == a_firstVertex) {
+            if (range.object == _currentObject
+                && SameColor(range.color, a_color)
+                && range.firstVertex + range.vertexCount == a_firstVertex) {
                 range.vertexCount += a_vertexCount;
                 return;
             }
         }
 
-        _geometry.lineRanges.push_back({.firstVertex = a_firstVertex, .vertexCount = a_vertexCount, .color = a_color});
+        _geometry.lineRanges.push_back({
+            .firstVertex = a_firstVertex,
+            .vertexCount = a_vertexCount,
+            .color = a_color,
+            .object = _currentObject,
+        });
     }
 
     const nifly::NifFile* _nifFile = nullptr;
@@ -1031,6 +1039,8 @@ private:
     CollisionGeometry _geometry;
     std::vector<nifly::Vector3> _bounds;
     std::unordered_set<std::uint32_t> _visitedObjects;
+    // The object whose collision is being added.
+    std::uint32_t _currentObject = 0;
     std::unordered_set<std::uint32_t> _shapeStack;
     std::unordered_map<std::uint32_t, std::optional<Havok::PhysicsSystem>> _physicsSystems;
 };

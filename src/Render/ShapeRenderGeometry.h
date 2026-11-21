@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Nif/BoundingBox.h"
+#include "Render/ShapeSkin.h"
 
 #include <nifly/Geometry.hpp>
 
@@ -12,15 +13,9 @@ class NiShape;
 }
 
 struct ShapeRenderGeometry {
-    const std::vector<nifly::Vector3>* rawPositions = nullptr;
-    const std::vector<nifly::Vector3>* rawNormals = nullptr;
-    const std::vector<nifly::Vector3>* rawTangents = nullptr;
-    const std::vector<nifly::Vector3>* rawBitangents = nullptr;
-
-    std::vector<nifly::Vector3> skinnedPositions;
-    std::vector<nifly::Vector3> skinnedNormals;
-    std::vector<nifly::Vector3> skinnedTangents;
-    std::vector<nifly::Vector3> skinnedBitangents;
+    SkinSource raw;
+    // Filled for a skinned shape, whose vertices are drawn where its bones put them.
+    SkinnedVertices deformed;
     std::vector<nifly::Triangle> triangles;
 
     nifly::MatTransform modelTransform;

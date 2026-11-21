@@ -1,5 +1,5 @@
 #include "Animation/SceneAnimation.h"
-#include "Animation/DrawnShaders.h"
+#include "Animation/DrawnTargets.h"
 
 #include <nifly/NifFile.hpp>
 
@@ -9,6 +9,10 @@
 #include <string_view>
 
 namespace {
+// How long tracks that play once keep their last pose before they start over. Some last a fraction of a second, such
+// as a lid opening, and would flicker without it.
+constexpr float kHoldSeconds = 1.0F;
+
 bool NamesLoop(const Animation::Sequence& a_sequence) {
     constexpr std::string_view kLoop = "loop";
     return !std::ranges::search(a_sequence.name, kLoop, {}, [](const unsigned char a_letter) {
@@ -30,8 +34,8 @@ std::size_t OpeningSequence(const std::vector<Animation::Sequence>& a_sequences)
 namespace Animation {
 
 SceneAnimation::SceneAnimation(nifly::NifFile& a_nifFile) {
-    const auto drawnShaders = DrawnShaders(a_nifFile);
-    const TrackSource source {.header = a_nifFile.GetHeader(), .drawnShaders = drawnShaders};
+    const DrawnTargets drawn(a_nifFile);
+    const TrackSource source {.file = a_nifFile, .drawn = drawn};
     _selfRunning = SelfRunningTracks(source);
     _sequences = SequencesOf(source);
     _playing = OpeningSequence(_sequences);
@@ -68,6 +72,16 @@ void SceneAnimation::AddValues(Pose& a_pose, const TrackSet& a_tracks, const flo
     for (const auto& track : a_tracks.colors) {
         a_pose.ShaderToAnimate(track.shader)[track.value] = track.curve.At(TrackTime(track.timing, a_sceneTime));
     }
+    for (const auto& track : a_tracks.transforms) {
+        // A second track on the same object changes its own parts and keeps what the first one set.
+        const auto* const posed = a_pose.Nodes().Local(track.object);
+        auto transform = posed != nullptr ? *posed : track.stored;
+        track.curve.Apply(transform, TrackTime(track.timing, a_sceneTime));
+        a_pose.Nodes().SetLocal(track.object, transform);
+    }
+    for (const auto& track : a_tracks.visibilities) {
+        a_pose.Nodes().SetHidden(track.object, !track.curve.At(TrackTime(track.timing, a_sceneTime)));
+    }
 }
 
 float SceneAnimation::TrackTime(const ControllerTiming& a_timing, const float a_sceneTime) const {
@@ -76,10 +90,11 @@ float SceneAnimation::TrackTime(const ControllerTiming& a_timing, const float a_
 }
 
 void SceneAnimation::UpdateReplayPeriod() {
-    _replayPeriod = PlayOnceLength(_selfRunning);
+    auto length = PlayOnceLength(_selfRunning);
     if (const auto* const sequence = PlayingSequence()) {
-        _replayPeriod = std::max(_replayPeriod, PlayOnceLength(sequence->tracks));
+        length = std::max(length, PlayOnceLength(sequence->tracks));
     }
+    _replayPeriod = length > 0.0F ? length + kHoldSeconds : 0.0F;
 }
 
 } // namespace Animation

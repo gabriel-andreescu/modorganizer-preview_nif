@@ -1,5 +1,7 @@
 #include "Render/NifWidget.h"
+#include "Animation/DrawnTargets.h"
 #include "Nif/CollisionGeometry.h"
+#include "Nif/FaceBonesModel.h"
 #include "Nif/GrassModel.h"
 #include "Nif/ShaderFlags.h"
 #include "Nif/ShapeVisibility.h"
@@ -51,7 +53,10 @@ NifWidget::NifWidget(
 )
     : QOpenGLWidget(a_parent)
     , _nifFile {std::move(a_nifFile)}
-    , _animation {*_nifFile}
+    , _animation {IsFaceBonesModelPath(a_dataPath) ? Animation::SceneAnimation {} : Animation::SceneAnimation {*_nifFile}}
+    , _sceneGraph {*_nifFile}
+    , _restStates {_sceneGraph.Evaluate({})}
+    , _hiddenCanAppear {Animation::AnimatesVisibility(*_nifFile)}
     , _isGrassModel {IsGrassModelPath(a_dataPath)}
     , _gameFiles {std::move(a_gameFiles)}
     , _textureManager {std::make_unique<TextureManager>(*_gameFiles, std::move(a_textureSelection))}
@@ -206,8 +211,7 @@ void NifWidget::SetAnimationTime(const std::optional<float> a_time) {
     }
 
     _animationTime = a_time;
-    ApplyAnimation();
-    update();
+    ShowAnimation();
 }
 
 QStringList NifWidget::SequenceNames() const {
@@ -226,8 +230,7 @@ QString NifWidget::PlayingSequence() const {
 void NifWidget::PlaySequence(const QString& a_name) {
     _animation.PlaySequence(a_name.toStdString());
     if (_animationTime) {
-        ApplyAnimation();
-        update();
+        ShowAnimation();
     }
 }
 
@@ -235,12 +238,38 @@ Animation::Pose NifWidget::AnimationPose() const {
     return _animationTime ? _animation.At(*_animationTime) : Animation::Pose {};
 }
 
+void NifWidget::ShowAnimation() {
+    // Before the first paint there are no shapes, and initialization applies the time to them.
+    if (isValid()) {
+        makeCurrent();
+        ApplyAnimation();
+        doneCurrent();
+    }
+    update();
+}
+
 void NifWidget::ApplyAnimation() {
+    // Without a time the shapes go back to exactly what they were loaded as, not to a pose worked out again.
+    if (!_animationTime) {
+        for (auto* const shapes : {&_glShapes, &_editorMarkerShapes}) {
+            std::ranges::for_each(*shapes, &OpenGLShape::Rest);
+        }
+        if (_collisionOverlay) {
+            _collisionOverlay->PlaceAtRest();
+        }
+        return;
+    }
+
     const auto pose = AnimationPose();
+    const auto states = _sceneGraph.Evaluate(pose.Nodes());
     for (auto* const shapes : {&_glShapes, &_editorMarkerShapes}) {
         for (auto& shape : *shapes) {
             shape.Animate(pose.Shader(shape.ShaderBlock()));
+            shape.Place(states);
         }
+    }
+    if (_collisionOverlay) {
+        _collisionOverlay->Place(states, _restStates);
     }
 }
 
@@ -249,7 +278,8 @@ bool NifWidget::DrawsCollision() const {
 }
 
 void NifWidget::UpdateSceneBounds() {
-    _sceneBounds = ::SceneBounds(DrawnShapes());
+    // The view is fitted to the mesh as it was loaded, so it doesn't depend on the moment its animation is at.
+    _sceneBounds = ::RestSceneBounds(ShownShapes());
     // The mesh's own shapes choose the opening view. Its editor markers and collision do when it has none.
     _sceneBox = ::SceneBox(_glShapes);
     if (_glShapes.empty() && _showEditorMarkers) {
@@ -261,7 +291,7 @@ void NifWidget::UpdateSceneBounds() {
     }
 }
 
-std::vector<const OpenGLShape*> NifWidget::DrawnShapes() const {
+std::vector<const OpenGLShape*> NifWidget::ShownShapes() const {
     std::vector<const OpenGLShape*> shapes;
     shapes.reserve(_glShapes.size() + (_showEditorMarkers ? _editorMarkerShapes.size() : 0));
     for (const auto& shape : _glShapes) {
@@ -272,6 +302,12 @@ std::vector<const OpenGLShape*> NifWidget::DrawnShapes() const {
             shapes.push_back(&shape);
         }
     }
+    return shapes;
+}
+
+std::vector<const OpenGLShape*> NifWidget::DrawnShapes() const {
+    auto shapes = ShownShapes();
+    std::erase_if(shapes, [](const OpenGLShape* const a_shape) { return a_shape->IsHidden(); });
     return shapes;
 }
 
@@ -318,7 +354,7 @@ void NifWidget::initializeGL() {
         }
         const auto name = QString::fromStdString(shape->name.get());
         const auto visibility = ClassifyShapeVisibility(*_nifFile, shape);
-        if (visibility == ShapeVisibility::kHidden) {
+        if (visibility == ShapeVisibility::kHidden && !_hiddenCanAppear) {
             _skippedShapes.push_back({.name = name, .reason = QStringLiteral("hidden")});
             continue;
         }
@@ -527,6 +563,9 @@ void NifWidget::EnsureCollisionOverlay() {
     _collisionOverlayBuildAttempted = true;
     try {
         _collisionOverlay = std::make_unique<OpenGLCollisionOverlay>(CollisionGeometryBuilder::Build(_nifFile.get()));
+        if (_animationTime) {
+            _collisionOverlay->Place(ObjectStates(AnimationPose()), _restStates);
+        }
     } catch (const std::exception& e) {
         qWarning("Failed to prepare NIF collision overlay: %s", e.what());
     } catch (...) {
@@ -554,6 +593,10 @@ void NifWidget::SetProjectionMatrix() {
     }
 
     auto drawnBounds = _sceneBounds;
+    // Animated parts can move past the bounds the mesh has at rest.
+    if (_animationTime) {
+        drawnBounds = Enclose(drawnBounds, ::SceneBounds(DrawnShapes()));
+    }
     if (DrawsCollision() && _collisionOverlay) {
         drawnBounds = Enclose(drawnBounds, _collisionOverlay->Bounds());
     }
@@ -606,7 +649,7 @@ void NifWidget::RenderRefractionProxyPass(QOpenGLFunctions_2_1* a_f) {
     a_f->glDepthMask(GL_FALSE);
 
     for (const auto& shape : _glShapes) {
-        if (!shape.IsRefractionProxy() || !program->bind()) {
+        if (!shape.IsRefractionProxy() || shape.IsHidden() || !program->bind()) {
             continue;
         }
 

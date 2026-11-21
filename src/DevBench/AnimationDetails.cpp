@@ -1,5 +1,6 @@
 #include "DevBench/AnimationDetails.h"
 #include "Animation/ShaderValues.h"
+#include "Nif/SceneGraph.h"
 
 #include <QJsonArray>
 
@@ -43,6 +44,21 @@ QJsonObject ShaderValuesDetails(const Animation::ShaderValues& a_values) {
         }
     }
     return details;
+}
+
+QJsonObject ObjectStateDetails(const ObjectState& a_state) {
+    const auto& world = a_state.world;
+    QJsonArray rotation;
+    for (auto i = 0; i < 3; ++i) {
+        const auto& row = world.rotation[i];
+        rotation.append(QJsonArray {row.x, row.y, row.z});
+    }
+    return {
+        {"translation", QJsonArray {world.translation.x, world.translation.y, world.translation.z}},
+        {"rotation", rotation},
+        {"scale", world.scale},
+        {"hidden", a_state.hidden},
+    };
 }
 
 }

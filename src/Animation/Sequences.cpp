@@ -1,11 +1,27 @@
 #include "Animation/Sequences.h"
+#include "Animation/ShaderChannels.h"
 
 #include <nifly/NifFile.hpp>
+
+namespace {
+// A sequence names the node or shape a block moves or shows. A shader controller has its shader as its own target.
+std::uint32_t TargetOf(
+    const nifly::NifFile& a_nifFile,
+    nifly::NiTimeController* const a_controller,
+    const nifly::ControllerLink& a_link
+) {
+    if (Animation::ShaderFloatOf(a_controller) || Animation::ShaderColorOf(a_controller)) {
+        return a_controller->targetRef.index;
+    }
+    auto* const object = a_nifFile.FindBlockByName<nifly::NiAVObject>(a_link.nodeName.get());
+    return object != nullptr ? a_nifFile.GetBlockID(object) : nifly::NIF_NPOS;
+}
+} // namespace
 
 namespace Animation {
 
 std::vector<Sequence> SequencesOf(const TrackSource& a_source) {
-    const auto& header = a_source.header;
+    const auto& header = a_source.file.GetHeader();
 
     std::vector<Sequence> sequences;
     for (std::uint32_t id = 0; id < header.GetNumBlocks(); ++id) {
@@ -28,7 +44,8 @@ std::vector<Sequence> SequencesOf(const TrackSource& a_source) {
         Sequence sequence {.name = block->name.get(), .loops = loops};
         for (const auto& link : block->controlledBlocks) {
             if (auto* const controller = header.GetBlock(link.controllerRef)) {
-                AddTrack(sequence.tracks, a_source, controller, header.GetBlock(link.interpolatorRef), timing);
+                const auto target = TargetOf(a_source.file, controller, link);
+                AddTrack(sequence.tracks, a_source, controller, target, header.GetBlock(link.interpolatorRef), timing);
             }
         }
         if (!sequence.tracks.Empty()) {

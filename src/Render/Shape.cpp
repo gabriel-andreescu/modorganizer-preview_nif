@@ -1,5 +1,7 @@
 #include "Render/Shape.h"
+#include "Nif/SceneGraph.h"
 #include "Nif/ShaderUtils.h"
+#include "Nif/ShapeVisibility.h"
 #include "Render/ShaderClassification.h"
 #include "Render/ShapeDrawState.h"
 #include "Render/ShapeGeometry.h"
@@ -51,6 +53,9 @@ OpenGLShape::OpenGLShape(
     , _geometry {std::make_unique<OpenGLShapeGeometry>()}
     , _material {std::make_unique<OpenGLShapeMaterial>()}
     , _restMaterial {std::make_unique<OpenGLShapeMaterial>()}
+    , _block {a_nifFile->GetBlockID(a_niShape)}
+    , _hiddenAtRest {ClassifyShapeVisibility(*a_nifFile, a_niShape) == ShapeVisibility::kHidden}
+    , _hidden {_hiddenAtRest}
     , _textures {std::make_unique<OpenGLShapeTextures>()}
     , _drawState {std::make_unique<OpenGLShapeDrawState>()} {
     const auto* const functions = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(
@@ -114,6 +119,17 @@ void OpenGLShape::Animate(const Animation::ShaderValues* const a_values) {
     *_material = a_values != nullptr ? _restMaterial->Animated(*a_values) : *_restMaterial;
 }
 
+void OpenGLShape::Place(const std::span<const ObjectState> a_states) {
+    _geometry->Place(a_states, _block);
+    _hidden = a_states[_block].hidden;
+}
+
+void OpenGLShape::Rest() {
+    *_material = *_restMaterial;
+    _geometry->PlaceAtRest();
+    _hidden = _hiddenAtRest;
+}
+
 void OpenGLShape::SetupShaders(QOpenGLShaderProgram* a_program) const {
     _textures->SetupUniforms(a_program, _material->TextureFeatureFlags());
     _material->SetupUniforms(a_program, _shaderType);
@@ -151,6 +167,22 @@ ShaderManager::ShaderType OpenGLShape::ShaderType() const noexcept {
 
 std::uint32_t OpenGLShape::ShaderBlock() const noexcept {
     return _shaderBlock;
+}
+
+std::uint32_t OpenGLShape::Block() const noexcept {
+    return _block;
+}
+
+bool OpenGLShape::IsHidden() const noexcept {
+    return _hidden;
+}
+
+bool OpenGLShape::IsHiddenAtRest() const noexcept {
+    return _hiddenAtRest;
+}
+
+const nifly::BoundingSphere& OpenGLShape::RestBounds() const noexcept {
+    return _geometry->RestBounds();
 }
 
 const QMatrix4x4& OpenGLShape::ModelMatrix() const noexcept {

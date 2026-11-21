@@ -2,6 +2,7 @@
 
 #include "Animation/SceneAnimation.h"
 #include "Nif/BoundingBox.h"
+#include "Nif/SceneGraph.h"
 #include "Render/AxisView.h"
 #include "Render/Camera.h"
 #include "Render/OpeningView.h"
@@ -108,6 +109,10 @@ public:
     void PlaySequence(const QString& a_name);
     // The animated values at the shown moment. Empty at rest.
     [[nodiscard]] Animation::Pose AnimationPose() const;
+    // Where a pose puts every object of the NIF, by block.
+    [[nodiscard]] std::vector<ObjectState> ObjectStates(const Animation::Pose& a_pose) const {
+        return _sceneGraph.Evaluate(a_pose.Nodes());
+    }
 
 signals:
     void TexturesLoaded(const QVector<TextureResult>& a_results);
@@ -126,12 +131,17 @@ protected:
     void resizeGL(int a_w, int a_h) override;
 
 private:
+    // Puts the shapes and the collision at the shown moment. Needs the GL context.
     void ApplyAnimation();
+    // The same from outside initialization and painting, which have no GL context.
+    void ShowAnimation();
     [[nodiscard]] float AspectRatio() const;
     // A NIF without meshes, such as a skeleton, has nothing to show but its collision, so the collision is drawn
     // whatever the collision toggle says. The toggle keeps the user's choice: both panes share it and it carries over
     // to the next file, so turning it on for one skeleton would change every other view.
     [[nodiscard]] bool DrawsCollision() const;
+    // The shapes the view's toggles show, and those of them the animation isn't hiding at the shown moment.
+    [[nodiscard]] std::vector<const OpenGLShape*> ShownShapes() const;
     [[nodiscard]] std::vector<const OpenGLShape*> DrawnShapes() const;
     void Cleanup();
     void CopySceneColorTexture(QOpenGLFunctions_2_1* a_f);
@@ -154,6 +164,11 @@ private:
     // It reads the file's keys, so it's declared after the file.
     Animation::SceneAnimation _animation;
     std::optional<float> _animationTime;
+    SceneGraph _sceneGraph;
+    // Every object where the NIF stores it, by block.
+    std::vector<ObjectState> _restStates;
+    // The NIF's animation shows and hides objects, so shapes that are hidden at rest are kept to appear.
+    bool _hiddenCanAppear = false;
     bool _isGrassModel = false;
 
     // The texture manager reads through it, so it's declared first and outlives the manager.

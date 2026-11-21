@@ -1,16 +1,15 @@
 #pragma once
 
 #include "Animation/Curves.h"
+#include "Animation/DrawnTargets.h"
 #include "Animation/ShaderValues.h"
 #include "Animation/TrackTime.h"
 
 #include <cstdint>
-#include <unordered_set>
 #include <vector>
 
 namespace nifly {
 class NifFile;
-class NiHeader;
 }
 
 namespace Animation {
@@ -26,31 +25,49 @@ struct ShaderFloatTrack {
 struct ShaderColorTrack {
     std::uint32_t shader = 0;
     ShaderColor value = ShaderColor::kEmissive;
-    ColorCurve curve;
+    PointCurve curve;
+    ControllerTiming timing;
+};
+
+// A node or shape that moves. The curve replaces parts of the transform the object stores.
+struct TransformTrack {
+    std::uint32_t object = 0;
+    nifly::MatTransform stored;
+    TransformCurve curve;
+    ControllerTiming timing;
+};
+
+// A node or shape that appears and disappears.
+struct VisibilityTrack {
+    std::uint32_t object = 0;
+    BoolCurve curve;
     ControllerTiming timing;
 };
 
 struct TrackSet {
     std::vector<ShaderFloatTrack> floats;
     std::vector<ShaderColorTrack> colors;
+    std::vector<TransformTrack> transforms;
+    std::vector<VisibilityTrack> visibilities;
 
     [[nodiscard]] bool Empty() const noexcept {
-        return floats.empty() && colors.empty();
+        return floats.empty() && colors.empty() && transforms.empty() && visibilities.empty();
     }
 };
 
-// Where the tracks of a file are looked up, and the shaders worth a track.
+// The file the tracks are read from, and what is worth a track in it.
 struct TrackSource {
-    const nifly::NiHeader& header;
-    const std::unordered_set<std::uint32_t>& drawnShaders;
+    const nifly::NifFile& file;
+    const DrawnTargets& drawn;
 };
 
-// Adds the track a controller gives when it follows an interpolator with a timing. Adds nothing for a controller
-// the preview doesn't animate, a shader it doesn't draw, or an interpolator without a curve.
+// Adds the track a controller gives when it drives a target block from an interpolator with a timing. Adds nothing
+// for a controller the preview doesn't animate, a target it doesn't draw, or an interpolator without a curve.
 void AddTrack(
     TrackSet& a_tracks,
     const TrackSource& a_source,
     nifly::NiTimeController* a_controller,
+    std::uint32_t a_target,
     nifly::NiInterpolator* a_interpolator,
     const ControllerTiming& a_timing
 );

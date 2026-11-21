@@ -1,4 +1,6 @@
 #include "Render/CollisionOverlay.h"
+#include "Nif/SceneGraph.h"
+#include "Render/Framing.h"
 #include "Render/ShaderManager.h"
 
 #include <QDebug>
@@ -19,6 +21,7 @@ OpenGLCollisionOverlay::OpenGLCollisionOverlay(const CollisionGeometry& a_geomet
     if (_lineRanges.empty()) {
         _lineRanges.push_back({.firstVertex = 0, .vertexCount = a_geometry.vertices.size(), .color = {}});
     }
+    _placements.resize(_lineRanges.size());
 
     auto* const functions = QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_1>(QOpenGLContext::currentContext());
     if (!functions) {
@@ -78,6 +81,27 @@ void OpenGLCollisionOverlay::Destroy() {
     _vertexCount = 0;
 }
 
+void OpenGLCollisionOverlay::Place(
+    const std::span<const ObjectState> a_posed,
+    const std::span<const ObjectState> a_rest
+) {
+    for (std::size_t i = 0; i < _lineRanges.size(); ++i) {
+        const auto object = _lineRanges[i].object;
+        _placements[i].setToIdentity();
+        if (a_posed[object].posed) {
+            _placements[i] = ToQMatrix(
+                a_posed[object].world.ComposeTransforms(a_rest[object].world.InverseTransform())
+            );
+        }
+    }
+}
+
+void OpenGLCollisionOverlay::PlaceAtRest() {
+    for (auto& placement : _placements) {
+        placement.setToIdentity();
+    }
+}
+
 void OpenGLCollisionOverlay::Render(
     QOpenGLShaderProgram* a_program,
     const QMatrix4x4& a_viewMatrix,
@@ -95,7 +119,7 @@ void OpenGLCollisionOverlay::Render(
 
     const auto binder = QOpenGLVertexArrayObject::Binder(_vertexArray.Get());
 
-    a_program->setUniformValue("mvpMatrix", a_projectionMatrix * a_viewMatrix);
+    const auto viewProjection = a_projectionMatrix * a_viewMatrix;
 
     functions->glDisable(GL_POLYGON_OFFSET_FILL);
     functions->glDisable(GL_CULL_FACE);
@@ -106,7 +130,9 @@ void OpenGLCollisionOverlay::Render(
     functions->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     functions->glLineWidth(1.25F);
 
-    for (const auto& range : _lineRanges) {
+    for (std::size_t i = 0; i < _lineRanges.size(); ++i) {
+        const auto& range = _lineRanges[i];
+        a_program->setUniformValue("mvpMatrix", viewProjection * _placements[i]);
         functions
             ->glDrawArrays(GL_LINES, static_cast<GLint>(range.firstVertex), static_cast<GLsizei>(range.vertexCount));
     }

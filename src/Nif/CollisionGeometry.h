@@ -6,6 +6,7 @@
 #include <nifly/NifFile.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 struct CollisionColor {
@@ -29,6 +30,8 @@ struct CollisionLineRange {
     std::size_t firstVertex = 0;
     std::size_t vertexCount = 0;
     CollisionColor color;
+    // The block of the node or shape the collision belongs to, which it moves with.
+    std::uint32_t object = 0;
 };
 
 struct CollisionGeometry {

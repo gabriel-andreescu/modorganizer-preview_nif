@@ -1,6 +1,9 @@
 #include "Render/ShapeGeometry.h"
+#include "Nif/SceneGraph.h"
 #include "Nif/ShaderFlags.h"
+#include "Render/Framing.h"
 #include "Render/ShapeRenderGeometry.h"
+#include "Render/ShapeSkin.h"
 
 #include <QDebug>
 #include <QOpenGLContext>
@@ -16,27 +19,7 @@
 #include <vector>
 
 namespace {
-QMatrix4x4 ConvertTransform(const nifly::MatTransform& a_transform) {
-    auto mat = a_transform.ToMatrix();
-    return QMatrix4x4 {
-        mat[0],
-        mat[1],
-        mat[2],
-        mat[3],
-        mat[4],
-        mat[5],
-        mat[6],
-        mat[7],
-        mat[8],
-        mat[9],
-        mat[10],
-        mat[11],
-        mat[12],
-        mat[13],
-        mat[14],
-        mat[15],
-    };
-}
+constexpr std::array kSkinnedAttributes {kAttribPosition, kAttribNormal, kAttribTangent, kAttribBitangent};
 
 template <typename T>
 OpenGLBufferResource MakeVertexBuffer(const std::vector<T>* a_data, const GLuint a_attrib) {
@@ -94,11 +77,18 @@ void OpenGLShapeGeometry::Initialize(
     SetDefaultVertexAttributes(functions);
     ValidateShapeGeometry(a_niShape);
 
+    _nifFile = a_nifFile;
+    _niShape = a_niShape;
     const auto geometry = PrepareShapeRenderGeometry(a_nifFile, a_niShape);
-    _modelMatrix = ConvertTransform(geometry.modelTransform);
+    _modelMatrix = ToQMatrix(geometry.modelTransform);
     _bounds = geometry.bounds;
     _box = geometry.box;
     _skinned = geometry.skinned;
+    if (!_skinned && geometry.raw.positions != nullptr) {
+        _ownBounds = nifly::BoundingSphere(*geometry.raw.positions);
+    }
+    _restModelMatrix = _modelMatrix;
+    _restBounds = _bounds;
 
     if (const auto* const verts = geometry.Positions()) {
         _vertexBuffers[kAttribPosition] = MakeVertexBuffer(verts, kAttribPosition);
@@ -140,6 +130,73 @@ void OpenGLShapeGeometry::Initialize(
             std::min(iElements, static_cast<std::uint32_t>(std::numeric_limits<GLsizei>::max()))
         );
         glIndexBuffer->release();
+    }
+}
+
+void OpenGLShapeGeometry::Place(const std::span<const ObjectState> a_states, const std::uint32_t a_block) {
+    if (_skinned) {
+        Deform(a_states);
+        return;
+    }
+
+    const auto& world = a_states[a_block].world;
+    _modelMatrix = ToQMatrix(world);
+    _bounds.center = world.ApplyTransform(_ownBounds.center);
+    _bounds.radius = world.ApplyTransformToDist(_ownBounds.radius);
+}
+
+void OpenGLShapeGeometry::PlaceAtRest() {
+    _modelMatrix = _restModelMatrix;
+    _bounds = _restBounds;
+    if (_restVertices) {
+        WriteVertices(*_restVertices);
+        _restVertices.reset();
+    }
+}
+
+void OpenGLShapeGeometry::Deform(const std::span<const ObjectState> a_states) {
+    if (!_skin) {
+        _skin = std::make_unique<ShapeSkin>(_nifFile, _niShape);
+        _skinSource = SkinSourceOf(_nifFile, _niShape);
+    }
+    if (!_skin->HasInfluences() || !_skin->MovedBy(a_states)) {
+        PlaceAtRest();
+        return;
+    }
+
+    // Until a pose overwrites them, the buffers hold the vertices the shape was loaded with.
+    if (!_restVertices) {
+        _restVertices = ReadVertices();
+    }
+    const auto vertices = _skin->Posed(_skinSource, a_states);
+    WriteVertices(vertices);
+    _bounds = nifly::BoundingSphere(vertices.positions);
+}
+
+SkinnedVertices OpenGLShapeGeometry::ReadVertices() const {
+    SkinnedVertices vertices;
+    const std::array lists {&vertices.positions, &vertices.normals, &vertices.tangents, &vertices.bitangents};
+    for (std::size_t i = 0; i < lists.size(); ++i) {
+        const auto& buffer = _vertexBuffers[kSkinnedAttributes[i]];
+        if (!buffer || !buffer->bind()) {
+            continue;
+        }
+        lists[i]->resize(static_cast<std::size_t>(buffer->size()) / sizeof(nifly::Vector3));
+        buffer->read(0, lists[i]->data(), buffer->size());
+        buffer->release();
+    }
+    return vertices;
+}
+
+void OpenGLShapeGeometry::WriteVertices(const SkinnedVertices& a_vertices) const {
+    const std::array lists {&a_vertices.positions, &a_vertices.normals, &a_vertices.tangents, &a_vertices.bitangents};
+    for (std::size_t i = 0; i < lists.size(); ++i) {
+        const auto& buffer = _vertexBuffers[kSkinnedAttributes[i]];
+        if (!buffer || lists[i]->empty() || !buffer->bind()) {
+            continue;
+        }
+        buffer->write(0, lists[i]->data(), buffer->size());
+        buffer->release();
     }
 }
 

@@ -38,6 +38,28 @@ QVector3D ToQVector(const nifly::Vector3& a_vector) {
     return {a_vector.x, a_vector.y, a_vector.z};
 }
 
+QMatrix4x4 ToQMatrix(const nifly::MatTransform& a_transform) {
+    const auto mat = a_transform.ToMatrix();
+    return QMatrix4x4 {
+        mat[0],
+        mat[1],
+        mat[2],
+        mat[3],
+        mat[4],
+        mat[5],
+        mat[6],
+        mat[7],
+        mat[8],
+        mat[9],
+        mat[10],
+        mat[11],
+        mat[12],
+        mat[13],
+        mat[14],
+        mat[15],
+    };
+}
+
 nifly::BoundingSphere SceneBounds(const std::vector<const OpenGLShape*>& a_shapes) {
     nifly::BoundingSphere bounds;
     for (const auto* const shape : a_shapes) {
@@ -49,10 +71,20 @@ nifly::BoundingSphere SceneBounds(const std::vector<const OpenGLShape*>& a_shape
     return bounds;
 }
 
+nifly::BoundingSphere RestSceneBounds(const std::vector<const OpenGLShape*>& a_shapes) {
+    nifly::BoundingSphere bounds;
+    for (const auto* const shape : a_shapes) {
+        if (!shape->IsRefractionProxy() && !shape->IsHiddenAtRest()) {
+            bounds = Enclose(bounds, shape->RestBounds());
+        }
+    }
+    return bounds;
+}
+
 BoundingBox SceneBox(const std::vector<OpenGLShape>& a_shapes) {
     BoundingBox box;
     for (const auto& shape : a_shapes) {
-        if (!shape.IsRefractionProxy()) {
+        if (!shape.IsRefractionProxy() && !shape.IsHiddenAtRest()) {
             box.Add(shape.Box());
         }
     }
