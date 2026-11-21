@@ -33,7 +33,16 @@ target("Plugin", function()
     add_files("$(projectdir)/src/**.cpp", "$(projectdir)/src/**.h|PCH.h")
     add_includedirs("$(projectdir)/src")
     set_pcxxheader("$(projectdir)/src/PCH.h")
-    add_packages("qt6base", "mo2-uibase", "devbench-api", "mo2-libbsarch", "bodyslide-material-file", "eigen", "gli", "nifly")
+    add_packages(
+        "qt6base",
+        "mo2-uibase",
+        "devbench-api",
+        "mo2-libbsarch",
+        "bodyslide-material-file",
+        "eigen",
+        "gli",
+        "nifly"
+    )
     add_rules("@devbench-api/integration")
 end)
 
