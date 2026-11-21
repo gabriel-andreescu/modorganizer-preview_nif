@@ -2,12 +2,12 @@
 #include "Data/FileHiding.h"
 #include "Data/GameFiles.h"
 #include "Preview/TexturesPanel.h"
+#include "Preview/TexturesSplit.h"
 #include "Preview/VersionPicker.h"
 #include "Render/NifWidget.h"
 
 #include <QFileInfo>
 #include <QLabel>
-#include <QSplitter>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -55,17 +55,12 @@ NifPreviewPane::NifPreviewPane(
     _statusLabel = new QLabel(this);
     _statusLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
-    auto* const splitter = new QSplitter(Qt::Vertical, this);
-    splitter->addWidget(_viewport);
-    splitter->addWidget(_texturesPanel);
-    splitter->setStretchFactor(0, 1);
-    splitter->setStretchFactor(1, 0);
-    splitter->setChildrenCollapsible(false);
+    _texturesSplit = new TexturesSplit(_viewport, _texturesPanel, this);
 
     auto* const layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(_versionPicker);
-    layout->addWidget(splitter, 1);
+    layout->addWidget(_texturesSplit, 1);
     layout->addWidget(_statusLabel);
 
     ConnectControls();
@@ -161,6 +156,7 @@ void NifPreviewPane::SetShowEditorMarkers(const bool a_showEditorMarkers) {
 void NifPreviewPane::SetTexturesOpen(const bool a_open) {
     _texturesOpen = a_open;
     UpdateTexturesVisibility();
+    _texturesSplit->FitPanel();
 }
 
 // A NIF without textures, such as a skeleton, gets no empty list.
@@ -291,6 +287,7 @@ void NifPreviewPane::HandleTexturesLoaded() {
     _onlyCollision = _nifWidget != nullptr && !_nifWidget->HasMeshes();
     _texturesPanel->SetTextures(TextureResults());
     UpdateTexturesVisibility();
+    _texturesSplit->FitPanel();
     emit TexturesLoaded();
 }
 

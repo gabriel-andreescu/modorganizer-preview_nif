@@ -11,11 +11,14 @@
 #include <QStyle>
 #include <QStyledItemDelegate>
 
+#include <algorithm>
+
 namespace {
 constexpr int kTextureColumn = 0;
 constexpr int kSlotColumn = 1;
 constexpr int kModColumn = 2;
-constexpr int kShownRows = 5;
+// More textures than this scroll.
+constexpr int kMaxShownRows = 5;
 
 // Shortens a path from its start, so a narrow column keeps the file name.
 class PathDelegate final : public QStyledItemDelegate {
@@ -94,13 +97,15 @@ void TextureList::SetRows(const QVector<Row>& a_rows, const QString& a_sourceNam
             }
         }
     }
+    updateGeometry();
     emit CurrentTextureChanged();
 }
 
 QSize TextureList::sizeHint() const {
+    const auto shownRows = static_cast<int>(std::min<qsizetype>(_rows.size(), kMaxShownRows));
     return {
         QTreeWidget::sizeHint().width(),
-        header()->sizeHint().height() + (kShownRows * _rowHeight) + (2 * frameWidth()),
+        header()->sizeHint().height() + (shownRows * _rowHeight) + (2 * frameWidth()),
     };
 }
 

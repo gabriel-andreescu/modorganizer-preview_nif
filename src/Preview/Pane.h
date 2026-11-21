@@ -15,6 +15,7 @@ class NifWidget;
 class QLabel;
 class QVBoxLayout;
 class TexturesPanel;
+class TexturesSplit;
 class VersionPicker;
 
 namespace MOBase {
@@ -104,6 +105,7 @@ private:
     QWidget* _viewport = nullptr;
     QVBoxLayout* _viewLayout = nullptr;
     TexturesPanel* _texturesPanel = nullptr;
+    TexturesSplit* _texturesSplit = nullptr;
     QLabel* _statusLabel = nullptr;
     QWidget* _viewWidget = nullptr;
     NifWidget* _nifWidget = nullptr;
